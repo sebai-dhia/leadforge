@@ -21,26 +21,72 @@
     },
     {
       "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nif (body.bbox) return [{ json: { bbox: String(body.bbox) } }];\nconst areas = String(body.city || '').split('|').map(x => x.trim()).filter(Boolean).slice(0, 3);\nreturn areas.length ? areas.map(text => ({ json: { text } })) : [{ json: { text: '' } }];"
+      },
+      "id": "n15",
+      "name": "Expand Areas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        110,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-bbox",
+              "leftValue": "={{ $json.bbox ? \"yes\" : \"no\" }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n16",
+      "name": "Is Map Area",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        -120
+      ]
+    },
+    {
+      "parameters": {
         "url": "https://api.geoapify.com/v1/geocode/search",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpQueryAuth",
         "sendQuery": true,
         "specifyQuery": "json",
-        "jsonQuery": "={{ JSON.stringify({ text: $json.body.city, limit: 1, format: 'json' }) }}"
+        "jsonQuery": "={{ JSON.stringify({ text: $json.text, limit: 1, format: 'json' }) }}"
       },
       "id": "n9",
       "name": "Geocode City",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        220,
-        0
+        330,
+        80
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst g = ($input.first().json.results || [])[0];\nif (!g) return [{ json: { _empty: true } }];\nconst map = [\n  [/dent/i, 'healthcare.dentist'],\n  [/clinic|doctor|medical|physician|clinique|medecin/i, 'healthcare.clinic_or_praxis'],\n  [/pharmac/i, 'healthcare.pharmacy'],\n  [/restaurant/i, 'catering.restaurant'],\n  [/caf[eé]|coffee/i, 'catering.cafe'],\n  [/hotel|guest ?house|riad/i, 'accommodation.hotel'],\n  [/gym|fitness/i, 'sport.fitness'],\n  [/hair|salon|beauty|barber|spa\\b/i, 'service.beauty'],\n  [/lawyer|law firm|attorney|avocat/i, 'office.lawyer'],\n  [/car repair|garage|mechanic/i, 'service.vehicle.repair.car'],\n  [/supermarket|grocery/i, 'commercial.supermarket'],\n  [/bakery|pastry|patisserie/i, 'commercial.food_and_drink.bakery'],\n  [/school|academy|training/i, 'education.school']\n];\nconst hit = map.find(([re]) => re.test(body.niche || ''));\nreturn [{ json: {\n  lon: g.lon, lat: g.lat,\n  categories: hit ? hit[1] : 'commercial,service,office,catering',\n  name: hit ? null : body.niche\n}}];"
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst map = [\n  [/dent/i, 'healthcare.dentist'],\n  [/clinic|doctor|medical|physician|clinique|medecin/i, 'healthcare.clinic_or_praxis'],\n  [/pharmac/i, 'healthcare.pharmacy'],\n  [/restaurant/i, 'catering.restaurant'],\n  [/caf[eé]|coffee/i, 'catering.cafe'],\n  [/hotel|guest ?house|riad/i, 'accommodation.hotel'],\n  [/gym|fitness/i, 'sport.fitness'],\n  [/hair|salon|beauty|barber|spa\\b/i, 'service.beauty'],\n  [/lawyer|law firm|attorney|avocat/i, 'office.lawyer'],\n  [/car repair|garage|mechanic/i, 'service.vehicle.repair.car'],\n  [/supermarket|grocery/i, 'commercial.supermarket'],\n  [/bakery|pastry|patisserie/i, 'commercial.food_and_drink.bakery'],\n  [/school|academy|training/i, 'education.school']\n];\nconst hit = map.find(([re]) => re.test(body.niche || ''));\nconst categories = hit ? hit[1] : 'commercial,service,office,catering';\nconst name = hit ? null : body.niche;\n\n// One item per area: a drawn rectangle comes straight from Expand Areas, a city comes back from the geocoder.\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  if (j.bbox) {\n    out.push({ json: { filter: 'rect:' + j.bbox, categories, name } });\n  } else {\n    const g = (j.results || [])[0];\n    if (g) out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name } });\n  }\n}\nreturn out.length ? out : [{ json: { _empty: true } }];"
       },
       "id": "n10",
       "name": "Build Query",
@@ -58,7 +104,7 @@
         "genericAuthType": "httpQueryAuth",
         "sendQuery": true,
         "specifyQuery": "json",
-        "jsonQuery": "={{ JSON.stringify({ categories: $json.categories, filter: 'circle:' + $json.lon + ',' + $json.lat + ',10000', limit: 20, ...($json.name ? { name: $json.name } : {}) }) }}"
+        "jsonQuery": "={{ JSON.stringify({ categories: $json.categories, filter: $json.filter, limit: 20, ...($json.name ? { name: $json.name } : {}) }) }}"
       },
       "id": "n2",
       "name": "Geoapify Places",
@@ -72,7 +118,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nconst body = $('Webhook').first().json.body || {};\nconst feats = (($input.first().json.features) || []).filter(f => f.properties && f.properties.name);\nif (!feats.length) return [{ json: { _empty: true } }];\nconst fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;\nreturn feats.map(f => {\n  const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};\n  const website = fix(p.website || c.website || raw.website || raw['contact:website'] || null);\n  return { json: {\n    placeId: p.place_id || null,\n    name: p.name,\n    address: p.address_line2 || p.formatted || null,\n    phone: p.phone || c.phone || raw.phone || raw['contact:phone'] || null,\n    osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,\n    rating: null,\n    reviews: 0,\n    website,\n    fetchUrl: safeUrl(website),\n    niche: body.niche, city: body.city,\n    service: body.service, sender: body.sender\n  }};\n});"
+        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nconst body = $('Webhook').first().json.body || {};\nconst seen = new Set();\nconst feats = [];\nfor (const item of $input.all()) {\n  for (const f of ((item.json && item.json.features) || [])) {\n    if (!f.properties || !f.properties.name) continue;\n    const key = f.properties.place_id || (f.properties.name + '|' + f.properties.formatted);\n    if (seen.has(key)) continue;\n    seen.add(key);\n    feats.push(f);\n  }\n}\nif (!feats.length) return [{ json: { _empty: true } }];\nconst fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;\nreturn feats.map(f => {\n  const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};\n  const website = fix(p.website || c.website || raw.website || raw['contact:website'] || null);\n  return { json: {\n    placeId: p.place_id || null,\n    name: p.name,\n    address: p.address_line2 || p.formatted || null,\n    phone: p.phone || c.phone || raw.phone || raw['contact:phone'] || null,\n    osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,\n    rating: null,\n    reviews: 0,\n    website,\n    fetchUrl: safeUrl(website),\n    niche: body.niche, city: body.city,\n    service: body.service, sender: body.sender\n  }};\n});"
       },
       "id": "n3",
       "name": "Prepare",
@@ -167,7 +213,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.\nreturn $input.all().map(item => {\n  const l = item.json;\n  if (l._empty) return item;\n  const niche = (l.niche || '').toLowerCase();\n  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);\n  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);\n  let score = appointment ? 6 : food ? 5 : 4;\n  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];\n  const flags = [];\n  if (!l.website) { score += 2; flags.push('no website listed'); }\n  else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }\n  else if (l.siteChecked) { score += 1; flags.push('website found, no online booking seen'); }\n  else { flags.push('website could not be checked'); }\n  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {\n    score -= 2; flags.push('looks like a large organisation');\n  }\n  const ways = [];\n  if (l.phone) ways.push('phone');\n  if (l.emails && l.emails.length) ways.push('email');\n  if (l.social && l.social.length) ways.push('social page');\n  if (ways.length) { score += 1; flags.push(ways.join(', ') + ' available'); }\n  else { flags.push('no contact details found yet'); }\n  score = Math.max(1, Math.min(10, score));\n  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };\n});"
+        "jsCode": "// Contact-aware rule-based fit score (1-10).\n// Prioritizes reachable businesses so leads with a contact route rank at the top.\nreturn $input.all().map(item => {\n  const l = item.json;\n  if (l._empty) return item;\n  const niche = (l.niche || '').toLowerCase();\n  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);\n  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);\n\n  let score = appointment ? 5 : food ? 4 : 3;\n  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];\n  const flags = [];\n\n  const hasPhone = Boolean(l.phone);\n  const hasEmail = Boolean(l.emails && l.emails.length);\n  const hasSocial = Boolean(l.social && l.social.length);\n  const isReachable = hasPhone || hasEmail || hasSocial;\n\n  if (hasPhone) flags.push('phone available');\n  if (hasEmail) flags.push('email available');\n  if (hasSocial) flags.push('social profile available');\n\n  if (l.website) {\n    if (l.hasBooking) {\n      score -= 1;\n      flags.push('website already mentions online booking');\n    } else if (l.siteChecked) {\n      score += 2;\n      flags.push('website found, no online booking seen');\n    } else {\n      flags.push('website listed');\n    }\n  } else {\n    if (isReachable) {\n      score += 2;\n      flags.push('no website (prime outreach candidate)');\n    } else {\n      flags.push('no website');\n    }\n  }\n\n  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {\n    score -= 2;\n    flags.push('looks like a large organisation');\n  }\n\n  // Reachability weighting: reachable leads rank high; unreachable leads are capped\n  if (isReachable) {\n    score += (hasPhone && hasEmail ? 2 : 1);\n  } else {\n    score = Math.min(score, 3);\n    flags.push('unreachable: no phone or email found yet');\n  }\n\n  score = Math.max(1, Math.min(10, score));\n  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };\n});"
       },
       "id": "n6",
       "name": "Score",
@@ -180,7 +226,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl']) delete r[k];\n  return r;\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl']) delete r[k];\n  return r;\n});\nout.sort((a, b) => {\n  const aReachable = Boolean(a.phone || (a.emails && a.emails.length) || (a.social && a.social.length));\n  const bReachable = Boolean(b.phone || (b.emails && b.emails.length) || (b.social && b.social.length));\n  if (aReachable !== bReachable) return bReachable ? 1 : -1;\n  return b.score - a.score;\n});\nreturn [{ json: { jobId, leads: out } }];"
       },
       "id": "n7",
       "name": "Format",
@@ -206,14 +252,80 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2420,
+        2440,
         0
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookBody = $('Webhook').first().json.body || {};\nconst input = $input.first().json || {};\nconst leads = input.leads || [];\n\nconst esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst niche = esc(webhookBody.niche || 'N/A');\nconst location = esc(webhookBody.city || (webhookBody.bbox ? 'Map Bounding Box' : 'N/A'));\nconst total = leads.length;\nconst reachable = leads.filter(l => Boolean(l.phone || (l.emails && l.emails.length) || (l.social && l.social.length))).length;\n\nlet html = '🎯 <b>Leadforge Alert: New Leads Discovered!</b>\\n\\n';\nhtml += '📍 <b>Niche:</b> ' + niche + '\\n';\nhtml += '🌍 <b>Location:</b> ' + location + '\\n';\nhtml += '📊 <b>Found:</b> ' + total + ' leads (' + reachable + ' reachable)\\n\\n';\n\nif (leads.length > 0) {\n  html += '🔥 <b>Top Opportunities:</b>\\n';\n  const top = leads.slice(0, 3);\n  top.forEach((l, idx) => {\n    const contact = esc(l.phone || (l.emails && l.emails[0]) || (l.website ? 'Website listed' : 'No contact found'));\n    html += (idx + 1) + '. <b>' + esc(l.name || 'Unnamed') + '</b> (Score: ' + (l.score || 0) + '/10)\\n   📞 ' + contact + '\\n';\n  });\n} else {\n  html += '⚠️ <i>No leads were found for this search.</i>';\n}\n\nreturn [{ json: { chatId: '5285518045', text: html } }];"
+      },
+      "id": "n13",
+      "name": "Build Telegram Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "5285518045",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "n14",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2680,
+        160
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegramApi",
+          "name": "Telegram account"
+        }
+      }
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
+        [
+          {
+            "node": "Expand Areas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Areas": {
+      "main": [
+        [
+          {
+            "node": "Is Map Area",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Map Area": {
+      "main": [
+        [
+          {
+            "node": "Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Geocode City",
@@ -327,6 +439,22 @@
         [
           {
             "node": "Send Results to Backend",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
             "type": "main",
             "index": 0
           }

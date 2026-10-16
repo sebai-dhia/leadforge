@@ -1,5 +1,6 @@
 package com.leadfinder.auth;
 
+import com.leadfinder.config.AppProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -18,16 +19,26 @@ public class AuthController {
 
     public record Credentials(@Email @NotBlank String email, @NotBlank @Size(min = 8, max = 100) String password) {}
 
-    public record TokenResponse(String token, String email) {}
+    public record TokenResponse(String token, String email, String role, boolean isDemo) {}
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final TokenService tokens;
     private final AuthThrottle throttle;
+    private final ActiveSessionRegistry sessionRegistry;
+    private final AppProperties props;
+
+    @GetMapping("/demo-status")
+    public ActiveSessionRegistry.DemoStatus demoStatus() {
+        return sessionRegistry.getStatus();
+    }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse register(@Valid @RequestBody Credentials c, HttpServletRequest request) {
+        if (props.demo() != null && !props.demo().allowRegistration()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Public registration is disabled in demo mode");
+        }
         throttle.checkAndRecordRegister(request.getRemoteAddr());
         String email = c.email().trim().toLowerCase();
         if (users.existsByEmail(email)) {
@@ -37,7 +48,7 @@ public class AuthController {
         u.setEmail(email);
         u.setPasswordHash(encoder.encode(c.password()));
         users.save(u);
-        return new TokenResponse(tokens.issue(u), u.getEmail());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
     }
 
     @PostMapping("/login")
@@ -52,7 +63,11 @@ public class AuthController {
             throttle.recordLoginFailure(ip, email);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
+        if (u.isDemo() && !sessionRegistry.canAcceptVisitor()) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demo is currently full (5 active sessions). Please try again in a few minutes.");
+        }
         throttle.clearLogin(ip, email);
-        return new TokenResponse(tokens.issue(u), u.getEmail());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
     }
 }

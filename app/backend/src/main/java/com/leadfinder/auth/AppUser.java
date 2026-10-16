@@ -32,6 +32,16 @@ public class AppUser {
     @Column(nullable = false)
     private String language = "en";
 
+    @Column(nullable = false)
+    private String role = "DEMO_USER";
+
+    @Column(name = "is_demo", nullable = false)
+    private boolean isDemo = false;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
+
+    public boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(role);
+    }
 }

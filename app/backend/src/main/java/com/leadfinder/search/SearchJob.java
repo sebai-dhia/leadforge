@@ -22,6 +22,7 @@ public class SearchJob {
 
     private String niche;
     private String city;
+    private String bbox;
     private String service;
     private String sender;
 

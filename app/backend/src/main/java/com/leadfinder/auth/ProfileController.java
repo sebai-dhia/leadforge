@@ -16,9 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class ProfileController {
 
-    public record ProfileDto(String email, String offer, String displayName, String language) {
+    public record ProfileDto(String email, String offer, String displayName, String language, String role, boolean isDemo) {
         static ProfileDto of(AppUser u) {
-            return new ProfileDto(u.getEmail(), u.getOffer(), u.getDisplayName(), u.getLanguage());
+            return new ProfileDto(u.getEmail(), u.getOffer(), u.getDisplayName(), u.getLanguage(), u.getRole(), u.isDemo());
         }
     }
 
@@ -36,6 +36,9 @@ public class ProfileController {
     @PutMapping
     public ProfileDto update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateProfile req) {
         AppUser u = load(jwt);
+        if (u.isDemo()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Demo profile is read-only.");
+        }
         u.setOffer(req.offer().trim());
         u.setDisplayName(req.displayName().trim());
         u.setLanguage(req.language());

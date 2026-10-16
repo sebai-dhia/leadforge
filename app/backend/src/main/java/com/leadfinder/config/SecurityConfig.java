@@ -30,7 +30,7 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, com.leadfinder.auth.SessionActivityFilter sessionFilter) throws Exception {
         http.csrf(c -> c.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -39,7 +39,8 @@ public class SecurityConfig {
                         // /api/internal is protected by a shared secret checked in the controller
                         .requestMatchers("/api/auth/**", "/api/internal/**", "/actuator/health", "/error").permitAll()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
+                .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))
+                .addFilterAfter(sessionFilter, org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 

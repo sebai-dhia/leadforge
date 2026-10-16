@@ -9,7 +9,7 @@ export type LeadStatus = 'NEW' | 'CONTACTED' | 'REPLIED' | 'NOT_INTERESTED';
 export type LeadSort = 'score' | 'recent' | 'name';
 
 export interface Job {
-  id: number; niche: string; city: string; status: JobStatus; createdAt: string;
+  id: number; niche: string; city: string; bbox?: string; status: JobStatus; createdAt: string;
   foundCount: number | null; newCount: number | null;
 }
 
@@ -26,9 +26,14 @@ export interface EnrichResult { lead: Lead; found: string[]; note: string; sourc
 export interface Usage { used: number; limit: number; }
 export type UsageMap = Record<'search' | 'draft' | 'enrich', Usage>;
 
-export interface Profile { email: string; offer: string; displayName: string; language: Lang; }
+export interface Profile { email: string; offer: string; displayName: string; language: Lang; role?: string; isDemo?: boolean; }
 
-export interface NewSearch { niche: string; city: string; }
+export interface NewSearch {
+  niche: string;
+  city?: string;
+  cities?: string[];
+  bbox?: string;
+}
 
 /** Filters shared by the leads list and the CSV export. */
 export interface LeadFilters {
@@ -51,6 +56,14 @@ export class ApiService {
   list() { return this.http.get<Job[]>(`${API}/searches`); }
   create(s: NewSearch) { return this.http.post<Job>(`${API}/searches`, s); }
   get(id: string) { return this.http.get<{ job: Job; leads: Lead[] }>(`${API}/searches/${id}`); }
+
+  demoStatus() {
+    return this.http.get<{ demoFull: boolean; activeSessions: number; maxSessions: number; idleMinutes: number }>(`${API}/auth/demo-status`);
+  }
+
+  suggestedNiches() {
+    return this.http.get<string[]>(`${API}/searches/suggested-niches`);
+  }
 
   profile() { return this.http.get<Profile>(`${API}/profile`); }
   saveProfile(p: Pick<Profile, 'offer' | 'displayName' | 'language'>) { return this.http.put<Profile>(`${API}/profile`, p); }

@@ -27,12 +27,21 @@ The browser never talks to n8n.
    | AI Write Message (draft workflow only) | Header Auth | `x-goog-api-key` | your Gemini API key |
    | Serper Search (enrich workflow only) | Header Auth | `X-API-KEY` | your Serper key (serper.dev, free credits) |
 | Send Results to Backend | Header Auth | `X-Callback-Secret` | same as `N8N_CALLBACK_SECRET` (default `dev-callback-secret`) |
+| Telegram Alert (lead-finder workflow) | Telegram API | `Telegram account` | your Telegram Bot token from @BotFather |
 
    Publish both workflows. The AI model is `gemini-flash-lite-latest`. Use a model alias like this one: a specific retired name can return a misleading `401`.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8081, because 8080 is often taken; Flyway creates the tables).
-4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Register, fill in your profile, then search.
+4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Use quick demo accounts or register (if enabled), fill in your profile, then search.
 
 If n8n runs in Docker, set `PUBLIC_BASE_URL=http://host.docker.internal:8081` for the backend so n8n can reach the callback.
+
+## Features & Highlights
+
+- **Multi-Area & Interactive Leaflet Map**: Search across up to 3 cities/regions simultaneously or draw a bounding box directly on an interactive OpenStreetMap to discover local businesses anywhere in the world.
+- **Contact-Aware Fit Scoring**: Transparent 1-10 score that prioritizes reachable businesses (phone, direct email, active social) and caps unreachable leads at 3/10.
+- **Service-to-Niche Taxonomy**: Smart recommendation chips on the search page suggest top target niches cached by SHA-256 hash of the freelancer's profile offer.
+- **Telegram Lead Alerts**: Immediate Telegram notifications sent via n8n upon search completion with summary statistics and top opportunities.
+- **Demo Guardrails**: Public demo mode with 5 concurrent active session cap, 15-minute idle expiry, one-click demo logins (`demo1@leadforge.dev`, `demo2@leadforge.dev`), read-only demo profiles, and separate admin bypass (`admin@leadforge.dev`).
 
 ## Config (environment variables)
 

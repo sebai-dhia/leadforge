@@ -41,16 +41,21 @@ public class N8nClient {
 
     /** n8n answers immediately (Webhook responds "When received") and calls back when finished. */
     public void trigger(SearchJob job) {
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("jobId", job.getId());
+        payload.put("niche", job.getNiche());
+        payload.put("city", job.getCity());
+        if (job.getBbox() != null && !job.getBbox().isBlank()) {
+            payload.put("bbox", job.getBbox());
+        }
+        payload.put("service", job.getService());
+        payload.put("sender", job.getSender());
+        payload.put("callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results");
+
         trigger.post()
                 .uri(props.n8n().webhookUrl())
                 .header("X-Webhook-Secret", props.n8n().webhookSecret())
-                .body(Map.of(
-                        "jobId", job.getId(),
-                        "niche", job.getNiche(),
-                        "city", job.getCity(),
-                        "service", job.getService(),
-                        "sender", job.getSender(),
-                        "callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results"))
+                .body(payload)
                 .retrieve()
                 .toBodilessEntity();
     }

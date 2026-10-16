@@ -116,6 +116,33 @@ class ApiIntegrationTest extends IntegrationTestBase {
         mvc.perform(get("/api/usage").with(as(u))).andExpect(jsonPath("$.search.used").value(0));
     }
 
+    @Test
+    void searchWithMultipleCitiesJoinsIntoCompositeArea() throws Exception {
+        AppUser u = newUser("multi@x.tn", true);
+        String multiCitySearch = "{\"niche\":\"dentists\",\"cities\":[\"Tunis\",\"Ariana\",\"La Marsa\"]}";
+        mvc.perform(post("/api/searches").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(multiCitySearch))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.city").value("Tunis | Ariana | La Marsa"));
+    }
+
+    @Test
+    void searchWithBboxStoresBoundingBox() throws Exception {
+        AppUser u = newUser("bbox@x.tn", true);
+        String bboxSearch = "{\"niche\":\"dentists\",\"bbox\":\"10.12,36.80,10.25,36.88\"}";
+        mvc.perform(post("/api/searches").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(bboxSearch))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.bbox").value("10.12,36.80,10.25,36.88"))
+                .andExpect(jsonPath("$.city").value(containsString("Map Area")));
+    }
+
+    @Test
+    void searchWithNoLocationReturnsBadRequest() throws Exception {
+        AppUser u = newUser("noloc@x.tn", true);
+        String noLoc = "{\"niche\":\"dentists\"}";
+        mvc.perform(post("/api/searches").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(noLoc))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---------------------------------------------------------------- messages and contact lookups
 
     @Test
