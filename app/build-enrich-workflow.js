@@ -53,7 +53,7 @@ const searchFailed = !!r.error && !r.organic;
 const msg = String((r.error && (r.error.message || r.error)) || '');
 const searchProblem = !searchFailed ? '' : /401|403|unauthor|invalid/i.test(msg) ? 'key' : /402|429|credit|quota|limit/i.test(msg) ? 'quota' : 'other';
 
-const DIRECTORY = /(^|\.)(facebook|instagram|linkedin|twitter|tiktok|youtube|pinterest|tripadvisor|booking|yelp|pagesjaunes|foursquare|google|wikipedia|expedia|agoda|kayak|trivago|hotels|airbnb|mapcarta|zomato|opentable|thefork|yellowpages|waze|bing|yahoo|duckduckgo)\./i;
+const DIRECTORY = /(^|\.)(facebook|instagram|linkedin|twitter|tiktok|youtube|pinterest|tripadvisor|booking|yelp|pagesjaunes|foursquare|google|wikipedia|expedia|agoda|kayak|trivago|hotels|airbnb|mapcarta|zomato|opentable|thefork|yellowpages|waze|bing|yahoo|duckduckgo|med|pharmaboardroom|kompass|europages|cylex|hotfrog|opendi|jumia|tayara|annuaire|doctolib|doctoranytime|tabibi|drest|tripadvisor|restaurantguru|cybo|local|infobel|societe|pagesjaunes)\./i;
 const known = safeUrl(b.website);
 const kind = nicheRe(b.niche);
 const phoneDigits = String(b.phone || '').replace(/\D/g, '').slice(-8);
@@ -114,7 +114,9 @@ const phoneKey = String(b.phone || '').replace(/\D/g, '').slice(-8);
 const text = plainText(homeHtml);
 const kind = nicheRe(b.niche);
 const phoneHit = phoneKey.length >= 6 && homeHtml.replace(/\D/g, '').includes(phoneKey);
-const verified = !c.needsVerify || (a.length > 0 && (phoneHit || (ratio(b.leadName, text) >= 0.6 && !!kind && kind.test(norm(text)))));
+// An online shop that sells a brand is not a local business of that name, even if its menus mention "beauty".
+const shopSignals = (norm(text).match(/panier|add to cart|ajouter au panier|checkout|livraison gratuite|cart\b/g) || []).length;
+const verified = !c.needsVerify || (a.length > 0 && (phoneHit || (shopSignals < 3 && ratio(b.leadName, text) >= 0.6 && !!kind && kind.test(norm(text)))));
 
 let website = null, emails = [], phones = [], social = [...(c.social || []), ...(verified ? [...a.social, ...k.social] : [])];
 if (verified) {
