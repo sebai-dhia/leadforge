@@ -47,7 +47,7 @@ import { ApiService, Lang } from './api.service';
           @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
           <div class="actions">
             <button type="submit" [disabled]="saving() || isDemo()">{{ saving() ? 'Saving…' : 'Save profile' }}</button>
-            @if (saved()) { <span class="ok" role="status">Saved. <a routerLink="/">Start a search</a></span> }
+            @if (saved()) { <span class="ok" role="status">Saved. <a routerLink="/searches">Start a search</a></span> }
           </div>
         </form>
       }

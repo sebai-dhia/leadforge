@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { AreaPipe } from './area.pipe';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,7 +8,7 @@ import { AreaMapSelector } from './area-map-selector';
 
 @Component({
   selector: 'app-searches',
-  imports: [FormsModule, RouterLink, DatePipe, AreaMapSelector],
+  imports: [AreaPipe, FormsModule, RouterLink, DatePipe, AreaMapSelector],
   template: `
     <h1>Find leads</h1>
 
@@ -83,8 +84,8 @@ import { AreaMapSelector } from './area-map-selector';
       @for (j of jobs(); track j.id) {
         <a class="card row link" [routerLink]="['/searches', j.id]">
           <span>
-            <strong>{{ j.niche }}</strong> in {{ j.city }}
-            @if (j.bbox) { <span class="mute" style="font-size: 11px;">[Map area]</span> }
+            <strong>{{ j.niche }}</strong> in {{ j.city | area }}
+            
           </span>
           <span class="mute">
             @if (j.status === 'DONE' && j.foundCount !== null) { {{ j.foundCount }} found, {{ j.newCount }} new · }

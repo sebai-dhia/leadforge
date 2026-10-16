@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { AreaPipe } from './area.pipe';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,7 +10,7 @@ type StatusFilter = LeadStatus | 'ALL';
 
 @Component({
   selector: 'app-leads',
-  imports: [FormsModule, RouterLink, DatePipe, LeadCard],
+  imports: [AreaPipe, FormsModule, RouterLink, DatePipe, LeadCard],
   template: `
     <div class="page-head">
       <h1>Your leads</h1>
@@ -36,7 +37,7 @@ type StatusFilter = LeadStatus | 'ALL';
           <select id="search" [ngModel]="searchId()" (ngModelChange)="setSearch($event)">
             <option [ngValue]="0">All searches</option>
             @for (j of jobs(); track j.id) {
-              <option [ngValue]="j.id">{{ j.niche }} in {{ j.city }} ({{ j.createdAt | date: 'MMM d, HH:mm' }})</option>
+              <option [ngValue]="j.id">{{ j.niche }} in {{ j.city | area }} ({{ j.createdAt | date: 'MMM d, HH:mm' }})</option>
             }
           </select>
         </label>

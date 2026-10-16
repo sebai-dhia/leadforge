@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { AreaPipe } from './area.pipe';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus } from './api.service';
 
@@ -13,14 +14,14 @@ export function whatsappDigits(phone: string | null): string | null {
 
 @Component({
   selector: 'app-lead-card',
-  imports: [FormsModule],
+  imports: [AreaPipe, FormsModule],
   template: `
     <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED'" [class.compact]="collapsible()">
       @if (collapsible()) {
         <button type="button" class="lead-head" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
           <span class="lead-title">
             <bdi class="lead-name">{{ current().name }}</bdi>
-            @if (current().niche) { <span class="mute">{{ current().niche }} · {{ current().city }}</span> }
+            @if (current().niche) { <span class="mute">{{ current().niche }} · {{ current().city | area }}</span> }
           </span>
           <span class="lead-meta">
             <span class="fit" [attr.data-level]="fit().level">{{ fit().label }} <span class="num">{{ current().score }}/10</span></span>

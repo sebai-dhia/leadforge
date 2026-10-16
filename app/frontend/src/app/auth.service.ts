@@ -32,10 +32,12 @@ export class AuthService {
 
   login(email: string, password: string) { return this.auth('login', email, password); }
   register(email: string, password: string) { return this.auth('register', email, password); }
+  /** One-click sign-in for the shared public demo accounts. */
+  demoLogin(which: 1 | 2) { return this.login(`demo${which}@leadforge.dev`, 'demo1234'); }
 
   logout() {
     this.set(null, null, null, false);
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/');
   }
 
   private auth(kind: 'login' | 'register', email: string, password: string) {

@@ -1,4 +1,5 @@
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { AreaPipe } from './area.pipe';
 import { RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadStatus } from './api.service';
 import { LeadCard } from './lead-card';
@@ -7,14 +8,14 @@ type Filter = LeadStatus | 'ALL';
 
 @Component({
   selector: 'app-search-detail',
-  imports: [RouterLink, LeadCard],
+  imports: [AreaPipe, RouterLink, LeadCard],
   template: `
-    <p><a routerLink="/searches">← All searches</a> · <a routerLink="/">All your leads</a></p>
+    <p><a routerLink="/searches">← All searches</a> · <a routerLink="/leads">All your leads</a></p>
 
     @if (!job()) {
       <div class="card skeleton-card" aria-busy="true" aria-label="Loading"><span></span><span></span><span></span></div>
     } @else {
-      <h1>{{ job()!.niche }} in {{ job()!.city }}</h1>
+      <h1>{{ job()!.niche }} in {{ job()!.city | area }}</h1>
 
       @switch (job()!.status) {
         @case ('PENDING') {
