@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
       }
     </header>
     <main><router-outlet /></main>
+    <footer>Place data by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> and OpenStreetMap contributors</footer>
   `,
 })
 export class App {

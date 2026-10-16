@@ -21,7 +21,8 @@ import { ApiService, Job, Lead } from './api.service';
             <span class="score">Fit {{ l.score }}/10</span>
           </div>
           <div class="mute">
-            {{ l.address }} · <a [href]="l.website" target="_blank" rel="noopener">website</a>
+            {{ l.address }}
+            @if (l.website) { · <a [href]="l.website" target="_blank" rel="noopener">website</a> } @else { · no website listed }
             @if (l.phone) { · {{ l.phone }} }
             @if (l.rating) { · ★ {{ l.rating }} ({{ l.reviews }}) }
           </div>
@@ -29,7 +30,7 @@ import { ApiService, Job, Lead } from './api.service';
           @if (l.emails.length) {
             <div class="mute">Email found: {{ l.emails.join(', ') }}</div>
           } @else {
-            <div class="warn">No email found on the website. Try the contact form or phone.</div>
+            <div class="warn">No email found. Try the phone number or look for their Facebook page.</div>
           }
           <details>
             <summary>Draft email</summary>

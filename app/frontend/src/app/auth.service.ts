@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 
-export const API = 'http://localhost:8080/api';
+export const API = 'http://localhost:8081/api';
 
 interface TokenResponse { token: string; email: string; }
 

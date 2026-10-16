@@ -11,8 +11,8 @@ import { ApiService, Job } from './api.service';
     <form class="card" (ngSubmit)="submit()">
       <h1>New search</h1>
       <div class="grid">
-        <label>Business type <input name="niche" required placeholder="dental clinics" [(ngModel)]="form.niche"></label>
-        <label>City <input name="city" required placeholder="Lyon" [(ngModel)]="form.city"></label>
+        <label>Business type <input name="niche" required placeholder="dental clinics, restaurants, hotels…" [(ngModel)]="form.niche"></label>
+        <label>City <input name="city" required placeholder="Tunis, Tunisia" [(ngModel)]="form.city"></label>
         <label class="full">What you offer
           <textarea name="service" rows="2" required placeholder="Custom booking systems and internal tools for small businesses"
             [(ngModel)]="form.service"></textarea></label>
