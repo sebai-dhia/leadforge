@@ -71,4 +71,11 @@ class EmailRankerTest {
         assertTrue(EmailRanker.rank(List.of(), "x.tn").isEmpty());
         assertTrue(EmailRanker.rank(java.util.Arrays.asList((String) null, "info@x.tn"), "x.tn").contains("info@x.tn"));
     }
+
+    @Test
+    void templatePlaceholdersAreRemoved() {
+        List<String> ranked = EmailRanker.rank(List.of(
+                "votreadresse@mail.com", "votre-email@gmail.com", "adresse@x.tn", "your-email@x.tn", "info@x.tn"), "x.tn");
+        assertEquals(List.of("info@x.tn"), ranked);
+    }
 }

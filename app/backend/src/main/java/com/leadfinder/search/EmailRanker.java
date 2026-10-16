@@ -19,6 +19,7 @@ final class EmailRanker {
     /** Not a real inbox: senders that never read replies, and template placeholders. */
     private static final Pattern JUNK_LOCAL = Pattern.compile(
             "^(no-?reply|do-?not-?reply|donotreply|mailer-daemon|postmaster|abuse|webmaster|hostmaster|root|"
+                    + "votre[-._]?(adresse|email|mail|nom)|ton[-._]?(adresse|email)|(your|my)[-._]?(email|address|mail)|adresse|exemple|example|prenom[-._]?nom|nom[-._]?prenom|"
                     + "unsubscribe|bounces?|newsletter|you|your-?name|name|user|username|email|mail|test|sample|john\\.?doe)$");
 
     private static final Set<String> JUNK_DOMAINS = Set.of(

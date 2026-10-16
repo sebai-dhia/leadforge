@@ -1,43 +1,95 @@
 // Generates n8n/enrich-contact.workflow.json (run: node build-enrich-workflow.js)
-// Flow: Webhook -> web search for the business's own pages -> fetch its site and contact page -> Respond.
-// The facts returned (emails, phones, social links) come from pages we fetched; the search only suggests where to look.
+// Flow: Webhook -> search the web (Serper) for the business -> pick candidates that match its name
+//       -> fetch its site and contact page -> verify the page really belongs to the business -> Respond.
+// No AI is used: matching is by name tokens, so it is fast, cheap and explainable.
+// Facts returned (emails, phones, social links) come from pages we fetched or from search results.
 const fs = require('fs');
 const { SAFE_URL, CONTACT_LINK, SCRAPE } = require('./workflow-snippets');
 
-const promptCode = String.raw`
-const b = ($input.first().json || {}).body || {};
-const prompt = [
-  'Find the official online presence of this local business using web search.',
-  'Business: ' + b.leadName,
-  b.address ? 'Address: ' + b.address : null,
-  b.city ? 'City: ' + b.city : null,
-  b.niche ? 'Category: ' + b.niche : null,
-  b.website ? 'Known website: ' + b.website : 'No website is known.',
-  '',
-  'Reply with ONLY JSON: {"website": string or null, "facebook": string or null, "instagram": string or null}.',
-  'Rules: give only URLs that appear in the search results and clearly belong to THIS business in THIS city. If you are not sure, use null. Never guess or build a URL yourself.'
-].filter(x => x !== null).join('\n');
-return [{ json: { prompt } }];
+// Shared by Pick Candidates and Collect. Accents are removed, generic words are ignored, and a
+// result only counts when most of the distinctive words of the business name appear in it.
+const NAME_MATCH = String.raw`
+const STOP = new Set(['hotel','hotels','cabinet','dr','dre','docteur','doctor','clinique','clinic','restaurant','cafe','salon','coiffure',
+  'pharmacie','pharmacy','the','and','des','les','chez','tunis','tunisie','tunisia','dentaire','dentiste','avocat','maitre','spa','gym','fitness']);
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const tokens = s => norm(s).split(/[^\p{L}\p{N}]+/u).filter(t => t.length >= 3 && !STOP.has(t));
+const ratio = (needle, hay) => {
+  const t = tokens(needle);
+  if (!t.length) return 0;
+  const h = norm(hay);
+  return t.filter(x => h.includes(x)).length / t.length;
+};
+// What a page of this kind of business talks about. A page that shares the name but none of these is
+// probably a different business (a fashion brand called "NafNaf" is not a hair salon).
+const NICHES = [
+  [/dent/i, 'dentist|dentaire|dentiste|dental|orthodon|\u0623\u0633\u0646\u0627\u0646'],
+  [/clinic|doctor|medical|physician|clinique|medecin/i, 'clinique|clinic|medecin|docteur|doctor|patient|consultation|sante|health|\u0637\u0628\u064a\u0628|\u0639\u064a\u0627\u062f\u0629'],
+  [/pharmac/i, 'pharmacie|pharmacy|medicament|ordonnance|\u0635\u064a\u062f\u0644'],
+  [/restaurant/i, 'restaurant|menu|cuisine|plats?\\b|chef|\u0645\u0637\u0639\u0645'],
+  [/caf[e\u00e9]|coffee/i, 'cafe|coffee|boisson|\u0645\u0642\u0647\u0649'],
+  [/hotel|guest ?house|riad/i, 'hotel|chambre|rooms?\\b|suite|sejour|resort|guest|\u0641\u0646\u062f\u0642'],
+  [/gym|fitness/i, 'gym|fitness|musculation|coach|abonnement|\u0646\u0627\u062f\u064a'],
+  [/hair|salon|beauty|barber|spa\b/i, 'coiffure|coiffeu|hair|barber|beaute|beauty|esthetique|manucure|\u062d\u0644\u0627\u0642|\u062a\u062c\u0645\u064a\u0644'],
+  [/lawyer|law firm|attorney|avocat/i, 'avocat|lawyer|law firm|juridique|\u0645\u062d\u0627\u0645'],
+  [/car repair|garage|mechanic/i, 'garage|mecanique|automobile|voiture|vidange|reparation'],
+  [/supermarket|grocery/i, 'supermarche|supermarket|courses|hypermarche|rayon'],
+  [/bakery|pastry|patisserie/i, 'boulangerie|patisserie|bakery|gateau|viennoiserie'],
+  [/school|academy|training/i, 'ecole|school|formation|eleves|enseignement|\u0645\u062f\u0631\u0633\u0629']
+];
+const nicheRe = niche => { const hit = NICHES.find(([re]) => re.test(niche || '')); return hit ? new RegExp(hit[1], 'i') : null; };
+const plainText = html => String(html || '').replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ');
 `.trim();
 
-const pickCode = SAFE_URL + '\n' + String.raw`
+const queryCode = String.raw`
+const b = ($input.first().json || {}).body || {};
+const q = [b.leadName, b.city].filter(Boolean).join(' ').trim().slice(0, 200);
+return [{ json: { q } }];
+`.trim();
+
+const pickCode = SAFE_URL + '\n' + NAME_MATCH + '\n' + String.raw`
 const b = $('Webhook').first().json.body || {};
 const r = $input.first().json || {};
-let cand = {};
-try {
-  const raw = (r.candidates && r.candidates[0].content.parts.map(p => p.text || '').join('')) || '';
-  cand = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) || {};
-} catch (e) { cand = {}; }
-const chunks = (r.candidates && r.candidates[0].groundingMetadata && r.candidates[0].groundingMetadata.groundingChunks) || [];
-const sources = [...new Set(chunks.map(c => c.web && c.web.title).filter(Boolean))].slice(0, 5);
+const searchFailed = !!r.error && !r.organic;
+const msg = String((r.error && (r.error.message || r.error)) || '');
+const searchProblem = !searchFailed ? '' : /401|403|unauthor|invalid/i.test(msg) ? 'key' : /402|429|credit|quota|limit/i.test(msg) ? 'quota' : 'other';
+
+const DIRECTORY = /(^|\.)(facebook|instagram|linkedin|twitter|tiktok|youtube|pinterest|tripadvisor|booking|yelp|pagesjaunes|foursquare|google|wikipedia|expedia|agoda|kayak|trivago|hotels|airbnb|mapcarta|zomato|opentable|thefork|yellowpages|waze|bing|yahoo|duckduckgo)\./i;
 const known = safeUrl(b.website);
-const suggested = safeUrl(cand.website);
+const kind = nicheRe(b.niche);
+const phoneDigits = String(b.phone || '').replace(/\D/g, '').slice(-8);
+const organic = Array.isArray(r.organic) ? r.organic : [];
+let website = null, websiteTitle = null;
+const social = [], sources = [];
+
+for (const it of organic) {
+  const p = parseUrl(it.link);
+  if (!p) continue;
+  const host = p.hostname.replace(/^www\./, '');
+  const pathText = decodeURIComponent((p.rest || '').split(/[?#]/)[0].replace(/[-_.\/]+/g, ' '));
+  const hay = (it.title || '') + ' ' + (it.snippet || '') + ' ' + pathText;
+  if (/(^|\.)(facebook|instagram)\.com$/i.test(host)) {
+    const sHay = (it.title || '') + ' ' + (it.snippet || '');
+    const sameKind = (kind && kind.test(norm(sHay + ' ' + host + ' ' + pathText))) || (phoneDigits.length >= 6 && sHay.replace(/\D/g, '').includes(phoneDigits));
+    if (social.length < 2 && sameKind && ratio(b.leadName, (it.title || '') + ' ' + pathText) >= 0.6) { social.push(it.link); if (it.title) sources.push(it.title); }
+    continue;
+  }
+  if (DIRECTORY.test(host + '.')) continue;
+  if (!website && ratio(b.leadName, hay + ' ' + host) >= 0.6) {
+    const safe = safeUrl(it.link);
+    if (safe) { website = safe; websiteTitle = it.title || null; }
+  }
+}
+const kg = r.knowledgeGraph;
+if (!known && !website && kg && kg.website && ratio(b.leadName, kg.title || '') >= 0.6) {
+  const safe = safeUrl(kg.website);
+  if (safe) { website = safe; websiteTitle = kg.title || null; }
+}
+if (websiteTitle) sources.unshift(websiteTitle);
 return [{ json: {
-  fetchUrl: known || suggested || null,
-  foundWebsite: !known && suggested ? suggested : null,
-  social: [cand.facebook, cand.instagram].filter(x => typeof x === 'string'),
-  sources,
-  searchFailed: !!r.error
+  fetchUrl: known || website || null,
+  foundWebsite: !known && website ? website : null,
+  needsVerify: !known && !!website,
+  social, sources: sources.slice(0, 3), searchFailed, searchProblem, results: organic.length
 }}];
 `.trim();
 
@@ -48,26 +100,49 @@ const html = item && item.json && typeof item.json.data === 'string' ? item.json
 return [{ json: { contactUrl: base ? contactLink(html, base) : null } }];
 `.trim();
 
-const collectCode = SCRAPE + '\n' + String.raw`
+const collectCode = SCRAPE + '\n' + NAME_MATCH + '\n' + String.raw`
+const b = $('Webhook').first().json.body || {};
 const c = $('Pick Candidates').first().json;
 const home = $('Fetch Site').first();
 const contact = $input.first();
-const a = scrape(home && home.json ? home.json.data : '');
-const b = scrape(contact && contact.json ? contact.json.data : '');
-const social = [...new Set([...(c.social || []), ...a.social, ...b.social])];
+const homeHtml = home && home.json && typeof home.json.data === 'string' ? home.json.data : '';
+const a = scrape(homeHtml);
+const k = scrape(contact && contact.json ? contact.json.data : '');
+
+// A website found by search must mention the business name, or its phone number, before we trust it.
+const phoneKey = String(b.phone || '').replace(/\D/g, '').slice(-8);
+const text = plainText(homeHtml);
+const kind = nicheRe(b.niche);
+const phoneHit = phoneKey.length >= 6 && homeHtml.replace(/\D/g, '').includes(phoneKey);
+const verified = !c.needsVerify || (a.length > 0 && (phoneHit || (ratio(b.leadName, text) >= 0.6 && !!kind && kind.test(norm(text)))));
+
+let website = null, emails = [], phones = [], social = [...(c.social || []), ...(verified ? [...a.social, ...k.social] : [])];
+if (verified) {
+  website = c.foundWebsite || null;
+  emails = [...new Set([...a.emails, ...k.emails])].slice(0, 8);
+  phones = [...new Set([...a.phones, ...k.phones])].slice(0, 3);
+}
+social = [...new Set(social)].slice(0, 6);
+
 let note;
-if (!c.fetchUrl && !social.length) note = c.searchFailed ? 'The web search is unavailable right now. Try again later.' : 'No website or social page could be found for this business.';
-else if (c.fetchUrl && a.length === 0) note = 'The website did not respond.';
-else if (c.fetchUrl) note = 'Checked the website and its contact page.';
-else note = 'No website found. Social pages were found by web search; check they belong to this business.';
-return [{ json: {
-  website: c.foundWebsite || null,
-  emails: [...new Set([...a.emails, ...b.emails])].slice(0, 8),
-  phones: [...new Set([...a.phones, ...b.phones])].slice(0, 3),
-  social: social.slice(0, 6),
-  sources: c.sources || [],
-  note
-}}];
+if (c.searchFailed) {
+  note = c.searchProblem === 'key' ? 'The search service rejected its API key. Check the key in n8n.'
+    : c.searchProblem === 'quota' ? 'The search service has no credits or requests left.'
+    : 'The search service is unavailable right now. Try again later.';
+} else if (c.needsVerify && !verified) {
+  note = 'A possible website was found, but its page does not clearly belong to this business (name, phone or type of business do not match), so it was ignored.';
+} else if (c.fetchUrl && a.length === 0) {
+  note = 'The website did not respond.';
+} else if (c.fetchUrl && c.needsVerify) {
+  note = 'Found the website by web search and confirmed it mentions this business. Checked its contact page too.';
+} else if (c.fetchUrl) {
+  note = 'Checked the website and its contact page.';
+} else if (social.length) {
+  note = 'No website found. Social pages were found by search; check they belong to this business.';
+} else {
+  note = c.results ? 'The search found no website or social page that clearly matches this business.' : 'The search returned nothing for this business.';
+}
+return [{ json: { website, emails, phones, social, sources: c.sources || [], note } }];
 `.trim();
 
 const pageOptions = { timeout: 8000, response: { response: { responseFormat: 'text' } } };
@@ -81,19 +156,19 @@ const workflow = {
       webhookId: 'enrich-contact-backend'
     },
     {
-      parameters: { jsCode: promptCode },
-      id: 'e2', name: 'Build Search Prompt', type: 'n8n-nodes-base.code', typeVersion: 2, position: [220, 0]
+      parameters: { jsCode: queryCode },
+      id: 'e2', name: 'Build Query', type: 'n8n-nodes-base.code', typeVersion: 2, position: [220, 0]
     },
     {
       parameters: {
-        method: 'POST',
-        url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent',
+        method: 'POST', url: 'https://google.serper.dev/search',
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0, maxOutputTokens: 600 } }) }}"
+        jsonBody: '={{ JSON.stringify({ q: $json.q, num: 10 }) }}',
+        options: { timeout: 15000 }
       },
-      id: 'e3', name: 'AI Web Search', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [440, 0],
-      retryOnFail: true, maxTries: 2, waitBetweenTries: 2000,
+      id: 'e3', name: 'Serper Search', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [440, 0],
+      retryOnFail: true, maxTries: 2, waitBetweenTries: 1500,
       onError: 'continueRegularOutput'
     },
     {
@@ -124,9 +199,9 @@ const workflow = {
     }
   ],
   connections: {
-    'Webhook': { main: [[{ node: 'Build Search Prompt', type: 'main', index: 0 }]] },
-    'Build Search Prompt': { main: [[{ node: 'AI Web Search', type: 'main', index: 0 }]] },
-    'AI Web Search': { main: [[{ node: 'Pick Candidates', type: 'main', index: 0 }]] },
+    'Webhook': { main: [[{ node: 'Build Query', type: 'main', index: 0 }]] },
+    'Build Query': { main: [[{ node: 'Serper Search', type: 'main', index: 0 }]] },
+    'Serper Search': { main: [[{ node: 'Pick Candidates', type: 'main', index: 0 }]] },
     'Pick Candidates': { main: [[{ node: 'Fetch Site', type: 'main', index: 0 }]] },
     'Fetch Site': { main: [[{ node: 'Find Contact Link', type: 'main', index: 0 }]] },
     'Find Contact Link': { main: [[{ node: 'Fetch Contact Page', type: 'main', index: 0 }]] },

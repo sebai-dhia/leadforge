@@ -78,7 +78,8 @@ function scrape(html) {
   const plain = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
   const emails = [...new Set([...mailto, ...plain].map(e => e.toLowerCase()))]
     .filter(e => !/\.(png|jpe?g|gif|svg|webp|ico|css|js)$/.test(e));
-  const social = [...new Set(html.match(/https?:\/\/(?:www\.|m\.)?(?:facebook|instagram)\.com\/[^\s"'<>)\\]+/gi) || [])];
+  const social = [...new Set(html.match(/https?:\/\/(?:www\.|m\.)?(?:facebook|instagram)\.com\/[^\s"'<>)\\]+/gi) || [])]
+    .filter(u => !/\.com\/(tr|sharer|share|plugins|dialog|login|policies)([?\/]|$)/i.test(u));
   const tel = (html.match(/href\s*=\s*["']tel:([^"']+)["']/gi) || [])
     .map(x => decodeURIComponent(x.replace(/^[^:]*tel:/i, '').replace(/["']$/, '')).trim())
     .filter(p => p.replace(/\D/g, '').length >= 8);
