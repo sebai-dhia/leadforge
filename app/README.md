@@ -17,7 +17,7 @@ The browser never talks to n8n. A search creates a `PENDING` job, n8n works in t
    |---|---|---|
    | Webhook node | `X-Webhook-Secret` | same as `N8N_WEBHOOK_SECRET` (default `dev-webhook-secret`) |
    | Google Places Search | `X-Goog-Api-Key` | your Google key (Places API New) |
-   | Claude Score and Draft | `x-api-key` | your Anthropic key |
+   | Gemini Score and Draft | `x-goog-api-key` | your Gemini (Google AI Studio) key |
    | Send Results to Backend | `X-Callback-Secret` | same as `N8N_CALLBACK_SECRET` (default `dev-callback-secret`) |
    Activate the workflow.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8080; Flyway creates the tables).

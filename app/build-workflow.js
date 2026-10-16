@@ -1,5 +1,5 @@
 // Generates n8n/lead-finder.workflow.json for the Spring Boot backend (run: node build-workflow.js)
-// Flow: Webhook (responds at once) -> Places -> fetch sites -> Claude -> POST results to backend callback.
+// Flow: Webhook (responds at once) -> Places -> fetch sites -> Gemini -> POST results to backend callback.
 const fs = require('fs');
 
 const prepareCode = `
@@ -57,7 +57,7 @@ $input.all().forEach((item, i) => {
   delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;
   let r = {};
   try {
-    const raw = item.json.content[0].text;
+    const raw = item.json.candidates[0].content.parts[0].text;
     r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }
   out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });
@@ -111,14 +111,12 @@ const workflow = {
     },
     {
       parameters: {
-        method: 'POST', url: 'https://api.anthropic.com/v1/messages',
+        method: 'POST', url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
-        sendHeaders: true,
-        headerParameters: { parameters: [{ name: 'anthropic-version', value: '2023-06-01' }] },
         sendBody: true, specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 800, messages: [{ role: 'user', content: $json.prompt }] }) }}"
+        jsonBody: "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1000 } }) }}"
       },
-      id: 'n6', name: 'Claude Score and Draft', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1100, 0],
+      id: 'n6', name: 'Gemini Score and Draft', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1100, 0],
       onError: 'continueRegularOutput'
     },
     {
@@ -140,8 +138,8 @@ const workflow = {
     'Google Places Search': { main: [[{ node: 'Prepare', type: 'main', index: 0 }]] },
     'Prepare': { main: [[{ node: 'Fetch Website', type: 'main', index: 0 }]] },
     'Fetch Website': { main: [[{ node: 'Extract', type: 'main', index: 0 }]] },
-    'Extract': { main: [[{ node: 'Claude Score and Draft', type: 'main', index: 0 }]] },
-    'Claude Score and Draft': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
+    'Extract': { main: [[{ node: 'Gemini Score and Draft', type: 'main', index: 0 }]] },
+    'Gemini Score and Draft': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
     'Format': { main: [[{ node: 'Send Results to Backend', type: 'main', index: 0 }]] }
   },
   settings: { executionOrder: 'v1' }

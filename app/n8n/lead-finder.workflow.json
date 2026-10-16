@@ -98,24 +98,15 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            }
-          ]
-        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 800, messages: [{ role: 'user', content: $json.prompt }] }) }}"
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1000 } }) }}"
       },
       "id": "n6",
-      "name": "Claude Score and Draft",
+      "name": "Gemini Score and Draft",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -126,7 +117,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst leads = $('Extract').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const lead = { ...leads[i].json };\n  if (lead._empty) return;\n  delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;\n  let r = {};\n  try {\n    const raw = item.json.content[0].text;\n    r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));\n  } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }\n  out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst leads = $('Extract').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const lead = { ...leads[i].json };\n  if (lead._empty) return;\n  delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;\n  let r = {};\n  try {\n    const raw = item.json.candidates[0].content.parts[0].text;\n    r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));\n  } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }\n  out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
       },
       "id": "n7",
       "name": "Format",
@@ -206,14 +197,14 @@
       "main": [
         [
           {
-            "node": "Claude Score and Draft",
+            "node": "Gemini Score and Draft",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Claude Score and Draft": {
+    "Gemini Score and Draft": {
       "main": [
         [
           {
