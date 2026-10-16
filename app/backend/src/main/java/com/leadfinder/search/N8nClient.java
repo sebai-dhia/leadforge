@@ -7,11 +7,16 @@ import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @Component
 public class N8nClient {
     public record Draft(String subject, String body) {}
+
+    /** Contact details found for one business by the on-demand lookup. */
+    public record Enrichment(String website, List<String> emails, List<String> phones, List<String> social,
+                             List<String> sources, String note) {}
 
     private final AppProperties props;
     private final RestClient trigger;
@@ -48,6 +53,16 @@ public class N8nClient {
                         "callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results"))
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    /** Asks the n8n "enrich-contact" workflow to look for contact details; it answers when done. */
+    public Enrichment enrich(Map<String, Object> request) {
+        return draft.post()
+                .uri(props.n8n().enrichUrl())
+                .header("X-Webhook-Secret", props.n8n().webhookSecret())
+                .body(request)
+                .retrieve()
+                .body(Enrichment.class);
     }
 
     /** Asks the n8n "draft-message" workflow to write one message; it answers when the AI is done. */

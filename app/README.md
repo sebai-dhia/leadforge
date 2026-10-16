@@ -64,3 +64,12 @@ When a search reports a business, the backend looks for an existing lead of the 
 - Messages are drafts written from the listed facts only. Read and correct them before sending.
 - Tests: `./mvnw test -Dtest='LeadMatchingTest,LeadCsvTest'` (pure unit tests). `BackendApplicationTests` needs the database running.
 - Not included yet: per-user quotas, rate limiting, email verification, refresh tokens, integration tests, notes on a lead.
+
+## Limits, contact lookup and tests (added later)
+
+- Daily limits per user (rolling 24 h): 20 searches, 100 messages, 50 contact lookups (LIMIT_SEARCHES_PER_DAY, LIMIT_DRAFTS_PER_DAY, LIMIT_ENRICH_PER_DAY). A failed n8n call is refunded. GET /api/usage shows the counters; the API answers 429 at the limit.
+- Login throttle: 5 failed logins per address and email, then 429 for 15 minutes. Sign-ups: 10 per address per hour. State is in memory (one backend instance).
+- Contact data: search results also read the contact page, collect Facebook and Instagram links, and rank emails (business inboxes first, privacy and no-reply addresses last). POST /api/leads/{id}/enrich (workflow n8n/enrich-contact.workflow.json) fills missing website, phone, emails and social pages. Its web-search step needs Gemini search grounding, which returned 429 on the current key, so without a known website it may find nothing.
+- n8n Code nodes have no URL global: addresses are parsed by hand in workflow-snippets.js, and only public http(s) websites are fetched. Run n8n with no access to internal services.
+- Known limit: a chain hotel whose website is the chain directory page can get the chain social pages.
+- Tests: ./mvnw test (needs docker compose up -d; integration tests use the leadfinder_test database, created automatically). Workflow Code nodes are tested locally with the scripts used during development.

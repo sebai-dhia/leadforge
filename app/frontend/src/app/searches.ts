@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiService, Job } from './api.service';
+import { ApiService, Job, Usage } from './api.service';
 
 @Component({
   selector: 'app-searches',
@@ -27,13 +27,18 @@ import { ApiService, Job } from './api.service';
           <input id="city" name="city" required maxlength="120" placeholder="Tunis, Tunisia" [(ngModel)]="form.city">
         </label>
         <div class="end">
-          <button type="submit" [disabled]="busy() || profileReady() === false">{{ busy() ? 'Starting…' : 'Find leads' }}</button>
+          <button type="submit" [disabled]="busy() || profileReady() === false || limitReached()">{{ busy() ? 'Starting…' : 'Find leads' }}</button>
         </div>
       </div>
       <datalist id="niches">
         @for (n of niches; track n) { <option [value]="n"></option> }
       </datalist>
-      <p class="help">Each search returns up to 20 businesses and takes about a minute. Pick a type from the list for the best match.</p>
+      <p class="help">
+        Each search returns up to 20 businesses. Pick a type from the list for the best match.
+        @if (usage(); as u) {
+          <span [class.err]="u.used >= u.limit">{{ u.used >= u.limit ? 'You have used all ' + u.limit + ' searches for today.' : (u.limit - u.used) + ' of ' + u.limit + ' searches left today.' }}</span>
+        }
+      </p>
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
     </form>
 
@@ -70,6 +75,8 @@ export class Searches {
   protected readonly error = signal('');
   /** null until the profile has loaded, then true or false */
   protected readonly profileReady = signal<boolean | null>(null);
+  protected readonly usage = signal<Usage | null>(null);
+  protected limitReached() { const u = this.usage(); return !!u && u.used >= u.limit; }
   protected form = { niche: '', city: '' };
 
   constructor() {
@@ -78,6 +85,7 @@ export class Searches {
       error: () => this.loading.set(false),
     });
     this.api.profile().subscribe(p => this.profileReady.set(!!p.offer.trim() && !!p.displayName.trim()));
+    this.api.usage().subscribe({ next: u => this.usage.set(u.search), error: () => { /* the limit simply is not shown */ } });
   }
 
   protected label(s: Job['status']) {
@@ -92,6 +100,7 @@ export class Searches {
       error: e => {
         this.busy.set(false);
         if (e.status === 422) this.profileReady.set(false);
+        else if (e.status === 429) this.error.set('You have reached today\'s search limit. It frees up gradually over 24 hours.');
         else this.error.set('Could not start the search. Check that the backend is running and try again.');
       },
     });

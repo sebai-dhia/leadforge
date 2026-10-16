@@ -1,5 +1,6 @@
 package com.leadfinder.auth;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -22,10 +23,12 @@ public class AuthController {
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final TokenService tokens;
+    private final AuthThrottle throttle;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public TokenResponse register(@Valid @RequestBody Credentials c) {
+    public TokenResponse register(@Valid @RequestBody Credentials c, HttpServletRequest request) {
+        throttle.checkAndRecordRegister(request.getRemoteAddr());
         String email = c.email().trim().toLowerCase();
         if (users.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
@@ -38,10 +41,18 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@Valid @RequestBody Credentials c) {
-        AppUser u = users.findByEmail(c.email().trim().toLowerCase())
+    public TokenResponse login(@Valid @RequestBody Credentials c, HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        String email = c.email().trim().toLowerCase();
+        throttle.checkLogin(ip, email);
+        AppUser u = users.findByEmail(email)
                 .filter(x -> encoder.matches(c.password(), x.getPasswordHash()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+                .orElse(null);
+        if (u == null) {
+            throttle.recordLoginFailure(ip, email);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+        throttle.clearLogin(ip, email);
         return new TokenResponse(tokens.issue(u), u.getEmail());
     }
 }

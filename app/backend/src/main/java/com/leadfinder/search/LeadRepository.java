@@ -17,9 +17,13 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
      * pattern with backslash as the escape character.
      */
     String FILTERS = " l.userId = :uid"
-            + " and (:reachable = false or l.phoneKey is not null or (l.emails is not null and l.emails <> ''))"
+            + " and (:reachable = false or l.phoneKey is not null or (l.emails is not null and l.emails <> '') or (l.social is not null and l.social <> ''))"
             + " and (:q = '' or lower(l.name) like :q escape '\\' or lower(l.address) like :q escape '\\')"
             + " and (:searchId = 0L or l.id in (select sl.leadId from SearchLead sl where sl.jobId = :searchId))";
+
+    /** Takes a lock that lasts until the transaction ends, so one user's search results are stored one at a time. */
+    @Query(value = "select cast(pg_advisory_xact_lock(:uid) as text)", nativeQuery = true)
+    String lockUser(@Param("uid") long uid);
 
     Optional<Lead> findByIdAndUserId(Long id, Long userId);
 

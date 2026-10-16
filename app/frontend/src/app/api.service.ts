@@ -15,10 +15,16 @@ export interface Job {
 
 export interface Lead {
   id: number; name: string; address: string; phone: string | null; rating: number | null; reviews: number | null;
-  website: string | null; emails: string[]; score: number; reason: string; subject: string | null;
+  website: string | null; emails: string[]; social: string[]; score: number; reason: string; subject: string | null;
   emailBody: string | null; status: LeadStatus; draftLanguage: Lang | null; draftChannel: Channel | null;
   niche: string | null; city: string | null; firstSeenAt: string | null; lastSeenAt: string | null;
+  contactCheckedAt: string | null;
 }
+
+export interface EnrichResult { lead: Lead; found: string[]; note: string; sources: string[]; }
+
+export interface Usage { used: number; limit: number; }
+export type UsageMap = Record<'search' | 'draft' | 'enrich', Usage>;
 
 export interface Profile { email: string; offer: string; displayName: string; language: Lang; }
 
@@ -55,6 +61,13 @@ export class ApiService {
   /** The file the user would download: same filters as the list, as a spreadsheet. */
   exportCsv(f: LeadFilters) {
     return this.http.get(`${API}/leads/export.csv`, { params: this.params(f), responseType: 'blob' });
+  }
+
+  usage() { return this.http.get<UsageMap>(`${API}/usage`); }
+
+  /** Looks for missing contact details of one lead. Only fills gaps. */
+  enrich(leadId: number) {
+    return this.http.post<EnrichResult>(`${API}/leads/${leadId}/enrich`, {});
   }
 
   setStatus(leadId: number, status: LeadStatus) {

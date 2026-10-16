@@ -49,7 +49,7 @@ type Filter = LeadStatus | 'ALL';
               }
               <button type="button" class="chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
                 (click)="reachable.set(!reachable())">
-                Has phone or email <span class="num">{{ reachableCount() }}</span>
+                Has a way to contact <span class="num">{{ reachableCount() }}</span>
               </button>
             </div>
 
@@ -83,7 +83,7 @@ export class SearchDetail {
     { value: 'REPLIED', label: 'Replied' }, { value: 'NOT_INTERESTED', label: 'Not interested' },
   ];
 
-  private static isReachable(l: Lead) { return !!l.emails.length || !!l.phone; }
+  private static isReachable(l: Lead) { return !!l.emails.length || !!l.phone || !!l.social.length; }
 
   protected readonly visible = computed(() => this.leads().filter(l =>
     (this.filter() === 'ALL' || l.status === this.filter()) && (!this.reachable() || SearchDetail.isReachable(l))));

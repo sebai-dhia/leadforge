@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, Channel, Lang, Lead, LeadStatus } from './api.service';
+import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus } from './api.service';
 
 /** WhatsApp needs an international number. Only trust numbers that already carry a country code. */
 export function whatsappDigits(phone: string | null): string | null {
@@ -60,10 +60,28 @@ export function whatsappDigits(phone: string | null): string | null {
         @if (current().website; as site) {
           <a class="btn ghost" [href]="site" target="_blank" rel="noopener">Website</a>
         }
-        @if (!telHref() && !current().emails.length && !current().website) {
-          <span class="warn">No phone, email or website found. Search for them on Facebook before writing.</span>
+        @for (s of socialLinks(); track s.url) {
+          <a class="btn ghost" [href]="s.url" target="_blank" rel="noopener">{{ s.label }}</a>
+        }
+        @if (canEnrich()) {
+          <button type="button" class="ghost" (click)="enrich()" [disabled]="enriching()">
+            {{ enriching() ? 'Looking…' : (current().contactCheckedAt ? 'Look again' : 'Find contact info') }}
+          </button>
+        }
+        @if (!telHref() && !current().emails.length && !current().website && !current().social.length) {
+          <span class="warn">No phone, email, website or social page found yet.</span>
         }
       </div>
+      @if (socialLinks().length) {
+        <p class="help">Social pages come from the business's own website or a web search. Check they are the right ones before writing.</p>
+      }
+      @if (enrichResult(); as r) {
+        <p class="help" role="status">
+          @if (r.found.length) { <strong>Found: {{ r.found.join(', ') }}.</strong> } @else { <strong>Nothing new found.</strong> }
+          {{ r.note }}
+        </p>
+      }
+      @if (enrichError()) { <p class="err" role="alert">{{ enrichError() }}</p> }
 
       <div class="seg" role="group" aria-label="Outreach status">
         @for (s of statuses; track s.value) {
@@ -157,6 +175,9 @@ export class LeadCard {
   protected readonly copied = signal(false);
   protected readonly error = signal('');
   protected readonly statusError = signal('');
+  protected readonly enriching = signal(false);
+  protected readonly enrichResult = signal<EnrichResult | null>(null);
+  protected readonly enrichError = signal('');
 
   protected readonly language = linkedSignal<Lang>(() => this.current().draftLanguage ?? this.defaultLanguage());
   protected readonly channel = linkedSignal<Channel>(() =>
@@ -172,7 +193,18 @@ export class LeadCard {
 
   protected readonly reach = computed(() => {
     const l = this.current();
-    return l.phone && l.emails.length ? 'Phone and email' : l.phone ? 'Phone' : l.emails.length ? 'Email' : 'No contact';
+    const ways = [l.phone ? 'Phone' : '', l.emails.length ? 'Email' : '', l.social.length ? 'Social' : ''].filter(Boolean);
+    return ways.length ? ways.join(' + ') : 'No contact';
+  });
+
+  protected readonly socialLinks = computed(() => this.current().social.map(url => ({
+    url, label: /instagram\.com/i.test(url) ? 'Instagram' : 'Facebook',
+  })));
+
+  /** Offered while something useful is still missing. */
+  protected readonly canEnrich = computed(() => {
+    const l = this.current();
+    return !l.website || !l.emails.length || !l.phone || !l.social.length;
   });
 
   protected readonly statusLabel = computed(() => this.statuses.find(s => s.value === this.current().status)?.label ?? '');
@@ -217,8 +249,27 @@ export class LeadCard {
       next: l => { this.current.set(l); this.generating.set(false); this.changed.emit(l); },
       error: e => {
         this.generating.set(false);
-        this.error.set(e.status === 502 ? 'The AI could not write this message. Try again in a moment.'
+        this.error.set(e.status === 429 ? 'You have used all messages for today. The limit frees up gradually over 24 hours.'
+          : e.status === 502 ? 'The AI could not write this message. Try again in a moment.'
           : 'Something went wrong. Try again.');
+      },
+    });
+  }
+
+  protected enrich() {
+    this.enriching.set(true);
+    this.enrichError.set('');
+    this.api.enrich(this.current().id).subscribe({
+      next: r => {
+        this.current.set(r.lead);
+        this.enrichResult.set(r);
+        this.enriching.set(false);
+        this.changed.emit(r.lead);
+      },
+      error: e => {
+        this.enriching.set(false);
+        this.enrichError.set(e.status === 429 ? 'You have used all contact lookups for today. The limit frees up gradually over 24 hours.'
+          : 'The lookup could not run. Check that n8n is running and try again.');
       },
     });
   }

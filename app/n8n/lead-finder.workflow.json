@@ -72,7 +72,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst feats = (($input.first().json.features) || []).filter(f => f.properties && f.properties.name);\nif (!feats.length) return [{ json: { _empty: true } }];\nconst fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;\nreturn feats.map(f => {\n  const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};\n  return { json: {\n    placeId: p.place_id || null,\n    name: p.name,\n    address: p.address_line2 || p.formatted || null,\n    phone: p.phone || c.phone || raw.phone || raw['contact:phone'] || null,\n    osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,\n    rating: null,\n    reviews: 0,\n    website: fix(p.website || c.website || raw.website || raw['contact:website'] || null),\n    niche: body.niche, city: body.city,\n    service: body.service, sender: body.sender\n  }};\n});"
+        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nconst body = $('Webhook').first().json.body || {};\nconst feats = (($input.first().json.features) || []).filter(f => f.properties && f.properties.name);\nif (!feats.length) return [{ json: { _empty: true } }];\nconst fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;\nreturn feats.map(f => {\n  const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};\n  const website = fix(p.website || c.website || raw.website || raw['contact:website'] || null);\n  return { json: {\n    placeId: p.place_id || null,\n    name: p.name,\n    address: p.address_line2 || p.formatted || null,\n    phone: p.phone || c.phone || raw.phone || raw['contact:phone'] || null,\n    osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,\n    rating: null,\n    reviews: 0,\n    website,\n    fetchUrl: safeUrl(website),\n    niche: body.niche, city: body.city,\n    service: body.service, sender: body.sender\n  }};\n});"
       },
       "id": "n3",
       "name": "Prepare",
@@ -85,12 +85,18 @@
     },
     {
       "parameters": {
-        "url": "={{ $json.website || 'http://localhost:1' }}",
+        "url": "={{ $json.fetchUrl || 'http://invalid.invalid/' }}",
         "options": {
-          "timeout": 8000,
+          "timeout": 6000,
           "response": {
             "response": {
               "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 10,
+              "batchInterval": 0
             }
           }
         }
@@ -107,10 +113,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const leads = $('Prepare').all();\nreturn $input.all().map((item, i) => {\n  const lead = leads[i].json;\n  if (lead._empty) return { json: { _empty: true } };\n  const html = typeof item.json.data === 'string' ? item.json.data : '';\n  const scraped = (html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])\n    .map(e => e.toLowerCase())\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e));\n  const found = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...scraped].filter(Boolean))];\n  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|\\u062d\\u062c\\u0632|\\u0645\\u0648\\u0639\\u062f/i.test(html);\n  const out = { ...lead, emails: found.slice(0, 3), hasBooking, siteChecked: html.length > 0 };\n  delete out.osmEmail;\n  return { json: out };\n});"
+        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nfunction resolveUrl(href, base) {\n  const origin = base.protocol + '://' + base.hostname + (base.port ? ':' + base.port : '');\n  if (/^https?:\\/\\//i.test(href)) return href;\n  if (href.startsWith('//')) return base.protocol + ':' + href;\n  if (href.startsWith('/')) return origin + href;\n  const dir = base.rest.split(/[?#]/)[0].replace(/[^\\/]*$/, '');\n  const parts = (dir + href).split('/');\n  const out = [];\n  for (const part of parts) {\n    if (part === '..') out.pop();\n    else if (part !== '.') out.push(part);\n  }\n  return origin + (out.join('/').startsWith('/') ? '' : '/') + out.join('/');\n}\nfunction contactLink(html, baseUrl) {\n  if (!baseUrl || typeof html !== 'string' || !html) return null;\n  const want = /contact|kontakt|nous[- ]contacter|contactez|a[- ]propos|about|à propos|اتصل|تواصل/i;\n  const base = parseUrl(baseUrl);\n  if (!base) return null;\n  const host = h => h.replace(/^www\\./, '');\n  const re = /<a\\b[^>]*\\bhref\\s*=\\s*[\"']([^\"'#]+)[\"'][^>]*>([\\s\\S]{0,200}?)<\\/a>/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    const href = m[1].trim();\n    if (/^(mailto|tel|javascript|data):/i.test(href)) continue;\n    if (!want.test(href) && !want.test(m[2].replace(/<[^>]+>/g, ' '))) continue;\n    const full = resolveUrl(href, base);\n    const target = parseUrl(full);\n    if (!target || host(target.hostname) !== host(base.hostname)) continue;\n    const safe = safeUrl(full);\n    if (safe && safe.replace(/\\/$/, '') !== safeUrl(baseUrl).replace(/\\/$/, '')) return safe;\n  }\n  return null;\n}\nconst leads = $('Prepare').all();\nreturn $input.all().map((item, i) => {\n  const lead = leads[i].json;\n  const base = lead._empty ? null : lead.fetchUrl;\n  const html = item.json && typeof item.json.data === 'string' ? item.json.data : '';\n  return { json: { contactUrl: base ? contactLink(html, base) : null } };\n});"
       },
-      "id": "n5",
-      "name": "Extract",
+      "id": "n11",
+      "name": "Find Contact Link",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -120,27 +126,68 @@
     },
     {
       "parameters": {
-        "jsCode": "// Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.\nreturn $input.all().map(item => {\n  const l = item.json;\n  if (l._empty) return item;\n  const niche = (l.niche || '').toLowerCase();\n  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);\n  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);\n  let score = appointment ? 6 : food ? 5 : 4;\n  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];\n  const flags = [];\n  if (!l.website) { score += 2; flags.push('no website listed'); }\n  else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }\n  else if (l.siteChecked) { score += 1; flags.push('website found, no online booking seen'); }\n  else { flags.push('website could not be checked'); }\n  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {\n    score -= 2; flags.push('looks like a large organisation');\n  }\n  const hasEmail = !!(l.emails && l.emails.length);\n  if (hasEmail || l.phone) {\n    score += 1;\n    flags.push(hasEmail && l.phone ? 'phone and email available' : l.phone ? 'phone available' : 'email available');\n  } else { flags.push('no contact details found yet'); }\n  score = Math.max(1, Math.min(10, score));\n  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };\n});"
+        "url": "={{ $json.contactUrl || 'http://invalid.invalid/' }}",
+        "options": {
+          "timeout": 6000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 10,
+              "batchInterval": 0
+            }
+          }
+        }
+      },
+      "id": "n12",
+      "name": "Fetch Contact Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "function scrape(html) {\n  html = typeof html === 'string' ? html : '';\n  const mailto = (html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/gi) || []).map(x => x.slice(7));\n  const plain = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [];\n  const emails = [...new Set([...mailto, ...plain].map(e => e.toLowerCase()))]\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp|ico|css|js)$/.test(e));\n  const social = [...new Set(html.match(/https?:\\/\\/(?:www\\.|m\\.)?(?:facebook|instagram)\\.com\\/[^\\s\"'<>)\\\\]+/gi) || [])];\n  const tel = (html.match(/href\\s*=\\s*[\"']tel:([^\"']+)[\"']/gi) || [])\n    .map(x => decodeURIComponent(x.replace(/^[^:]*tel:/i, '').replace(/[\"']$/, '')).trim())\n    .filter(p => p.replace(/\\D/g, '').length >= 8);\n  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|حجز|موعد/i.test(html);\n  return { emails, social: social.slice(0, 6), phones: [...new Set(tel)], hasBooking, length: html.length };\n}\nconst leads = $('Prepare').all();\nconst home = $('Fetch Website').all();\nreturn $input.all().map((contact, i) => {\n  const lead = leads[i].json;\n  if (lead._empty) return { json: { _empty: true } };\n  const a = scrape(home[i] && home[i].json ? home[i].json.data : '');\n  const b = scrape(contact.json ? contact.json.data : '');\n  const emails = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...a.emails, ...b.emails].filter(Boolean))];\n  const social = [...new Set([...a.social, ...b.social])].slice(0, 6);\n  const phone = lead.phone || a.phones[0] || b.phones[0] || null;\n  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0 };\n  delete out.osmEmail; delete out.fetchUrl;\n  return { json: out };\n});"
+      },
+      "id": "n5",
+      "name": "Extract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.\nreturn $input.all().map(item => {\n  const l = item.json;\n  if (l._empty) return item;\n  const niche = (l.niche || '').toLowerCase();\n  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);\n  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);\n  let score = appointment ? 6 : food ? 5 : 4;\n  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];\n  const flags = [];\n  if (!l.website) { score += 2; flags.push('no website listed'); }\n  else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }\n  else if (l.siteChecked) { score += 1; flags.push('website found, no online booking seen'); }\n  else { flags.push('website could not be checked'); }\n  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {\n    score -= 2; flags.push('looks like a large organisation');\n  }\n  const ways = [];\n  if (l.phone) ways.push('phone');\n  if (l.emails && l.emails.length) ways.push('email');\n  if (l.social && l.social.length) ways.push('social page');\n  if (ways.length) { score += 1; flags.push(ways.join(', ') + ' available'); }\n  else { flags.push('no contact details found yet'); }\n  score = Math.max(1, Math.min(10, score));\n  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };\n});"
       },
       "id": "n6",
       "name": "Score",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
+        1980,
         0
       ]
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked']) delete r[k];\n  return r;\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl']) delete r[k];\n  return r;\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
       },
       "id": "n7",
       "name": "Format",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
+        2200,
         0
       ]
     },
@@ -159,7 +206,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1980,
+        2420,
         0
       ]
     }
@@ -221,6 +268,28 @@
       ]
     },
     "Fetch Website": {
+      "main": [
+        [
+          {
+            "node": "Find Contact Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact Link": {
+      "main": [
+        [
+          {
+            "node": "Fetch Contact Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Contact Page": {
       "main": [
         [
           {

@@ -54,6 +54,13 @@ public class Lead {
     @Column(name = "website_host")
     private String websiteHost;
 
+    /** Facebook and Instagram pages, comma separated. */
+    private String social;
+
+    /** When the on-demand contact lookup last ran for this lead. */
+    @Column(name = "contact_checked_at")
+    private Instant contactCheckedAt;
+
     @Column(name = "first_seen_at", insertable = false, updatable = false)
     private Instant firstSeenAt;
 

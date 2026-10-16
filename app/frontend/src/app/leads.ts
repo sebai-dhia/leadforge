@@ -55,7 +55,7 @@ type StatusFilter = LeadStatus | 'ALL';
             (click)="setStatus(f.value)">{{ f.label }} <span class="num">{{ countFor(f.value) }}</span></button>
         }
         <button type="button" class="chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
-          (click)="toggleReachable()">Has phone or email</button>
+          (click)="toggleReachable()">Has a way to contact</button>
       </div>
 
       @if (error()) { <p class="err" role="alert">{{ error() }} <button type="button" class="ghost" (click)="reload()">Try again</button></p> }

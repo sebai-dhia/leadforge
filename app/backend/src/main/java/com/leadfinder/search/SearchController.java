@@ -2,6 +2,7 @@ package com.leadfinder.search;
 
 import com.leadfinder.auth.AppUser;
 import com.leadfinder.auth.UserRepository;
+import com.leadfinder.usage.UsageService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -38,6 +39,7 @@ public class SearchController {
     private final LeadRepository leads;
     private final UserRepository users;
     private final N8nClient n8n;
+    private final UsageService usage;
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
@@ -48,6 +50,7 @@ public class SearchController {
             // The frontend sends the user to the profile page on this status.
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Complete your profile first");
         }
+        Long usageId = usage.consume(user.getId(), UsageService.Kind.SEARCH);
         SearchJob job = new SearchJob();
         job.setUserId(user.getId());
         job.setNiche(req.niche().trim());
@@ -61,6 +64,7 @@ public class SearchController {
             log.error("Could not reach n8n for job {}", job.getId(), e);
             job.setStatus(SearchJob.Status.FAILED);
             jobs.save(job);
+            usage.refund(usageId); // not the user's fault
         }
         return JobDto.of(job);
     }

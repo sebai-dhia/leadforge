@@ -1,0 +1,250 @@
+{
+  "name": "Lead Finder Enrich Contact",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich-contact",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "enrich-contact-backend"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = ($input.first().json || {}).body || {};\nconst prompt = [\n  'Find the official online presence of this local business using web search.',\n  'Business: ' + b.leadName,\n  b.address ? 'Address: ' + b.address : null,\n  b.city ? 'City: ' + b.city : null,\n  b.niche ? 'Category: ' + b.niche : null,\n  b.website ? 'Known website: ' + b.website : 'No website is known.',\n  '',\n  'Reply with ONLY JSON: {\"website\": string or null, \"facebook\": string or null, \"instagram\": string or null}.',\n  'Rules: give only URLs that appear in the search results and clearly belong to THIS business in THIS city. If you are not sure, use null. Never guess or build a URL yourself.'\n].filter(x => x !== null).join('\\n');\nreturn [{ json: { prompt } }];"
+      },
+      "id": "e2",
+      "name": "Build Search Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0, maxOutputTokens: 600 } }) }}"
+      },
+      "id": "e3",
+      "name": "AI Web Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nconst b = $('Webhook').first().json.body || {};\nconst r = $input.first().json || {};\nlet cand = {};\ntry {\n  const raw = (r.candidates && r.candidates[0].content.parts.map(p => p.text || '').join('')) || '';\n  cand = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) || {};\n} catch (e) { cand = {}; }\nconst chunks = (r.candidates && r.candidates[0].groundingMetadata && r.candidates[0].groundingMetadata.groundingChunks) || [];\nconst sources = [...new Set(chunks.map(c => c.web && c.web.title).filter(Boolean))].slice(0, 5);\nconst known = safeUrl(b.website);\nconst suggested = safeUrl(cand.website);\nreturn [{ json: {\n  fetchUrl: known || suggested || null,\n  foundWebsite: !known && suggested ? suggested : null,\n  social: [cand.facebook, cand.instagram].filter(x => typeof x === 'string'),\n  sources,\n  searchFailed: !!r.error\n}}];"
+      },
+      "id": "e4",
+      "name": "Pick Candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.fetchUrl || 'http://invalid.invalid/' }}",
+        "options": {
+          "timeout": 8000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "e5",
+      "name": "Fetch Site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "function parseUrl(u) {\n  if (!u || typeof u !== 'string') return null;\n  let s = u.trim();\n  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'http://' + s;\n  const m = s.match(/^(https?):\\/\\/(?:([^\\/?#@]*)@)?(\\[[^\\]]*\\]|[^\\/?#:]+)(?::(\\d*))?([\\/?#][^#]*)?(?:#.*)?$/i);\n  if (!m) return null;\n  return { protocol: m[1].toLowerCase(), userinfo: m[2] || '', hostname: m[3].toLowerCase(), port: m[4] || '', rest: m[5] || '/' };\n}\nfunction safeUrl(u) {\n  const p = parseUrl(u);\n  if (!p || p.userinfo) return null;\n  if (p.port && p.port !== '80' && p.port !== '443') return null;\n  const h = p.hostname;\n  if (h.startsWith('[') || h.includes(':')) return null;\n  if (!/^[a-z0-9-]+(\\.[a-z0-9-]+)*\\.([a-z]{2,24}|xn--[a-z0-9-]{2,59})$/.test(h)) return null;\n  if (h === 'localhost' || /\\.(local|internal|localhost|lan|home|corp|intranet|test|invalid|example)$/.test(h)) return null;\n  if (/(^|\\.)(nip\\.io|sslip\\.io|xip\\.io|localtest\\.me|lvh\\.me|vcap\\.me)$/.test(h)) return null;\n  const rest = p.rest.startsWith('/') ? p.rest : '/' + p.rest;\n  return p.protocol + '://' + h + (p.port ? ':' + p.port : '') + rest;\n}\nfunction resolveUrl(href, base) {\n  const origin = base.protocol + '://' + base.hostname + (base.port ? ':' + base.port : '');\n  if (/^https?:\\/\\//i.test(href)) return href;\n  if (href.startsWith('//')) return base.protocol + ':' + href;\n  if (href.startsWith('/')) return origin + href;\n  const dir = base.rest.split(/[?#]/)[0].replace(/[^\\/]*$/, '');\n  const parts = (dir + href).split('/');\n  const out = [];\n  for (const part of parts) {\n    if (part === '..') out.pop();\n    else if (part !== '.') out.push(part);\n  }\n  return origin + (out.join('/').startsWith('/') ? '' : '/') + out.join('/');\n}\nfunction contactLink(html, baseUrl) {\n  if (!baseUrl || typeof html !== 'string' || !html) return null;\n  const want = /contact|kontakt|nous[- ]contacter|contactez|a[- ]propos|about|à propos|اتصل|تواصل/i;\n  const base = parseUrl(baseUrl);\n  if (!base) return null;\n  const host = h => h.replace(/^www\\./, '');\n  const re = /<a\\b[^>]*\\bhref\\s*=\\s*[\"']([^\"'#]+)[\"'][^>]*>([\\s\\S]{0,200}?)<\\/a>/gi;\n  let m;\n  while ((m = re.exec(html)) !== null) {\n    const href = m[1].trim();\n    if (/^(mailto|tel|javascript|data):/i.test(href)) continue;\n    if (!want.test(href) && !want.test(m[2].replace(/<[^>]+>/g, ' '))) continue;\n    const full = resolveUrl(href, base);\n    const target = parseUrl(full);\n    if (!target || host(target.hostname) !== host(base.hostname)) continue;\n    const safe = safeUrl(full);\n    if (safe && safe.replace(/\\/$/, '') !== safeUrl(baseUrl).replace(/\\/$/, '')) return safe;\n  }\n  return null;\n}\nconst base = $('Pick Candidates').first().json.fetchUrl;\nconst item = $input.first();\nconst html = item && item.json && typeof item.json.data === 'string' ? item.json.data : '';\nreturn [{ json: { contactUrl: base ? contactLink(html, base) : null } }];"
+      },
+      "id": "e6",
+      "name": "Find Contact Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.contactUrl || 'http://invalid.invalid/' }}",
+        "options": {
+          "timeout": 8000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "e7",
+      "name": "Fetch Contact Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "function scrape(html) {\n  html = typeof html === 'string' ? html : '';\n  const mailto = (html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/gi) || []).map(x => x.slice(7));\n  const plain = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [];\n  const emails = [...new Set([...mailto, ...plain].map(e => e.toLowerCase()))]\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp|ico|css|js)$/.test(e));\n  const social = [...new Set(html.match(/https?:\\/\\/(?:www\\.|m\\.)?(?:facebook|instagram)\\.com\\/[^\\s\"'<>)\\\\]+/gi) || [])];\n  const tel = (html.match(/href\\s*=\\s*[\"']tel:([^\"']+)[\"']/gi) || [])\n    .map(x => decodeURIComponent(x.replace(/^[^:]*tel:/i, '').replace(/[\"']$/, '')).trim())\n    .filter(p => p.replace(/\\D/g, '').length >= 8);\n  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|حجز|موعد/i.test(html);\n  return { emails, social: social.slice(0, 6), phones: [...new Set(tel)], hasBooking, length: html.length };\n}\nconst c = $('Pick Candidates').first().json;\nconst home = $('Fetch Site').first();\nconst contact = $input.first();\nconst a = scrape(home && home.json ? home.json.data : '');\nconst b = scrape(contact && contact.json ? contact.json.data : '');\nconst social = [...new Set([...(c.social || []), ...a.social, ...b.social])];\nlet note;\nif (!c.fetchUrl && !social.length) note = c.searchFailed ? 'The web search is unavailable right now. Try again later.' : 'No website or social page could be found for this business.';\nelse if (c.fetchUrl && a.length === 0) note = 'The website did not respond.';\nelse if (c.fetchUrl) note = 'Checked the website and its contact page.';\nelse note = 'No website found. Social pages were found by web search; check they belong to this business.';\nreturn [{ json: {\n  website: c.foundWebsite || null,\n  emails: [...new Set([...a.emails, ...b.emails])].slice(0, 8),\n  phones: [...new Set([...a.phones, ...b.phones])].slice(0, 3),\n  social: social.slice(0, 6),\n  sources: c.sources || [],\n  note\n}}];"
+      },
+      "id": "e8",
+      "name": "Collect",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "e9",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Search Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Search Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Web Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Web Search": {
+      "main": [
+        [
+          {
+            "node": "Pick Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Candidates": {
+      "main": [
+        [
+          {
+            "node": "Fetch Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Site": {
+      "main": [
+        [
+          {
+            "node": "Find Contact Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact Link": {
+      "main": [
+        [
+          {
+            "node": "Fetch Contact Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Contact Page": {
+      "main": [
+        [
+          {
+            "node": "Collect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

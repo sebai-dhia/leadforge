@@ -1,8 +1,10 @@
 // Generates n8n/lead-finder.workflow.json for the Spring Boot backend (run: node build-workflow.js)
-// Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch sites -> rule-based score -> POST results to backend callback.
+// Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch home page and contact page
+//       -> rule-based score -> POST results to the backend callback.
 const fs = require('fs');
+const { SAFE_URL, CONTACT_LINK, SCRAPE } = require('./workflow-snippets');
 
-const queryCode = `
+const queryCode = String.raw`
 const body = $('Webhook').first().json.body || {};
 const g = ($input.first().json.results || [])[0];
 if (!g) return [{ json: { _empty: true } }];
@@ -14,7 +16,7 @@ const map = [
   [/caf[eé]|coffee/i, 'catering.cafe'],
   [/hotel|guest ?house|riad/i, 'accommodation.hotel'],
   [/gym|fitness/i, 'sport.fitness'],
-  [/hair|salon|beauty|barber|spa\\b/i, 'service.beauty'],
+  [/hair|salon|beauty|barber|spa\b/i, 'service.beauty'],
   [/lawyer|law firm|attorney|avocat/i, 'office.lawyer'],
   [/car repair|garage|mechanic/i, 'service.vehicle.repair.car'],
   [/supermarket|grocery/i, 'commercial.supermarket'],
@@ -29,13 +31,14 @@ return [{ json: {
 }}];
 `.trim();
 
-const prepareCode = `
+const prepareCode = SAFE_URL + '\n' + String.raw`
 const body = $('Webhook').first().json.body || {};
 const feats = (($input.first().json.features) || []).filter(f => f.properties && f.properties.name);
 if (!feats.length) return [{ json: { _empty: true } }];
-const fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;
+const fix = u => (u && !/^https?:\/\//i.test(u) ? 'http://' + u : u) || null;
 return feats.map(f => {
   const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};
+  const website = fix(p.website || c.website || raw.website || raw['contact:website'] || null);
   return { json: {
     placeId: p.place_id || null,
     name: p.name,
@@ -44,37 +47,48 @@ return feats.map(f => {
     osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,
     rating: null,
     reviews: 0,
-    website: fix(p.website || c.website || raw.website || raw['contact:website'] || null),
+    website,
+    fetchUrl: safeUrl(website),
     niche: body.niche, city: body.city,
     service: body.service, sender: body.sender
   }};
 });
 `.trim();
 
-const extractCode = `
+const findContactCode = SAFE_URL + '\n' + CONTACT_LINK + '\n' + String.raw`
 const leads = $('Prepare').all();
 return $input.all().map((item, i) => {
   const lead = leads[i].json;
+  const base = lead._empty ? null : lead.fetchUrl;
+  const html = item.json && typeof item.json.data === 'string' ? item.json.data : '';
+  return { json: { contactUrl: base ? contactLink(html, base) : null } };
+});
+`.trim();
+
+const extractCode = SCRAPE + '\n' + String.raw`
+const leads = $('Prepare').all();
+const home = $('Fetch Website').all();
+return $input.all().map((contact, i) => {
+  const lead = leads[i].json;
   if (lead._empty) return { json: { _empty: true } };
-  const html = typeof item.json.data === 'string' ? item.json.data : '';
-  const scraped = (html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])
-    .map(e => e.toLowerCase())
-    .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e));
-  const found = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...scraped].filter(Boolean))];
-  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|\\u062d\\u062c\\u0632|\\u0645\\u0648\\u0639\\u062f/i.test(html);
-  const out = { ...lead, emails: found.slice(0, 3), hasBooking, siteChecked: html.length > 0 };
-  delete out.osmEmail;
+  const a = scrape(home[i] && home[i].json ? home[i].json.data : '');
+  const b = scrape(contact.json ? contact.json.data : '');
+  const emails = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...a.emails, ...b.emails].filter(Boolean))];
+  const social = [...new Set([...a.social, ...b.social])].slice(0, 6);
+  const phone = lead.phone || a.phones[0] || b.phones[0] || null;
+  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0 };
+  delete out.osmEmail; delete out.fetchUrl;
   return { json: out };
 });
 `.trim();
 
-const scoreCode = `
+const scoreCode = String.raw`
 // Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.
 return $input.all().map(item => {
   const l = item.json;
   if (l._empty) return item;
   const niche = (l.niche || '').toLowerCase();
-  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);
+  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);
   const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);
   let score = appointment ? 6 : food ? 5 : 4;
   const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];
@@ -86,21 +100,22 @@ return $input.all().map(item => {
   if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {
     score -= 2; flags.push('looks like a large organisation');
   }
-  const hasEmail = !!(l.emails && l.emails.length);
-  if (hasEmail || l.phone) {
-    score += 1;
-    flags.push(hasEmail && l.phone ? 'phone and email available' : l.phone ? 'phone available' : 'email available');
-  } else { flags.push('no contact details found yet'); }
+  const ways = [];
+  if (l.phone) ways.push('phone');
+  if (l.emails && l.emails.length) ways.push('email');
+  if (l.social && l.social.length) ways.push('social page');
+  if (ways.length) { score += 1; flags.push(ways.join(', ') + ' available'); }
+  else { flags.push('no contact details found yet'); }
   score = Math.max(1, Math.min(10, score));
   return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };
 });
 `.trim();
 
-const formatCode = `
+const formatCode = String.raw`
 const jobId = $('Webhook').first().json.body.jobId;
 const out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {
   const r = { ...l, subject: '', emailBody: '' };
-  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked']) delete r[k];
+  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl']) delete r[k];
   return r;
 });
 out.sort((a, b) => b.score - a.score);
@@ -109,6 +124,12 @@ return [{ json: { jobId, leads: out } }];
 
 const callbackUrl = "={{ $('Webhook').first().json.body.callbackUrl }}";
 const geoQueryAuth = { authentication: 'genericCredentialType', genericAuthType: 'httpQueryAuth' };
+// Fetch up to 10 sites at once so slow websites do not add up. A short timeout keeps one dead site from stalling a search.
+const pageFetchOptions = {
+  timeout: 6000,
+  response: { response: { responseFormat: 'text' } },
+  batching: { batch: { batchSize: 10, batchInterval: 0 } }
+};
 
 const workflow = {
   name: 'Lead Finder Backend',
@@ -148,24 +169,30 @@ const workflow = {
       id: 'n3', name: 'Prepare', type: 'n8n-nodes-base.code', typeVersion: 2, position: [880, 0]
     },
     {
-      parameters: {
-        url: "={{ $json.website || 'http://localhost:1' }}",
-        options: { timeout: 8000, response: { response: { responseFormat: 'text' } } }
-      },
+      parameters: { url: "={{ $json.fetchUrl || 'http://invalid.invalid/' }}", options: pageFetchOptions },
       id: 'n4', name: 'Fetch Website', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1100, 0],
       onError: 'continueRegularOutput'
     },
     {
+      parameters: { jsCode: findContactCode },
+      id: 'n11', name: 'Find Contact Link', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1320, 0]
+    },
+    {
+      parameters: { url: "={{ $json.contactUrl || 'http://invalid.invalid/' }}", options: pageFetchOptions },
+      id: 'n12', name: 'Fetch Contact Page', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1540, 0],
+      onError: 'continueRegularOutput'
+    },
+    {
       parameters: { jsCode: extractCode },
-      id: 'n5', name: 'Extract', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1320, 0]
+      id: 'n5', name: 'Extract', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1760, 0]
     },
     {
       parameters: { jsCode: scoreCode },
-      id: 'n6', name: 'Score', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1540, 0]
+      id: 'n6', name: 'Score', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1980, 0]
     },
     {
       parameters: { jsCode: formatCode },
-      id: 'n7', name: 'Format', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1760, 0]
+      id: 'n7', name: 'Format', type: 'n8n-nodes-base.code', typeVersion: 2, position: [2200, 0]
     },
     {
       parameters: {
@@ -174,7 +201,7 @@ const workflow = {
         sendBody: true, specifyBody: 'json',
         jsonBody: '={{ JSON.stringify($json) }}'
       },
-      id: 'n8', name: 'Send Results to Backend', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1980, 0]
+      id: 'n8', name: 'Send Results to Backend', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [2420, 0]
     }
   ],
   connections: {
@@ -183,7 +210,9 @@ const workflow = {
     'Build Query': { main: [[{ node: 'Geoapify Places', type: 'main', index: 0 }]] },
     'Geoapify Places': { main: [[{ node: 'Prepare', type: 'main', index: 0 }]] },
     'Prepare': { main: [[{ node: 'Fetch Website', type: 'main', index: 0 }]] },
-    'Fetch Website': { main: [[{ node: 'Extract', type: 'main', index: 0 }]] },
+    'Fetch Website': { main: [[{ node: 'Find Contact Link', type: 'main', index: 0 }]] },
+    'Find Contact Link': { main: [[{ node: 'Fetch Contact Page', type: 'main', index: 0 }]] },
+    'Fetch Contact Page': { main: [[{ node: 'Extract', type: 'main', index: 0 }]] },
     'Extract': { main: [[{ node: 'Score', type: 'main', index: 0 }]] },
     'Score': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
     'Format': { main: [[{ node: 'Send Results to Backend', type: 'main', index: 0 }]] }

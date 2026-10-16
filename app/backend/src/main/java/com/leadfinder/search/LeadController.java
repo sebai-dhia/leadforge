@@ -2,6 +2,7 @@ package com.leadfinder.search;
 
 import com.leadfinder.auth.AppUser;
 import com.leadfinder.auth.UserRepository;
+import com.leadfinder.usage.UsageService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -39,12 +40,17 @@ public class LeadController {
     public record DraftRequest(@Pattern(regexp = "en|fr|ar") String language,
                                @Pattern(regexp = "email|whatsapp") String channel) {}
 
+    /** What a contact lookup added, so the UI can say it plainly. */
+    public record EnrichResponse(LeadDto lead, List<String> found, String note, List<String> sources) {}
+
     /** counts: leads per status for the current filters, ignoring the status filter itself. */
     public record LeadPage(List<LeadDto> items, long total, int page, int size, Map<String, Long> counts) {}
 
     private final LeadRepository leads;
     private final UserRepository users;
     private final N8nClient n8n;
+    private final UsageService usage;
+    private final LeadService leadService;
 
     /** Every lead of the caller across all searches, with optional filters. */
     @GetMapping
@@ -116,14 +122,17 @@ public class LeadController {
         payload.put("language", req.language());
         payload.put("channel", req.channel());
 
+        Long usageId = usage.consume(userId(jwt), UsageService.Kind.DRAFT);
         N8nClient.Draft draft;
         try {
             draft = n8n.draft(payload);
         } catch (RuntimeException e) {
             log.error("Draft request failed for lead {}", id, e);
+            usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI could not write the message");
         }
         if (draft == null || draft.body() == null || draft.body().isBlank()) {
+            usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI returned an empty message");
         }
         lead.setSubject(draft.subject() == null ? "" : draft.subject());
@@ -131,6 +140,39 @@ public class LeadController {
         lead.setDraftLanguage(req.language());
         lead.setDraftChannel(req.channel());
         return LeadDto.of(leads.save(lead));
+    }
+
+    /**
+     * Looks for missing contact details of one lead: its own website and contact page, and its
+     * Facebook or Instagram page. Only fills gaps; nothing already known is replaced.
+     */
+    @PostMapping("/{id}/enrich")
+    public EnrichResponse enrich(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        Lead lead = ownedLead(jwt, id);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("leadName", lead.getName());
+        payload.put("address", lead.getAddress());
+        payload.put("niche", lead.getNiche());
+        payload.put("city", lead.getCity());
+        payload.put("website", lead.getWebsite());
+        payload.put("phone", lead.getPhone());
+
+        Long usageId = usage.consume(userId(jwt), UsageService.Kind.ENRICH);
+        N8nClient.Enrichment found;
+        try {
+            found = n8n.enrich(payload);
+        } catch (RuntimeException e) {
+            log.error("Contact lookup failed for lead {}", id, e);
+            usage.refund(usageId);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The contact lookup could not run");
+        }
+        if (found == null) {
+            found = new N8nClient.Enrichment(null, List.of(), List.of(), List.of(), List.of(), "Nothing was returned.");
+        }
+        LeadService.EnrichOutcome outcome = leadService.applyEnrichment(lead, found);
+        Lead saved = leads.save(lead);
+        return new EnrichResponse(LeadDto.of(saved), outcome.found(), found.note(),
+                found.sources() == null ? List.of() : found.sources());
     }
 
     private Long userId(Jwt jwt) {
