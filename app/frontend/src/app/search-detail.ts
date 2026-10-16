@@ -9,7 +9,7 @@ type Filter = LeadStatus | 'ALL';
   selector: 'app-search-detail',
   imports: [RouterLink, LeadCard],
   template: `
-    <p><a routerLink="/">← All searches</a></p>
+    <p><a routerLink="/searches">← All searches</a> · <a routerLink="/">All your leads</a></p>
 
     @if (!job()) {
       <div class="card skeleton-card" aria-busy="true" aria-label="Loading"><span></span><span></span><span></span></div>
@@ -32,7 +32,13 @@ type Filter = LeadStatus | 'ALL';
           @if (leads().length === 0) {
             <p class="mute">No businesses were found. Try a broader business type or a different city.</p>
           } @else {
-            <p class="mute">{{ leads().length }} businesses, best fit first. Open a lead to write a message when you want to contact it.</p>
+            <p class="mute">
+              {{ leads().length }} businesses, best fit first.
+              @if (job()!.newCount !== null) {
+                <strong>{{ job()!.newCount }} new to you</strong>, {{ leads().length - job()!.newCount! }} already in your leads.
+              }
+              Open a lead to write a message when you want to contact it.
+            </p>
 
             <div class="chips" role="group" aria-label="Filter leads">
               @for (f of filters; track f.value) {
@@ -48,7 +54,7 @@ type Filter = LeadStatus | 'ALL';
             </div>
 
             @for (l of visible(); track l.id) {
-              <app-lead-card [lead]="l" [defaultLanguage]="lang()" (changed)="onChanged($event)" />
+              <app-lead-card [lead]="l" [defaultLanguage]="lang()" [seenBefore]="isKnown(l)" (changed)="onChanged($event)" />
             } @empty {
               <div class="empty">
                 <p>No leads match this filter.</p>
@@ -95,6 +101,12 @@ export class SearchDetail {
 
   protected onChanged(updated: Lead) {
     this.leads.update(list => list.map(l => (l.id === updated.id ? updated : l)));
+  }
+
+  /** Found by an earlier search, so it was already in the user's leads. */
+  protected isKnown(l: Lead): boolean {
+    const created = this.job()?.createdAt;
+    return !!l.firstSeenAt && !!created && new Date(l.firstSeenAt).getTime() < new Date(created).getTime();
   }
 
   protected reset() {

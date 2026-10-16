@@ -37,6 +37,7 @@ const fix = u => (u && !/^https?:\\/\\//i.test(u) ? 'http://' + u : u) || null;
 return feats.map(f => {
   const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};
   return { json: {
+    placeId: p.place_id || null,
     name: p.name,
     address: p.address_line2 || p.formatted || null,
     phone: p.phone || c.phone || raw.phone || raw['contact:phone'] || null,

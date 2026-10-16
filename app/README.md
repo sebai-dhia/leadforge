@@ -11,6 +11,7 @@ The browser never talks to n8n.
 
 - **Search:** creates a `PENDING` job. n8n finds businesses (Geoapify), reads their websites for emails and booking widgets, scores each lead with transparent rules in code (no AI, so it takes seconds), and posts the leads back. The Angular page polls until the job is `DONE`. A sweeper marks jobs `FAILED` after 10 minutes without a callback.
 - **Message:** written on demand, per lead, in English, French or Arabic, for email or WhatsApp. The backend calls the `draft-message` workflow and waits for the reply.
+- **Leads:** a lead belongs to the user, not to one search. The home page lists every lead across all searches with filters, and exports them as CSV. The same business found by several searches is stored once and keeps its status and message.
 - **Profile:** what you offer, the name you sign with and your default language. Saved once and used by every search and message.
 
 ## Run it
@@ -42,11 +43,17 @@ If n8n runs in Docker, set `PUBLIC_BASE_URL=http://host.docker.internal:8081` fo
 |---|---|
 | `POST /api/auth/register`, `/login` | Account and JWT |
 | `GET`, `PUT /api/profile` | Offer, name, language. A search returns 422 until the profile is complete |
-| `POST /api/searches`, `GET /api/searches`, `GET /api/searches/{id}` | Searches and their leads |
+| `POST /api/searches`, `GET /api/searches`, `GET /api/searches/{id}` | Searches and their leads. A finished search reports `foundCount` and `newCount` (new to this user) |
+| `GET /api/leads` | All of the caller's leads. Filters: `status`, `reachable`, `q` (name or address), `searchId`; `sort` = `score` | `recent` | `name`; `page`, `size`. Returns `counts` per status for the filter chips |
+| `GET /api/leads/export.csv` | Same filters, as a UTF-8 CSV with BOM (opens correctly in Excel, Arabic included). Cells that look like formulas are neutralised |
 | `PATCH /api/leads/{id}/status` | `NEW`, `CONTACTED`, `REPLIED`, `NOT_INTERESTED` |
 | `POST /api/leads/{id}/draft` | `{language: en\|fr\|ar, channel: email\|whatsapp}`, returns the lead with the message |
 
-Leads are only reachable through a search the caller owns (other users get 404).
+A lead is only reachable by the user who owns it (other users get 404).
+
+## How duplicates are detected
+
+When a search reports a business, the backend looks for an existing lead of the same user, in this order: Geoapify `place_id`, the last 8 digits of the phone number, the website host (social-media pages are never used), then the same name at the same address. A match is refreshed (contact details are merged, the score is recomputed) but its status and message are kept. Migration `V3` merged the duplicates that existed before this rule.
 
 ## Status
 
@@ -55,4 +62,5 @@ Leads are only reachable through a search the caller owns (other users get 404).
 - Lead data from OpenStreetMap is thin in Tunisia: few leads have a website, phone or email. Scores are a rough ranking, not proof.
 - Fit score (1 to 10) is rule-based: business type (appointment-based scores higher), no website (+2), website with no booking seen (+1), booking already offered (-1), large-organisation name (-2), phone or email found (+1). Each lead shows its reasons. It ranks leads, it does not prove need.
 - Messages are drafts written from the listed facts only. Read and correct them before sending.
-- Not included yet: duplicate detection across searches, per-user quotas, rate limiting, CSV export, email verification, refresh tokens, backend tests.
+- Tests: `./mvnw test -Dtest='LeadMatchingTest,LeadCsvTest'` (pure unit tests). `BackendApplicationTests` needs the database running.
+- Not included yet: per-user quotas, rate limiting, email verification, refresh tokens, integration tests, notes on a lead.

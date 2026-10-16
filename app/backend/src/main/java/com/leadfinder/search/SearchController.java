@@ -24,9 +24,11 @@ public class SearchController {
 
     public record CreateSearch(@NotBlank @Size(max = 120) String niche, @NotBlank @Size(max = 120) String city) {}
 
-    public record JobDto(Long id, String niche, String city, SearchJob.Status status, Instant createdAt) {
+    public record JobDto(Long id, String niche, String city, SearchJob.Status status, Instant createdAt,
+                         Integer foundCount, Integer newCount) {
         static JobDto of(SearchJob j) {
-            return new JobDto(j.getId(), j.getNiche(), j.getCity(), j.getStatus(), j.getCreatedAt());
+            return new JobDto(j.getId(), j.getNiche(), j.getCity(), j.getStatus(), j.getCreatedAt(),
+                    j.getFoundCount(), j.getNewCount());
         }
     }
 
@@ -72,6 +74,6 @@ public class SearchController {
     public JobDetail get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         SearchJob job = jobs.findByIdAndUserId(id, Long.valueOf(jwt.getSubject()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return new JobDetail(JobDto.of(job), leads.findByJobIdOrderByScoreDesc(id).stream().map(LeadDto::of).toList());
+        return new JobDetail(JobDto.of(job), leads.findByJob(id).stream().map(LeadDto::of).toList());
     }
 }

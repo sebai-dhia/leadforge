@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // /api/internal is protected by a shared secret checked in the controller
-                        .requestMatchers("/api/auth/**", "/api/internal/**", "/actuator/health").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/internal/**", "/actuator/health", "/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
         return http.build();

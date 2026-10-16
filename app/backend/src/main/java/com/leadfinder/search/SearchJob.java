@@ -28,6 +28,13 @@ public class SearchJob {
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;
 
+    /** Businesses this search returned, and how many of them the user had not seen before. */
+    @Column(name = "found_count")
+    private Integer foundCount;
+
+    @Column(name = "new_count")
+    private Integer newCount;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 }

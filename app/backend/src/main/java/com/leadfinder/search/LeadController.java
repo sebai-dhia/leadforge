@@ -6,14 +6,24 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -21,15 +31,63 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LeadController {
 
+    private static final Set<String> STATUSES = Set.of("NEW", "CONTACTED", "REPLIED", "NOT_INTERESTED");
+    private static final int MAX_EXPORT = 5000;
+
     public record StatusUpdate(@Pattern(regexp = "NEW|CONTACTED|REPLIED|NOT_INTERESTED") String status) {}
 
     public record DraftRequest(@Pattern(regexp = "en|fr|ar") String language,
                                @Pattern(regexp = "email|whatsapp") String channel) {}
 
+    /** counts: leads per status for the current filters, ignoring the status filter itself. */
+    public record LeadPage(List<LeadDto> items, long total, int page, int size, Map<String, Long> counts) {}
+
     private final LeadRepository leads;
-    private final SearchJobRepository jobs;
     private final UserRepository users;
     private final N8nClient n8n;
+
+    /** Every lead of the caller across all searches, with optional filters. */
+    @GetMapping
+    public LeadPage list(@AuthenticationPrincipal Jwt jwt,
+                         @RequestParam(defaultValue = "") String status,
+                         @RequestParam(defaultValue = "false") boolean reachable,
+                         @RequestParam(defaultValue = "") String q,
+                         @RequestParam(defaultValue = "0") long searchId,
+                         @RequestParam(defaultValue = "score") String sort,
+                         @RequestParam(defaultValue = "0") int page,
+                         @RequestParam(defaultValue = "40") int size) {
+        Long uid = userId(jwt);
+        String st = validStatus(status);
+        String pattern = likePattern(q);
+        int pageSize = Math.max(1, Math.min(size, 100));
+        Page<Lead> result = leads.search(uid, st, reachable, pattern, searchId,
+                PageRequest.of(Math.max(0, page), pageSize, sortFor(sort)));
+
+        Map<String, Long> counts = new LinkedHashMap<>();
+        STATUSES.stream().sorted().forEach(s -> counts.put(s, 0L));
+        for (Object[] row : leads.statusCounts(uid, reachable, pattern, searchId)) {
+            counts.put((String) row[0], (Long) row[1]);
+        }
+        return new LeadPage(result.getContent().stream().map(LeadDto::of).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize(), counts);
+    }
+
+    /** Same filters as the list, as a spreadsheet file. */
+    @GetMapping("/export.csv")
+    public ResponseEntity<byte[]> export(@AuthenticationPrincipal Jwt jwt,
+                                         @RequestParam(defaultValue = "") String status,
+                                         @RequestParam(defaultValue = "false") boolean reachable,
+                                         @RequestParam(defaultValue = "") String q,
+                                         @RequestParam(defaultValue = "0") long searchId,
+                                         @RequestParam(defaultValue = "score") String sort) {
+        List<Lead> rows = leads.search(userId(jwt), validStatus(status), reachable, likePattern(q), searchId,
+                PageRequest.of(0, MAX_EXPORT, sortFor(sort))).getContent();
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("leads.csv").build().toString())
+                .body(LeadCsv.build(rows));
+    }
 
     @PatchMapping("/{id}/status")
     public LeadDto setStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
@@ -44,16 +102,15 @@ public class LeadController {
     public LeadDto draft(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
                          @Valid @RequestBody DraftRequest req) {
         Lead lead = ownedLead(jwt, id);
-        SearchJob job = jobs.findById(lead.getJobId()).orElseThrow();
-        AppUser user = users.findById(Long.valueOf(jwt.getSubject())).orElseThrow();
+        AppUser user = users.findById(userId(jwt)).orElseThrow();
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("leadName", lead.getName());
         payload.put("address", lead.getAddress());
         payload.put("website", lead.getWebsite());
         payload.put("reason", lead.getReason());
-        payload.put("niche", job.getNiche());
-        payload.put("city", job.getCity());
+        payload.put("niche", lead.getNiche());
+        payload.put("city", lead.getCity());
         payload.put("offer", user.getOffer());
         payload.put("senderName", user.getDisplayName());
         payload.put("language", req.language());
@@ -76,11 +133,36 @@ public class LeadController {
         return LeadDto.of(leads.save(lead));
     }
 
-    /** A lead is only reachable through a search that belongs to the caller. */
+    private Long userId(Jwt jwt) {
+        return Long.valueOf(jwt.getSubject());
+    }
+
+    /** A lead is only reachable by the user who owns it. */
     private Lead ownedLead(Jwt jwt, Long id) {
-        Lead lead = leads.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        jobs.findByIdAndUserId(lead.getJobId(), Long.valueOf(jwt.getSubject()))
+        return leads.findByIdAndUserId(id, userId(jwt))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return lead;
+    }
+
+    private static String validStatus(String status) {
+        if (status.isBlank()) return "";
+        if (!STATUSES.contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown status");
+        }
+        return status;
+    }
+
+    /** Lowercase LIKE pattern with the user's own % and _ escaped, or "" for no search text. */
+    private static String likePattern(String q) {
+        String t = q.trim().toLowerCase();
+        if (t.isEmpty()) return "";
+        return "%" + t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+    }
+
+    private static Sort sortFor(String sort) {
+        return switch (sort) {
+            case "recent" -> Sort.by(Sort.Order.desc("lastSeenAt"), Sort.Order.asc("name"));
+            case "name" -> Sort.by(Sort.Order.asc("name"));
+            default -> Sort.by(Sort.Order.desc("score").nullsLast(), Sort.Order.asc("name"));
+        };
     }
 }

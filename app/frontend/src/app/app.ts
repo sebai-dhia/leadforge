@@ -10,7 +10,8 @@ import { AuthService } from './auth.service';
       <a routerLink="/" class="brand">Lead Finder</a>
       @if (auth.email(); as email) {
         <nav aria-label="Main">
-          <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Searches</a>
+          <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Leads</a>
+          <a routerLink="/searches" routerLinkActive="on">Find leads</a>
           <a routerLink="/profile" routerLinkActive="on">Profile</a>
         </nav>
         <span class="user">{{ email }} <button class="ghost" (click)="auth.logout()">Log out</button></span>

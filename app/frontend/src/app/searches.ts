@@ -44,7 +44,10 @@ import { ApiService, Job } from './api.service';
       @for (j of jobs(); track j.id) {
         <a class="card row link" [routerLink]="['/searches', j.id]">
           <span><strong>{{ j.niche }}</strong> in {{ j.city }}</span>
-          <span class="mute">{{ j.createdAt | date: 'short' }} · <span [class]="'badge ' + j.status">{{ label(j.status) }}</span></span>
+          <span class="mute">
+            @if (j.status === 'DONE' && j.foundCount !== null) { {{ j.foundCount }} found, {{ j.newCount }} new · }
+            {{ j.createdAt | date: 'short' }} · <span [class]="'badge ' + j.status">{{ label(j.status) }}</span>
+          </span>
         </a>
       } @empty {
         <p class="mute">No searches yet. Choose a business type and a city above to find your first leads.</p>

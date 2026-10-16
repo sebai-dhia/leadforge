@@ -15,13 +15,31 @@ export function whatsappDigits(phone: string | null): string | null {
   selector: 'app-lead-card',
   imports: [FormsModule],
   template: `
-    <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED'">
-      <div class="row">
-        <h3 dir="auto">{{ current().name }}</h3>
-        <span class="fit" [attr.data-level]="fit().level" [title]="'Score ' + current().score + ' out of 10'">
-          {{ fit().label }} <span class="num">{{ current().score }}/10</span>
-        </span>
-      </div>
+    <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED'" [class.compact]="collapsible()">
+      @if (collapsible()) {
+        <button type="button" class="lead-head" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
+          <span class="lead-title">
+            <bdi class="lead-name">{{ current().name }}</bdi>
+            @if (current().niche) { <span class="mute">{{ current().niche }} · {{ current().city }}</span> }
+          </span>
+          <span class="lead-meta">
+            <span class="fit" [attr.data-level]="fit().level">{{ fit().label }} <span class="num">{{ current().score }}/10</span></span>
+            <span class="reach" [class.none]="reach() === 'No contact'">{{ reach() }}</span>
+            <span class="pill" [attr.data-status]="current().status">{{ statusLabel() }}</span>
+            <span class="chev" [class.open]="expanded()" aria-hidden="true"></span>
+          </span>
+        </button>
+      } @else {
+        <div class="row">
+          <h3 dir="auto">{{ current().name }}</h3>
+          <span class="fit" [attr.data-level]="fit().level" [title]="'Score ' + current().score + ' out of 10'">
+            {{ fit().label }} <span class="num">{{ current().score }}/10</span>
+          </span>
+        </div>
+        @if (seenBefore()) { <span class="tag">Already in your leads</span> }
+      }
+
+      @if (showBody()) {
       <p class="mute">
         <bdi>{{ current().address }}</bdi>
         @if (!current().website) { · no website listed }
@@ -107,12 +125,17 @@ export function whatsappDigits(phone: string | null): string | null {
           }
         </div>
       }
+      }
     </article>
   `,
 })
 export class LeadCard {
   readonly lead = input.required<Lead>();
   readonly defaultLanguage = input<Lang>('en');
+  /** Compact row that opens on click, used in long lists. */
+  readonly collapsible = input(false);
+  /** The business was already in the user's leads before this search found it. */
+  readonly seenBefore = input(false);
   readonly changed = output<Lead>();
 
   private readonly api = inject(ApiService);
@@ -128,6 +151,8 @@ export class LeadCard {
 
   protected readonly current = linkedSignal(() => this.lead());
   protected readonly open = signal(false);
+  protected readonly expanded = signal(false);
+  protected readonly showBody = computed(() => !this.collapsible() || this.expanded());
   protected readonly generating = signal(false);
   protected readonly copied = signal(false);
   protected readonly error = signal('');
@@ -144,6 +169,13 @@ export class LeadCard {
     return s >= 8 ? { label: 'Strong fit', level: 'high' } : s >= 6 ? { label: 'Possible fit', level: 'mid' }
       : { label: 'Weak fit', level: 'low' };
   });
+
+  protected readonly reach = computed(() => {
+    const l = this.current();
+    return l.phone && l.emails.length ? 'Phone and email' : l.phone ? 'Phone' : l.emails.length ? 'Email' : 'No contact';
+  });
+
+  protected readonly statusLabel = computed(() => this.statuses.find(s => s.value === this.current().status)?.label ?? '');
 
   protected readonly telHref = computed(() => {
     const p = this.current().phone;
