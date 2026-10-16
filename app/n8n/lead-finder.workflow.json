@@ -1,0 +1,242 @@
+{
+  "name": "Lead Finder Backend",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "find-leads",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "n1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "find-leads-backend"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://places.googleapis.com/v1/places:searchText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Goog-FieldMask",
+              "value": "places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber,places.rating,places.userRatingCount"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ textQuery: $json.body.niche + ' in ' + $json.body.city, maxResultCount: 10 }) }}"
+      },
+      "id": "n2",
+      "name": "Google Places Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst places = ($input.first().json.places || []).filter(p => p.websiteUri);\nif (!places.length) return [{ json: { _empty: true } }];\nreturn places.map(p => ({ json: {\n  name: p.displayName && p.displayName.text,\n  address: p.formattedAddress,\n  phone: p.nationalPhoneNumber || null,\n  rating: p.rating || null,\n  reviews: p.userRatingCount || 0,\n  website: p.websiteUri,\n  niche: body.niche, city: body.city,\n  service: body.service, sender: body.sender\n}}));"
+      },
+      "id": "n3",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website || 'http://localhost:1' }}",
+        "options": {
+          "timeout": 8000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "n4",
+      "name": "Fetch Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = $('Prepare').all();\nreturn $input.all().map((item, i) => {\n  const lead = leads[i].json;\n  if (lead._empty) return { json: { _empty: true, prompt: 'Reply with {}' } };\n  const html = typeof item.json.data === 'string' ? item.json.data : '';\n  const found = [...new Set((html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])\n    .map(e => e.toLowerCase())\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e)))];\n  const text = html.replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 3000);\n  const prompt = [\n    'You help a freelancer find clients who need custom software (web apps, booking/ordering systems, internal tools, automation, dashboards).',\n    'Freelancer name: ' + lead.sender,\n    'Freelancer offer: ' + lead.service,\n    '',\n    'Business: ' + lead.name + ' (' + lead.niche + ', ' + lead.city + ')',\n    'Website: ' + lead.website,\n    'Rating: ' + lead.rating + ' from ' + lead.reviews + ' reviews',\n    'Website text excerpt: ' + (text || '(could not be fetched)'),\n    '',\n    'Task: 1) score 0-10 how likely this business needs custom software the freelancer offers (outdated site, no online booking/ordering, manual processes, many reviews = busy). 2) one-sentence reason grounded in what you saw. 3) write a short (max 90 words), specific, non-spammy cold email in the language of the business website, no fake claims, one clear low-pressure question at the end.',\n    'Reply with ONLY JSON: {\"score\":number,\"reason\":string,\"subject\":string,\"emailBody\":string}'\n  ].join('\\n');\n  return { json: { ...lead, emails: found.slice(0, 3), prompt } };\n});"
+      },
+      "id": "n5",
+      "name": "Extract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 800, messages: [{ role: 'user', content: $json.prompt }] }) }}"
+      },
+      "id": "n6",
+      "name": "Claude Score and Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst leads = $('Extract').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const lead = { ...leads[i].json };\n  if (lead._empty) return;\n  delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;\n  let r = {};\n  try {\n    const raw = item.json.content[0].text;\n    r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));\n  } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }\n  out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
+      },
+      "id": "n7",
+      "name": "Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').first().json.body.callbackUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "n8",
+      "name": "Send Results to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Google Places Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Places Search": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare": {
+      "main": [
+        [
+          {
+            "node": "Fetch Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Website": {
+      "main": [
+        [
+          {
+            "node": "Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract": {
+      "main": [
+        [
+          {
+            "node": "Claude Score and Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Score and Draft": {
+      "main": [
+        [
+          {
+            "node": "Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format": {
+      "main": [
+        [
+          {
+            "node": "Send Results to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
