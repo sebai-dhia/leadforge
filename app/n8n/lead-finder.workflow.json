@@ -107,7 +107,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const leads = $('Prepare').all();\nreturn $input.all().map((item, i) => {\n  const lead = leads[i].json;\n  if (lead._empty) return { json: { _empty: true, prompt: 'Reply with {}' } };\n  const html = typeof item.json.data === 'string' ? item.json.data : '';\n  const scraped = (html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])\n    .map(e => e.toLowerCase())\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e));\n  const found = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...scraped].filter(Boolean))];\n  const text = html.replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 3000);\n  const web = lead.website\n    ? 'Website: ' + lead.website + '\\nWebsite text excerpt: ' + (text || '(could not be fetched)')\n    : 'No website is listed for this business (it may have little or no online presence, which can mean it needs a web app, booking or ordering system).';\n  const prompt = [\n    'You help a freelancer find clients who need custom software (web apps, booking/ordering systems, internal tools, automation, dashboards).',\n    'Freelancer name: ' + lead.sender,\n    'Freelancer offer: ' + lead.service,\n    '',\n    'Business: ' + lead.name + ' (' + lead.niche + ', ' + lead.city + ')',\n    web,\n    '',\n    'Task: 1) score 0-10 how likely this business needs custom software the freelancer offers (outdated or missing site, no online booking/ordering, manual processes). 2) one-sentence reason grounded in what you know. 3) write a short (max 90 words), specific, non-spammy cold email in English with one clear low-pressure question at the end. Use ONLY facts given above. Never write that you noticed, saw or reviewed anything you were not given. Do not assert that the business lacks a website, booking system or any tool; instead say you could not find one online or ask whether they have one. Do not guess the owner first name from the business name; greet with the business name or a neutral greeting.',\n    'Reply with ONLY JSON: {\"score\":number,\"reason\":string,\"subject\":string,\"emailBody\":string}'\n  ].join('\\n');\n  const out = { ...lead, emails: found.slice(0, 3), prompt };\n  delete out.osmEmail;\n  return { json: out };\n});"
+        "jsCode": "const leads = $('Prepare').all();\nreturn $input.all().map((item, i) => {\n  const lead = leads[i].json;\n  if (lead._empty) return { json: { _empty: true } };\n  const html = typeof item.json.data === 'string' ? item.json.data : '';\n  const scraped = (html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])\n    .map(e => e.toLowerCase())\n    .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e));\n  const found = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...scraped].filter(Boolean))];\n  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|\\u062d\\u062c\\u0632|\\u0645\\u0648\\u0639\\u062f/i.test(html);\n  const out = { ...lead, emails: found.slice(0, 3), hasBooking, siteChecked: html.length > 0 };\n  delete out.osmEmail;\n  return { json: out };\n});"
       },
       "id": "n5",
       "name": "Extract",
@@ -120,38 +120,20 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4, maxOutputTokens: 2000 } }) }}",
-        "options": {
-          "batching": {
-            "batch": {
-              "batchSize": 1,
-              "batchInterval": 5000
-            }
-          }
-        }
+        "jsCode": "// Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.\nreturn $input.all().map(item => {\n  const l = item.json;\n  if (l._empty) return item;\n  const niche = (l.niche || '').toLowerCase();\n  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);\n  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);\n  let score = appointment ? 6 : food ? 5 : 4;\n  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];\n  const flags = [];\n  if (!l.website) { score += 2; flags.push('no website listed'); }\n  else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }\n  else if (l.siteChecked) { score += 1; flags.push('website found, no online booking seen'); }\n  else { flags.push('website could not be checked'); }\n  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {\n    score -= 2; flags.push('looks like a large organisation');\n  }\n  const hasEmail = !!(l.emails && l.emails.length);\n  if (hasEmail || l.phone) {\n    score += 1;\n    flags.push(hasEmail && l.phone ? 'phone and email available' : l.phone ? 'phone available' : 'email available');\n  } else { flags.push('no contact details found yet'); }\n  score = Math.max(1, Math.min(10, score));\n  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };\n});"
       },
       "id": "n6",
-      "name": "AI Score and Draft",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         1540,
         0
-      ],
-      "retryOnFail": true,
-      "maxTries": 4,
-      "waitBetweenTries": 5000,
-      "onError": "continueRegularOutput"
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst leads = $('Extract').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const lead = { ...leads[i].json };\n  if (lead._empty) return;\n  delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;\n  let r = {};\n  try {\n    const raw = (item.json.candidates && item.json.candidates[0].content.parts.map(p => p.text || '').join('')) || item.json.choices[0].message.content;\n    r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));\n  } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }\n  out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked']) delete r[k];\n  return r;\n});\nout.sort((a, b) => b.score - a.score);\nreturn [{ json: { jobId, leads: out } }];"
       },
       "id": "n7",
       "name": "Format",
@@ -253,14 +235,14 @@
       "main": [
         [
           {
-            "node": "AI Score and Draft",
+            "node": "Score",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Score and Draft": {
+    "Score": {
       "main": [
         [
           {

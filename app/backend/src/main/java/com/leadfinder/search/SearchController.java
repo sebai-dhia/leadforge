@@ -1,7 +1,10 @@
 package com.leadfinder.search;
 
+import com.leadfinder.auth.AppUser;
+import com.leadfinder.auth.UserRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -19,8 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SearchController {
 
-    public record CreateSearch(@NotBlank String niche, @NotBlank String city,
-                               @NotBlank String service, @NotBlank String sender) {}
+    public record CreateSearch(@NotBlank @Size(max = 120) String niche, @NotBlank @Size(max = 120) String city) {}
 
     public record JobDto(Long id, String niche, String city, SearchJob.Status status, Instant createdAt) {
         static JobDto of(SearchJob j) {
@@ -28,32 +30,28 @@ public class SearchController {
         }
     }
 
-    public record LeadDto(Long id, String name, String address, String phone, Double rating, Integer reviews,
-                          String website, List<String> emails, Integer score, String reason,
-                          String subject, String emailBody, String status) {
-        static LeadDto of(Lead l) {
-            List<String> emails = l.getEmails() == null || l.getEmails().isBlank()
-                    ? List.of() : List.of(l.getEmails().split(","));
-            return new LeadDto(l.getId(), l.getName(), l.getAddress(), l.getPhone(), l.getRating(), l.getReviews(),
-                    l.getWebsite(), emails, l.getScore(), l.getReason(), l.getSubject(), l.getEmailBody(), l.getStatus());
-        }
-    }
-
     public record JobDetail(JobDto job, List<LeadDto> leads) {}
 
     private final SearchJobRepository jobs;
     private final LeadRepository leads;
+    private final UserRepository users;
     private final N8nClient n8n;
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public JobDto create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateSearch req) {
+        AppUser user = users.findById(Long.valueOf(jwt.getSubject()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (user.getOffer().isBlank() || user.getDisplayName().isBlank()) {
+            // The frontend sends the user to the profile page on this status.
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Complete your profile first");
+        }
         SearchJob job = new SearchJob();
-        job.setUserId(Long.valueOf(jwt.getSubject()));
-        job.setNiche(req.niche());
-        job.setCity(req.city());
-        job.setService(req.service());
-        job.setSender(req.sender());
+        job.setUserId(user.getId());
+        job.setNiche(req.niche().trim());
+        job.setCity(req.city().trim());
+        job.setService(user.getOffer());
+        job.setSender(user.getDisplayName());
         jobs.save(job);
         try {
             n8n.trigger(job);

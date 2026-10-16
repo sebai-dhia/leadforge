@@ -1,0 +1,138 @@
+{
+  "name": "Lead Finder Draft Message",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "draft-message",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "draft-message-backend"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body || {};\nconst languages = {\n  en: 'English',\n  fr: 'French',\n  ar: 'Arabic (Modern Standard Arabic, simple, polite and natural to read)'\n};\nconst lang = languages[b.language] || languages.en;\nconst wa = b.channel === 'whatsapp';\nconst facts = [\n  'Business: ' + b.leadName,\n  b.address ? 'Address: ' + b.address : null,\n  (b.niche && b.city) ? 'Category and city: ' + b.niche + ' in ' + b.city : null,\n  b.website ? 'Website: ' + b.website : 'No website is listed for this business.',\n  b.reason ? 'Why it may be a fit: ' + b.reason : null\n].filter(Boolean).join('\\n');\nconst prompt = [\n  'You write one short first-contact message from a freelancer to a local business.',\n  'Sender name: ' + b.senderName,\n  'What the sender offers: ' + b.offer,\n  '',\n  'Business facts (the ONLY facts you may use):',\n  facts,\n  '',\n  'Language: write the whole message in ' + lang + '.',\n  wa\n    ? 'Channel: WhatsApp. Body of at most 60 words, friendly and conversational, no subject, no formal sign-off block.'\n    : 'Channel: email. Subject of at most 8 words and a body of at most 90 words.',\n  '',\n  'Rules:',\n  '- Never claim that you noticed, saw, visited or reviewed anything.',\n  '- Never state that the business lacks a website, booking system or any tool. You may say you could not find one online, or ask whether they use one.',\n  '- Do not guess a person name. Greet with only a greeting word and a comma, such as Hello, or Bonjour, on its own line. Never put the business name in the greeting.',\n  '- Say nothing about the sender except the name and what they offer. Do not say where they are based or add experience, clients or credentials.',\n  '- Use the business name exactly as written. Do not add titles such as Dr or Maitre and do not assume anyone gender.',\n  '- No numbers, statistics, guarantees or exaggerated claims.',\n  '- End with one low-pressure question, then sign with the sender name.',\n  '',\n  'Reply with ONLY JSON: {\"subject\":string,\"body\":string}. The subject must be an empty string for WhatsApp.'\n].join('\\n');\nreturn [{ json: { prompt } }];"
+      },
+      "id": "d2",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.6, maxOutputTokens: 700 } }) }}"
+      },
+      "id": "d3",
+      "name": "AI Write Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const channel = (($('Webhook').first().json.body) || {}).channel;\nlet out = null;\ntry {\n  const raw = ($json.candidates && $json.candidates[0].content.parts.map(p => p.text || '').join('')) || '';\n  const o = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));\n  if (o && typeof o.body === 'string' && o.body.trim()) {\n    out = { subject: channel === 'whatsapp' ? '' : String(o.subject || '').trim(), body: o.body.trim() };\n  }\n} catch (e) { /* falls through to the error result */ }\nreturn [{ json: out || { error: true, message: 'The AI did not return a usable message' } }];"
+      },
+      "id": "d4",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.error ? 502 : 200 }}"
+        }
+      },
+      "id": "d5",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Write Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Write Message": {
+      "main": [
+        [
+          {
+            "node": "Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

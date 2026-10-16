@@ -31,4 +31,10 @@ public class Lead {
     private String emailBody;
 
     private String status = "NEW";
+
+    @Column(name = "draft_language")
+    private String draftLanguage;
+
+    @Column(name = "draft_channel")
+    private String draftChannel;
 }

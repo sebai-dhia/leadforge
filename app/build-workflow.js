@@ -1,5 +1,5 @@
 // Generates n8n/lead-finder.workflow.json for the Spring Boot backend (run: node build-workflow.js)
-// Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch sites -> AI (Gemini) -> POST results to backend callback.
+// Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch sites -> rule-based score -> POST results to backend callback.
 const fs = require('fs');
 
 const queryCode = `
@@ -54,49 +54,53 @@ const extractCode = `
 const leads = $('Prepare').all();
 return $input.all().map((item, i) => {
   const lead = leads[i].json;
-  if (lead._empty) return { json: { _empty: true, prompt: 'Reply with {}' } };
+  if (lead._empty) return { json: { _empty: true } };
   const html = typeof item.json.data === 'string' ? item.json.data : '';
   const scraped = (html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [])
     .map(e => e.toLowerCase())
     .filter(e => !/\\.(png|jpe?g|gif|svg|webp)$/.test(e) && !/(sentry|wixpress|example|domain)\\./.test(e));
   const found = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...scraped].filter(Boolean))];
-  const text = html.replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 3000);
-  const web = lead.website
-    ? 'Website: ' + lead.website + '\\nWebsite text excerpt: ' + (text || '(could not be fetched)')
-    : 'No website is listed for this business (it may have little or no online presence, which can mean it needs a web app, booking or ordering system).';
-  const prompt = [
-    'You help a freelancer find clients who need custom software (web apps, booking/ordering systems, internal tools, automation, dashboards).',
-    'Freelancer name: ' + lead.sender,
-    'Freelancer offer: ' + lead.service,
-    '',
-    'Business: ' + lead.name + ' (' + lead.niche + ', ' + lead.city + ')',
-    web,
-    '',
-    'Task: 1) score 0-10 how likely this business needs custom software the freelancer offers (outdated or missing site, no online booking/ordering, manual processes). 2) one-sentence reason grounded in what you know. 3) write a short (max 90 words), specific, non-spammy cold email in English with one clear low-pressure question at the end. Use ONLY facts given above. Never write that you noticed, saw or reviewed anything you were not given. Do not assert that the business lacks a website, booking system or any tool; instead say you could not find one online or ask whether they have one. Do not guess the owner first name from the business name; greet with the business name or a neutral greeting.',
-    'Reply with ONLY JSON: {"score":number,"reason":string,"subject":string,"emailBody":string}'
-  ].join('\\n');
-  const out = { ...lead, emails: found.slice(0, 3), prompt };
+  const hasBooking = /calendly|doctolib|booking|book now|book an? appointment|reserv|rendez-vous|prendre rdv|appointment|\\u062d\\u062c\\u0632|\\u0645\\u0648\\u0639\\u062f/i.test(html);
+  const out = { ...lead, emails: found.slice(0, 3), hasBooking, siteChecked: html.length > 0 };
   delete out.osmEmail;
   return { json: out };
 });
 `.trim();
 
+const scoreCode = `
+// Transparent rule-based fit score (1-10). No AI: it is instant, free and explainable.
+return $input.all().map(item => {
+  const l = item.json;
+  if (l._empty) return item;
+  const niche = (l.niche || '').toLowerCase();
+  const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);
+  const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);
+  let score = appointment ? 6 : food ? 5 : 4;
+  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];
+  const flags = [];
+  if (!l.website) { score += 2; flags.push('no website listed'); }
+  else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }
+  else if (l.siteChecked) { score += 1; flags.push('website found, no online booking seen'); }
+  else { flags.push('website could not be checked'); }
+  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {
+    score -= 2; flags.push('looks like a large organisation');
+  }
+  const hasEmail = !!(l.emails && l.emails.length);
+  if (hasEmail || l.phone) {
+    score += 1;
+    flags.push(hasEmail && l.phone ? 'phone and email available' : l.phone ? 'phone available' : 'email available');
+  } else { flags.push('no contact details found yet'); }
+  score = Math.max(1, Math.min(10, score));
+  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };
+});
+`.trim();
+
 const formatCode = `
 const jobId = $('Webhook').first().json.body.jobId;
-const leads = $('Extract').all();
-const out = [];
-$input.all().forEach((item, i) => {
-  const lead = { ...leads[i].json };
-  if (lead._empty) return;
-  delete lead.prompt; delete lead.niche; delete lead.city; delete lead.service; delete lead.sender;
-  let r = {};
-  try {
-    const raw = (item.json.candidates && item.json.candidates[0].content.parts.map(p => p.text || '').join('')) || item.json.choices[0].message.content;
-    r = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
-  } catch (e) { r = { score: 0, reason: 'AI output could not be parsed', subject: '', emailBody: '' }; }
-  out.push({ ...lead, score: Math.round(Number(r.score) || 0), reason: r.reason, subject: r.subject, emailBody: r.emailBody });
+const out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {
+  const r = { ...l, subject: '', emailBody: '' };
+  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked']) delete r[k];
+  return r;
 });
 out.sort((a, b) => b.score - a.score);
 return [{ json: { jobId, leads: out } }];
@@ -155,17 +159,8 @@ const workflow = {
       id: 'n5', name: 'Extract', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1320, 0]
     },
     {
-      parameters: {
-        method: 'POST', url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent',
-        authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
-        sendBody: true, specifyBody: 'json',
-        jsonBody: "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4, maxOutputTokens: 2000 } }) }}",
-        // one request every 5 s keeps us under free-tier rate limits
-        options: { batching: { batch: { batchSize: 1, batchInterval: 5000 } } }
-      },
-      id: 'n6', name: 'AI Score and Draft', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1540, 0],
-      retryOnFail: true, maxTries: 4, waitBetweenTries: 5000,
-      onError: 'continueRegularOutput'
+      parameters: { jsCode: scoreCode },
+      id: 'n6', name: 'Score', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1540, 0]
     },
     {
       parameters: { jsCode: formatCode },
@@ -188,8 +183,8 @@ const workflow = {
     'Geoapify Places': { main: [[{ node: 'Prepare', type: 'main', index: 0 }]] },
     'Prepare': { main: [[{ node: 'Fetch Website', type: 'main', index: 0 }]] },
     'Fetch Website': { main: [[{ node: 'Extract', type: 'main', index: 0 }]] },
-    'Extract': { main: [[{ node: 'AI Score and Draft', type: 'main', index: 0 }]] },
-    'AI Score and Draft': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
+    'Extract': { main: [[{ node: 'Score', type: 'main', index: 0 }]] },
+    'Score': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
     'Format': { main: [[{ node: 'Send Results to Backend', type: 'main', index: 0 }]] }
   },
   settings: { executionOrder: 'v1' }

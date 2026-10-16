@@ -21,6 +21,17 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** What the freelancer sells, reused by every search and draft. */
+    @Column(nullable = false)
+    private String offer = "";
+
+    @Column(name = "display_name", nullable = false)
+    private String displayName = "";
+
+    /** Preferred draft language: en, fr or ar. */
+    @Column(nullable = false)
+    private String language = "en";
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 }

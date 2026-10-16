@@ -11,24 +11,32 @@ import java.util.Map;
 
 @Component
 public class N8nClient {
+    public record Draft(String subject, String body) {}
+
     private final AppProperties props;
-    private final RestClient http;
+    private final RestClient trigger;
+    private final RestClient draft;
 
     public N8nClient(AppProperties props) {
         this.props = props;
+        this.trigger = client(Duration.ofSeconds(15));
+        this.draft = client(Duration.ofSeconds(60)); // the AI writes the message while we wait
+    }
+
+    private static RestClient client(Duration readTimeout) {
         // HTTP/1.1 only: the JDK client's default h2c upgrade makes POSTs to n8n hang.
         HttpClient jdk = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(jdk);
-        factory.setReadTimeout(Duration.ofSeconds(15));
-        this.http = RestClient.builder().requestFactory(factory).build();
+        factory.setReadTimeout(readTimeout);
+        return RestClient.builder().requestFactory(factory).build();
     }
 
     /** n8n answers immediately (Webhook responds "When received") and calls back when finished. */
     public void trigger(SearchJob job) {
-        http.post()
+        trigger.post()
                 .uri(props.n8n().webhookUrl())
                 .header("X-Webhook-Secret", props.n8n().webhookSecret())
                 .body(Map.of(
@@ -40,5 +48,15 @@ public class N8nClient {
                         "callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results"))
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    /** Asks the n8n "draft-message" workflow to write one message; it answers when the AI is done. */
+    public Draft draft(Map<String, Object> request) {
+        return draft.post()
+                .uri(props.n8n().draftUrl())
+                .header("X-Webhook-Secret", props.n8n().webhookSecret())
+                .body(request)
+                .retrieve()
+                .body(Draft.class);
     }
 }
