@@ -64,8 +64,9 @@ import { I18n } from './i18n';
   `,
   styles: `
     :host { display: block; }
-    .radar { --w: min(540px, calc((100svh - 220px) / 1.24)); position: relative; width: 100%; max-width: var(--w); aspect-ratio: 520 / 560; margin: 0 auto calc(var(--w) * .16); }
-    .panel { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; isolation: isolate;
+    /* The map's size follows the window height; the lead card is wide, so it is laid over the map's lower left. */
+    .radar { --w: min(540px, calc((100svh - 220px) / 1.24)); position: relative; width: 100%; height: calc(var(--w) * 1.25); }
+    .panel { position: absolute; right: 0; top: 0; width: var(--w); aspect-ratio: 520 / 560; border-radius: 30px; overflow: hidden; isolation: isolate;
       background: radial-gradient(120% 90% at 50% 0%, #0f1c17 0%, #08110e 70%);
       border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 60px 120px -40px rgba(0, 0, 0, .8), 0 0 90px -30px rgba(61, 220, 151, .28); }
     .map { position: absolute; inset: 0; width: 100%; height: 100%; will-change: transform;
@@ -94,18 +95,23 @@ import { I18n } from './i18n';
     .count { right: 18px; top: 16px; color: var(--accent); }
 
     /* layers above the map move faster than the map: depth */
-    .float-card { position: absolute; left: -12%; bottom: -20%; width: 76%; z-index: 2; will-change: transform;
+    .float-card { position: absolute; left: 0; bottom: 0; width: min(100%, 560px); z-index: 2; will-change: transform;
       transform: translate3d(0, calc(var(--p, 0) * -74px), 0); animation: float-in .9s .9s cubic-bezier(.2, .8, .2, 1) backwards; }
     .chip { position: absolute; z-index: 3; font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 999px; white-space: nowrap; will-change: transform;
       background: rgba(10, 20, 16, .82); border: 1px solid rgba(61, 220, 151, .4); color: var(--ink); backdrop-filter: blur(10px);
       box-shadow: 0 14px 40px -12px rgba(0, 0, 0, .7); animation: float-in .8s cubic-bezier(.2, .8, .2, 1) backwards; }
     .chip::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--accent); }
-    .chip-a { right: -5%; top: 26%; transform: translate3d(0, calc(var(--p, 0) * -120px), 0); animation-delay: 1.4s; }
-    .chip-b { right: 3%; bottom: 9%; transform: translate3d(0, calc(var(--p, 0) * -48px), 0); animation-delay: 1.7s; }
+    .chip-a { right: -2%; top: 22%; transform: translate3d(0, calc(var(--p, 0) * -120px), 0); animation-delay: 1.4s; }
+    .chip-b { right: 5%; top: calc(var(--w) * .74); transform: translate3d(0, calc(var(--p, 0) * -48px), 0); animation-delay: 1.7s; }
     @keyframes float-in { from { opacity: 0; translate: 0 26px; } }
 
-    @media (max-width: 960px) { .float-card { left: 0; width: 90%; bottom: -22%; } .radar { --w: 540px; max-width: 540px; margin-bottom: 22%; } .chip-a { right: 0; } }
-    @media (max-width: 520px) { .chip-b { display: none; } .float-card { width: 100%; } }
+    @media (max-width: 960px) {
+      .radar { --w: min(100%, 540px); height: auto; margin-bottom: 150px; }
+      .panel { position: relative; width: 100%; max-width: 540px; margin-left: auto; }
+      .float-card { bottom: -130px; width: 94%; max-width: 560px; }
+      .chip-a { right: 0; } .chip-b { right: 4%; top: 62%; }
+    }
+    @media (max-width: 520px) { .chip-b { display: none; } .radar { margin-bottom: 190px; } .float-card { width: 100%; bottom: -170px; } }
     @media (prefers-reduced-motion: reduce) {
       .map, .float-card, .chip { transform: none !important; }
       .sweep, .ping, .dot, .area, .float-card, .chip { animation: none !important; }

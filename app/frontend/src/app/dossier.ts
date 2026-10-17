@@ -48,7 +48,7 @@ import { I18n } from './i18n';
     </article>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; container-type: inline-size; }
     .dossier { position: relative; padding: 22px; border-radius: 22px; color: var(--ink);
       background: linear-gradient(165deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .02));
       border: 1px solid rgba(255, 255, 255, .11); backdrop-filter: blur(16px) saturate(1.2);
@@ -73,6 +73,18 @@ import { I18n } from './i18n';
     .c svg { color: var(--accent); }
     .compact .contacts { display: none; }
     .compact .reasons { margin-top: 14px; }
+    @container (min-width: 440px) {
+      .compact { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); column-gap: 22px; align-items: center; padding: 20px 22px; }
+      .compact .tag { position: absolute; top: 12px; right: 14px; }
+      .compact .id h3 { font-size: 17px; }
+      .compact .reasons { gap: 6px; margin-top: 12px; }
+      .compact .reasons li { font-size: 12.5px; padding: 4px 9px 4px 8px; }
+      .compact .bubble { font-size: 14px; padding: 11px 13px; }
+      .compact header, .compact .reasons, .compact .contacts { grid-column: 1; }
+      .compact .contacts { display: flex; gap: 6px; margin-top: 12px; }
+      .compact .c { font-size: 12.5px; padding: 6px 10px; }
+      .compact .draft { grid-column: 2; grid-row: 1 / span 3; margin: 0; padding: 0 0 0 20px; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .09); }
+    }
     .draft { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .09); }
     .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--mute); margin-bottom: 9px; }
     .bubble { margin: 0; padding: 13px 15px; border-radius: 14px 14px 14px 4px; background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .08);
