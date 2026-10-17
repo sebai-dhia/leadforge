@@ -162,7 +162,11 @@ import { SpecializationKey } from './specialization-picker';
     </div>
   `,
   styles: `
-    :host { display: block; overflow-x: clip; }
+    /* The landing page is drawn for the dark theme only (a night map). It sets its own dark tokens, so a visitor whose
+       system is in light mode still sees it as designed. */
+    :host { display: block; overflow-x: clip; min-height: 100vh; color-scheme: dark; color: var(--ink); background: var(--bg);
+      --bg: #0a0f0e; --card: #111917; --ink: #ecf3f0; --mute: #93a59e; --line: #22302b; --line-strong: #2b3b35;
+      --accent: #3ddc97; --warn: #f0a85a; --on-accent: #04120c; --accent-soft: #16201d; }
     .page { font-size: 17px; line-height: 1.6; }
     .top, .hero, .story, .trust, .final, .foot { max-width: 1180px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; padding-top: 20px; padding-bottom: 20px; position: relative; z-index: 5; }

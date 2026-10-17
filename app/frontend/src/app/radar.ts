@@ -13,7 +13,7 @@ import { I18n } from './i18n';
   template: `
     <div class="radar">
       <div class="panel">
-        <svg class="map" viewBox="0 0 520 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <svg class="map" viewBox="0 88 520 325" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,.055)" stroke-width="1" />
@@ -69,8 +69,8 @@ import { I18n } from './i18n';
   styles: `
     :host { display: block; }
     /* The map's size follows the window height; the lead card is wide, so it is laid over the map's lower left. */
-    .radar { --w: min(540px, calc((100svh - 220px) / 1.24)); position: relative; width: 100%; height: calc(var(--w) * 1.25); }
-    .panel { position: absolute; right: 0; top: 0; width: var(--w); aspect-ratio: 520 / 560; border-radius: 30px; overflow: hidden; isolation: isolate;
+    .radar { --w: max(340px, min(600px, calc((100svh - 425px) * 1.6))); position: relative; width: 100%; height: calc(var(--w) * .625 + 210px); }
+    .panel { position: absolute; right: 0; top: 0; width: var(--w); aspect-ratio: 16 / 10; border-radius: 28px; overflow: hidden; isolation: isolate;
       background: radial-gradient(120% 90% at 50% 0%, #0f1c17 0%, #08110e 70%);
       border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 60px 120px -40px rgba(0, 0, 0, .8), 0 0 90px -30px rgba(61, 220, 151, .28); }
     .map { position: absolute; inset: 0; width: 100%; height: 100%; will-change: transform;
@@ -109,12 +109,13 @@ import { I18n } from './i18n';
     .chip-a { animation-delay: 1.4s; } .chip-b { animation-delay: 1.7s; }
     @keyframes float-in { from { opacity: 0; translate: 0 26px; } }
 
+    /* one column: the map, then the card laid over its bottom edge. Nothing is placed above the map, so the text before it is never covered. */
     @media (max-width: 960px) {
-      .radar { --w: min(100%, 540px); height: auto; margin-bottom: 150px; }
-      .panel { position: relative; width: 100%; max-width: 540px; margin-left: auto; }
-      .stack { bottom: -130px; width: 94%; max-width: 560px; }
+      .radar { --w: min(100%, 560px); height: auto; display: flex; flex-direction: column; }
+      .panel { position: relative; width: 100%; max-width: 560px; margin-left: auto; }
+      .stack { position: relative; bottom: auto; width: 94%; max-width: 560px; margin-top: -72px; }
     }
-    @media (max-width: 520px) { .chip-b { display: none; } .radar { margin-bottom: 190px; } .stack { width: 100%; bottom: -170px; } }
+    @media (max-width: 520px) { .chip-b { display: none; } .stack { width: 100%; margin-top: -60px; } }
     @media (prefers-reduced-motion: reduce) {
       .map, .stack { transform: none !important; }
       .sweep, .ping, .dot, .area, .stack, .chip { animation: none !important; }
