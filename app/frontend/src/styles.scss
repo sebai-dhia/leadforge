@@ -158,7 +158,10 @@ select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 
 /* Language change: a short crossfade of the page. The switch itself has its own transition name, so it stays put. */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: ease; }
+/* Show only the live new switch, so its pill can slide while the page crossfades. */
 ::view-transition-group(lang-switch) { animation-duration: 0s; }
+::view-transition-old(lang-switch) { display: none; }
+::view-transition-new(lang-switch) { animation: none; opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
