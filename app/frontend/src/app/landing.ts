@@ -14,10 +14,10 @@ import { Logo } from './logo';
       <header class="top">
         <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="30" /></a>
         <nav [attr.aria-label]="t('landing.siteNav')">
-          <app-lang-switch />
           <a href="#how" class="plain">{{ t('landing.how') }}</a>
           <a href="#why" class="plain">{{ t('landing.why') }}</a>
           <a routerLink="/login" class="btn ghost">{{ t('landing.signin') }}</a>
+          <app-lang-switch />
         </nav>
       </header>
 

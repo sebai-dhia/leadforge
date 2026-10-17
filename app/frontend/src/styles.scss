@@ -155,3 +155,10 @@ select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .chev { width: 8px; height: 8px; border-right: 2px solid var(--mute); border-bottom: 2px solid var(--mute); transform: rotate(-45deg); transition: transform .15s ease; margin: 0 4px; }
 .chev.open { transform: rotate(45deg); }
 @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+
+/* Language change: a short crossfade of the page. The switch itself has its own transition name, so it stays put. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: ease; }
+::view-transition-group(lang-switch) { animation-duration: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

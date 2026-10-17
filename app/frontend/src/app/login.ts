@@ -15,7 +15,7 @@ import { ApiService } from './api.service';
     <div class="wrap">
       <header class="top">
         <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="28" /></a>
-        <span class="right"><app-lang-switch /><a routerLink="/" class="back">{{ t('login.back') }}</a></span>
+        <span class="right"><a routerLink="/" class="back">{{ t('login.back') }}</a><app-lang-switch /></span>
       </header>
 
       <div class="center">

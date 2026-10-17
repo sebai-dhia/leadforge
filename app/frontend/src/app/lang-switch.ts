@@ -11,6 +11,7 @@ import { I18n } from './i18n';
     </div>
   `,
   styles: `
+    :host { display: inline-flex; view-transition-name: lang-switch; }
     .switch { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px; }
     button { min-height: 38px; min-width: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--mute); font-weight: 600; font-size: 13px; }
     button:hover:not(.on) { color: var(--ink); filter: none; }

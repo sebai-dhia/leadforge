@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { ApplicationRef, Injectable, inject, signal } from '@angular/core';
 
 export type AppLang = 'en' | 'fr';
 
@@ -194,15 +194,24 @@ function read(): AppLang {
 @Injectable({ providedIn: 'root' })
 export class I18n {
   readonly lang = signal<AppLang>(read());
+  private readonly appRef = inject(ApplicationRef);
 
   constructor() {
     document.documentElement.lang = this.lang();
   }
 
   set(lang: AppLang) {
-    this.lang.set(lang);
-    document.documentElement.lang = lang;
-    try { localStorage.setItem('lf_lang', lang); } catch { /* storage unavailable */ }
+    if (lang === this.lang()) return;
+    const apply = () => {
+      this.lang.set(lang);
+      document.documentElement.lang = lang;
+      try { localStorage.setItem('lf_lang', lang); } catch { /* storage unavailable */ }
+      this.appRef.tick(); // the new text must be in the page before the transition takes its second snapshot
+    };
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+    const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (doc.startViewTransition && !calm) doc.startViewTransition(apply);
+    else apply();
   }
 
   /** Reads the language signal, so a template that calls it updates when the language changes. */
