@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { AreaPipe } from './area.pipe';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadStatus, NewSearch } from './api.service';
@@ -103,7 +103,18 @@ export class SearchDetail {
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
     this.api.profile().subscribe({ next: p => this.lang.set(p.language), error: () => { /* default stays English */ } });
-    queueMicrotask(() => this.load());
+    // the same page is reused when a retry moves to a new search, so load again whenever the id changes
+    effect(() => {
+      this.id();
+      untracked(() => {
+        clearTimeout(this.timer);
+        this.job.set(null);
+        this.leads.set([]);
+        this.filter.set('ALL');
+        this.reachable.set(false);
+        this.load();
+      });
+    });
   }
 
   protected count(f: Filter) {
