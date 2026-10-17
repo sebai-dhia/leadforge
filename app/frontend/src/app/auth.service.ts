@@ -33,6 +33,11 @@ export class AuthService {
   login(email: string, password: string) { return this.auth('login', email, password); }
   register(email: string, password: string) { return this.auth('register', email, password); }
   /** One-click sign-in for the shared public demo accounts. */
+  /** Signs in with a Google ID token; the backend verifies it and creates the account on first use. */
+  google(credential: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/google`, { credential })
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
+  }
   demoLogin(which: 1 | 2) { return this.login(`demo${which}@leadforge.dev`, 'demo1234'); }
 
   logout() {

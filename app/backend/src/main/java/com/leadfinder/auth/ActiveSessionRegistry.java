@@ -39,6 +39,11 @@ public class ActiveSessionRegistry {
         demoSessions.put(sessionId, Instant.now());
     }
 
+    /** Forgets every session. Used by tests so one test's sign-ins do not fill the seats of the next. */
+    public void reset() {
+        demoSessions.clear();
+    }
+
     public void removeSession(String sessionId) {
         if (sessionId != null) {
             demoSessions.remove(sessionId);

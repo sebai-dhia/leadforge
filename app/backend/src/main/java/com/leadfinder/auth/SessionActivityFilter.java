@@ -33,8 +33,7 @@ public class SessionActivityFilter extends OncePerRequestFilter {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) return;
         String sid = jwt.getClaimAsString("sid");
-        Boolean isDemo = jwt.getClaimAsBoolean("isDemo");
-        if (sid != null && Boolean.TRUE.equals(isDemo)) {
+        if (sid != null && !"ADMIN".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
             sessionRegistry.touchSession(sid, true);
         }
     }

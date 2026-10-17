@@ -29,6 +29,12 @@ public abstract class IntegrationTestBase {
     @MockitoBean
     protected N8nClient n8n;
 
+    @MockitoBean
+    protected com.leadfinder.auth.GoogleTokenVerifier google;
+
+    @Autowired
+    protected com.leadfinder.auth.ActiveSessionRegistry sessions;
+
     @Autowired
     protected JdbcTemplate jdbc;
     @Autowired
@@ -38,6 +44,7 @@ public abstract class IntegrationTestBase {
 
     @BeforeEach
     void cleanDatabase() {
+        sessions.reset();
         jdbc.execute("TRUNCATE usage_events, search_leads, leads, search_jobs, users RESTART IDENTITY CASCADE");
     }
 

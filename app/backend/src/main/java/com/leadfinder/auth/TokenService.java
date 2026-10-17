@@ -29,7 +29,7 @@ public class TokenService {
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String token = encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-        if (u.isDemo()) {
+        if (!u.isAdmin()) {
             sessionRegistry.registerSession(sessionId);
         }
         return token;

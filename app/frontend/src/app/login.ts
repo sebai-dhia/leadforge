@@ -2,12 +2,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Logo } from './logo';
+import { GoogleSignIn } from './google-sign-in';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink, Logo],
+  imports: [FormsModule, RouterLink, Logo, GoogleSignIn],
   template: `
     <div class="wrap">
       <header class="top">
@@ -39,7 +40,12 @@ import { ApiService } from './api.service';
             <p class="fine">Sessions end after {{ idleMinutes() }} minutes without activity.</p>
           </section>
 
-          <div class="or"><span></span>or sign in<span></span></div>
+          <div class="or"><span></span>or<span></span></div>
+          <app-google-sign-in (credential)="google($event)" (failed)="googleUnavailable.set(true)" />
+          @if (googleUnavailable()) { <p class="fine center-text">Google sign-in could not load. Use email and password instead.</p> }
+          @if (googleError()) { <p class="err center-text" role="alert">{{ googleError() }}</p> }
+
+          <div class="or"><span></span>or sign in with email<span></span></div>
 
           <form (ngSubmit)="submit()">
             <label>Email <input name="email" type="email" required autocomplete="email" placeholder="you@example.com" [(ngModel)]="email"></label>
@@ -70,6 +76,7 @@ import { ApiService } from './api.service';
     .alert { border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); color: var(--warn); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; margin-bottom: 14px; }
     .demo-buttons { display: flex; flex-direction: column; gap: 10px; }
     .demo-btn { justify-content: space-between; min-height: 52px; border-radius: 12px; padding: 0 18px; font-size: 16px; }
+    .center-text { text-align: center; }
     .fine { font-size: 13px; color: var(--mute); margin: 14px 0 0; }
     .or { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: var(--mute); font-size: 13px; }
     .or span { flex: 1; height: 1px; background: var(--line); }
@@ -91,6 +98,8 @@ export class Login implements OnInit {
   readonly maxCount = signal(5);
   readonly idleMinutes = signal(15);
   readonly demoFull = signal(false);
+  readonly googleUnavailable = signal(false);
+  readonly googleError = signal('');
 
   ngOnInit() {
     this.refreshStatus();
@@ -123,6 +132,23 @@ export class Login implements OnInit {
     this.auth.login(this.email, this.password).subscribe({
       next: () => this.router.navigateByUrl('/leads'),
       error: e => this.fail(e),
+    });
+  }
+
+  google(credential: string) {
+    this.busy.set(true);
+    this.googleError.set('');
+    this.auth.google(credential).subscribe({
+      next: () => this.router.navigateByUrl('/leads'),
+      error: e => {
+        this.busy.set(false);
+        this.googleError.set(
+          e.status === 429 ? 'The demo is full right now. Please try again in a few minutes.'
+          : e.status === 409 ? 'An account with this email already exists. Sign in with its password instead.'
+          : e.status === 401 ? 'Google could not confirm your sign-in. Please try again.'
+          : 'Could not reach the server. Please try again.');
+        if (e.status === 429) this.refreshStatus();
+      },
     });
   }
 

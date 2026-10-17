@@ -19,6 +19,8 @@ public class AuthController {
 
     public record Credentials(@Email @NotBlank String email, @NotBlank @Size(min = 8, max = 100) String password) {}
 
+    public record GoogleLogin(@NotBlank @Size(max = 4096) String credential) {}
+
     public record TokenResponse(String token, String email, String role, boolean isDemo) {}
 
     private final UserRepository users;
@@ -27,6 +29,7 @@ public class AuthController {
     private final AuthThrottle throttle;
     private final ActiveSessionRegistry sessionRegistry;
     private final AppProperties props;
+    private final GoogleTokenVerifier googleVerifier;
 
     @GetMapping("/demo-status")
     public ActiveSessionRegistry.DemoStatus demoStatus() {
@@ -57,17 +60,67 @@ public class AuthController {
         String email = c.email().trim().toLowerCase();
         throttle.checkLogin(ip, email);
         AppUser u = users.findByEmail(email)
-                .filter(x -> encoder.matches(c.password(), x.getPasswordHash()))
+                .filter(x -> x.getPasswordHash() != null && encoder.matches(c.password(), x.getPasswordHash()))
                 .orElse(null);
         if (u == null) {
             throttle.recordLoginFailure(ip, email);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
-        if (u.isDemo() && !sessionRegistry.canAcceptVisitor()) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Demo is currently full (5 active sessions). Please try again in a few minutes.");
-        }
+        requireFreeSeat(u);
         throttle.clearLogin(ip, email);
         return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+    }
+
+    /**
+     * Signs in with a Google ID token, creating the account on first use. An existing password account with the
+     * same email is never linked automatically: registration does not prove ownership of the address, so
+     * linking could hand the account to whoever registered first.
+     */
+    @PostMapping("/google")
+    public TokenResponse google(@Valid @RequestBody GoogleLogin body, HttpServletRequest request) {
+        if (props.google() == null || props.google().clientId() == null || props.google().clientId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Google sign-in is not enabled");
+        }
+        GoogleTokenVerifier.GoogleIdentity id;
+        try {
+            id = googleVerifier.verify(body.credential());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google sign-in could not be verified");
+        }
+        if (!id.emailVerified()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your Google email address is not verified");
+        }
+        String email = id.email().trim().toLowerCase();
+        AppUser u = users.findByGoogleSub(id.sub()).orElse(null);
+        if (u == null) {
+            if (users.existsByEmail(email)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "An account with this email already exists. Sign in with its password instead.");
+            }
+            requireFreeSeatForNewUser();
+            throttle.checkAndRecordRegister(request.getRemoteAddr());
+            u = new AppUser();
+            u.setEmail(email);
+            u.setGoogleSub(id.sub());
+            u.setRole("USER");
+            u.setDisplayName(id.name() == null ? "" : id.name().trim());
+            users.save(u);
+        } else {
+            requireFreeSeat(u);
+        }
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+    }
+
+    private void requireFreeSeat(AppUser u) {
+        if (!u.isAdmin() && !sessionRegistry.canAcceptVisitor()) full();
+    }
+
+    private void requireFreeSeatForNewUser() {
+        if (!sessionRegistry.canAcceptVisitor()) full();
+    }
+
+    private void full() {
+        throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                "Demo is currently full (5 active sessions). Please try again in a few minutes.");
     }
 }

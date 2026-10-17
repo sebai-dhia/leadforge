@@ -18,8 +18,12 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    /** Empty for accounts created through Google sign-in. */
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(name = "google_sub", unique = true)
+    private String googleSub;
 
     /** What the freelancer sells, reused by every search and draft. */
     @Column(nullable = false)
