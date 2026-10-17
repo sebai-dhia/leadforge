@@ -116,7 +116,7 @@ export class Login implements OnInit {
     this.busy.set(true);
     this.error.set('');
     this.auth.guest().subscribe({
-      next: () => this.router.navigateByUrl('/leads'),
+      next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => this.fail(e),
     });
   }
@@ -125,7 +125,7 @@ export class Login implements OnInit {
     this.busy.set(true);
     this.error.set('');
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigateByUrl('/leads'),
+      next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => this.fail(e),
     });
   }
@@ -134,7 +134,7 @@ export class Login implements OnInit {
     this.busy.set(true);
     this.googleError.set('');
     this.auth.google(credential).subscribe({
-      next: () => this.router.navigateByUrl('/leads'),
+      next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);
         this.googleError.set(

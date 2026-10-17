@@ -36,6 +36,31 @@ public class AppUser {
     @Column(nullable = false)
     private String language = "en";
 
+    /** One line under the name, like "Designer for local businesses". */
+    @Column(nullable = false)
+    private String headline = "";
+
+    @Column(nullable = false)
+    private String city = "";
+
+    /** A short sentence the AI uses to sign messages. */
+    @Column(nullable = false)
+    private String about = "";
+
+    /** JSON lists. Chosen services, target industries and links. */
+    @Column(nullable = false)
+    private String services = "[]";
+
+    @Column(nullable = false)
+    private String targets = "[]";
+
+    @Column(nullable = false)
+    private String links = "[]";
+
+    /** True once the first-run picker was completed or skipped. */
+    @Column(nullable = false)
+    private boolean onboarded = false;
+
     @Column(nullable = false)
     private String role = "DEMO_USER";
 

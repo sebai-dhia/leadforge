@@ -26,7 +26,14 @@ export interface EnrichResult { lead: Lead; found: string[]; note: string; sourc
 export interface Usage { used: number; limit: number; }
 export type UsageMap = Record<'search' | 'draft' | 'enrich', Usage>;
 
-export interface Profile { email: string; offer: string; displayName: string; language: Lang; role?: string; isDemo?: boolean; }
+export interface ProfileLink { label: string; url: string; }
+export interface Profile {
+  email: string; offer: string; displayName: string; headline: string; city: string; about: string;
+  services: string[]; targets: string[]; links: ProfileLink[]; language: Lang; onboarded: boolean;
+  role?: string; isDemo?: boolean;
+}
+export type ProfileUpdate = Partial<Pick<Profile, 'offer' | 'displayName' | 'headline' | 'city' | 'about' | 'services' | 'targets' | 'links' | 'language' | 'onboarded'>>;
+export interface ProfileStats { leads: number; drafted: number; contacted: number; replied: number; }
 
 export interface NewSearch {
   niche: string;
@@ -66,7 +73,8 @@ export class ApiService {
   }
 
   profile() { return this.http.get<Profile>(`${API}/profile`); }
-  saveProfile(p: Pick<Profile, 'offer' | 'displayName' | 'language'>) { return this.http.put<Profile>(`${API}/profile`, p); }
+  saveProfile(p: ProfileUpdate) { return this.http.put<Profile>(`${API}/profile`, p); }
+  profileStats() { return this.http.get<ProfileStats>(`${API}/profile/stats`); }
 
   leads(f: LeadFilters, page: number, size = 40) {
     return this.http.get<LeadPage>(`${API}/leads`, { params: this.params(f).set('page', page).set('size', size) });

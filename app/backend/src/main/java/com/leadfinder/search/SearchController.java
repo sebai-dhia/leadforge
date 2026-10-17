@@ -51,7 +51,8 @@ public class SearchController {
     public List<String> suggestedNiches(@AuthenticationPrincipal Jwt jwt) {
         AppUser user = users.findById(Long.valueOf(jwt.getSubject()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        return nicheSuggestions.suggestNiches(user.getOffer());
+        return nicheSuggestions.suggestFor(user.getOffer(),
+                com.leadfinder.auth.ProfileController.ProfileDto.of(user).targets());
     }
 
     @PostMapping

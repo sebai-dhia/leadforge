@@ -27,6 +27,13 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     Optional<Lead> findByIdAndUserId(Long id, Long userId);
 
+    long countByUserId(Long userId);
+
+    long countByUserIdAndStatus(Long userId, String status);
+
+    @Query("select count(l) from Lead l where l.userId = :uid and l.emailBody is not null and l.emailBody <> ''")
+    long countDrafted(@Param("uid") Long uid);
+
     Optional<Lead> findFirstByUserIdAndPlaceId(Long userId, String placeId);
 
     Optional<Lead> findFirstByUserIdAndPhoneKey(Long userId, String phoneKey);

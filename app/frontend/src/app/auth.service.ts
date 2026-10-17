@@ -10,6 +10,7 @@ interface TokenResponse {
   email: string;
   role?: string;
   isDemo?: boolean;
+  onboarded?: boolean;
 }
 
 function read(key: string): string | null {
@@ -30,6 +31,12 @@ export class AuthService {
   readonly isDemo = signal<boolean>(read('lf_is_demo') === 'true');
   readonly loggedIn = computed(() => this.token() !== null);
   readonly isGuest = computed(() => this.role() === 'GUEST');
+  readonly onboarded = signal<boolean>(read('lf_onboarded') !== 'false');
+
+  /** Where to go after signing in: the first-run picker once, then the leads. */
+  home(): string { return this.onboarded() ? '/leads' : '/welcome'; }
+
+  markOnboarded() { this.onboarded.set(true); write('lf_onboarded', 'true'); }
 
   login(email: string, password: string) { return this.auth('login', email, password); }
   register(email: string, password: string) { return this.auth('register', email, password); }
@@ -37,12 +44,12 @@ export class AuthService {
   /** Signs in with a Google ID token; the backend verifies it and creates the account on first use. */
   google(credential: string) {
     return this.http.post<TokenResponse>(`${API}/auth/google`, { credential })
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
   /** One click: a private temporary account that is deleted after a short idle time. */
   guest() {
     return this.http.post<TokenResponse>(`${API}/auth/guest`, {})
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
 
   logout() {
@@ -52,14 +59,16 @@ export class AuthService {
 
   private auth(kind: 'login' | 'register', email: string, password: string) {
     return this.http.post<TokenResponse>(`${API}/auth/${kind}`, { email, password })
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
 
-  private set(token: string | null, email: string | null, role: string | null, isDemo: boolean) {
+  private set(token: string | null, email: string | null, role: string | null, isDemo: boolean, onboarded = true) {
     this.token.set(token);
     this.email.set(email);
     this.role.set(role);
     this.isDemo.set(isDemo);
+    this.onboarded.set(onboarded);
+    write('lf_onboarded', onboarded ? 'true' : 'false');
     write('lf_token', token);
     write('lf_email', email);
     write('lf_role', role);

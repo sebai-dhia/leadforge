@@ -136,10 +136,24 @@ public class LeadController {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI returned an empty message");
         }
         lead.setSubject(draft.subject() == null ? "" : draft.subject());
-        lead.setEmailBody(draft.body());
+        lead.setEmailBody(withLinks(draft.body(), user));
         lead.setDraftLanguage(req.language());
         lead.setDraftChannel(req.channel());
         return LeadDto.of(leads.save(lead));
+    }
+
+    /** Adds the person's first two links under the message, unless the AI already wrote them. */
+    public static String withLinks(String body, AppUser user) {
+        var links = com.leadfinder.auth.ProfileController.ProfileDto.of(user).links();
+        StringBuilder sb = new StringBuilder(body.stripTrailing());
+        int added = 0;
+        for (var l : links) {
+            if (added == 2) break;
+            if (body.contains(l.url())) continue;
+            sb.append(added == 0 ? "\n\n" : "\n").append(l.label()).append(": ").append(l.url());
+            added++;
+        }
+        return sb.toString();
     }
 
     /**

@@ -1,5 +1,7 @@
 import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
 
@@ -7,7 +9,7 @@ import { Logo } from './logo';
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, Logo],
   template: `
-    @if (auth.loggedIn()) {
+    @if (showChrome()) {
       <header class="app-bar">
         <div class="app-bar-inner">
           <a routerLink="/leads" class="brand" aria-label="Leadforge, your leads"><app-logo [size]="26" /></a>
@@ -35,8 +37,8 @@ import { Logo } from './logo';
         </div>
       }
     }
-    <main [class.app-main]="auth.loggedIn()"><router-outlet /></main>
-    @if (auth.loggedIn()) {
+    <main [class.app-main]="showChrome()"><router-outlet /></main>
+    @if (showChrome()) {
       <footer class="app-footer">Place data by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> and OpenStreetMap contributors</footer>
     }
   `,
@@ -44,6 +46,12 @@ import { Logo } from './logo';
 export class App {
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  /** The first-run picker is a full page with its own header. */
+  private readonly fullPage = toSignal(
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(e => (e as NavigationEnd).urlAfterRedirects.startsWith('/welcome'))),
+    { initialValue: this.router.url.startsWith('/welcome') });
+  protected readonly showChrome = () => this.auth.loggedIn() && !this.fullPage();
 
   protected keepLeads() {
     this.auth.logout();

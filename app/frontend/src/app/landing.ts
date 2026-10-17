@@ -188,7 +188,7 @@ export class Landing implements OnInit {
     this.busy.set(true);
     this.error.set('');
     this.auth.guest().subscribe({
-      next: () => this.router.navigateByUrl('/leads'),
+      next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);
         this.error.set(e.status === 429

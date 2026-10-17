@@ -21,7 +21,7 @@ public class AuthController {
 
     public record GoogleLogin(@NotBlank @Size(max = 4096) String credential) {}
 
-    public record TokenResponse(String token, String email, String role, boolean isDemo) {}
+    public record TokenResponse(String token, String email, String role, boolean isDemo, boolean onboarded) {}
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
@@ -51,7 +51,7 @@ public class AuthController {
         u.setEmail(email);
         u.setPasswordHash(encoder.encode(c.password()));
         users.save(u);
-        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }
 
     @PostMapping("/login")
@@ -68,7 +68,7 @@ public class AuthController {
         }
         requireFreeSeat(u);
         throttle.clearLogin(ip, email);
-        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }
 
     /**
@@ -108,7 +108,7 @@ public class AuthController {
         } else {
             requireFreeSeat(u);
         }
-        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }
 
     /** One click, no form: a private temporary account that is deleted after a short idle time. */
@@ -122,10 +122,11 @@ public class AuthController {
         AppUser u = new AppUser();
         u.setEmail("guest-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@guest.leadforge.local");
         u.setRole("GUEST");
+        u.setOnboarded(true); // a guest starts straight away with a default offer
         u.setDisplayName("Guest");
         u.setOffer("Websites and custom software for small local businesses");
         users.save(u);
-        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }
 
     private void requireFreeSeat(AppUser u) {

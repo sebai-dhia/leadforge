@@ -18,6 +18,32 @@ public class NicheSuggestionService {
 
     private final ServiceNicheCacheRepository cache;
 
+    /** Search terms for the industries a person picked in their profile. */
+    private static final java.util.Map<String, String> TARGET_NICHES = java.util.Map.ofEntries(
+            java.util.Map.entry("dentists and clinics", "dental clinics"),
+            java.util.Map.entry("doctors and clinics", "doctors and clinics"),
+            java.util.Map.entry("pharmacies", "pharmacies"),
+            java.util.Map.entry("restaurants and cafés", "restaurants"),
+            java.util.Map.entry("hotels and guesthouses", "hotels"),
+            java.util.Map.entry("gyms and fitness", "gyms"),
+            java.util.Map.entry("beauty salons", "beauty salons"),
+            java.util.Map.entry("hair salons", "hair salons"),
+            java.util.Map.entry("law firms", "lawyers"),
+            java.util.Map.entry("car repair", "car repair"),
+            java.util.Map.entry("bakeries", "bakeries"),
+            java.util.Map.entry("schools and training", "schools"));
+
+    /** The person's own picks first, then guesses from what they offer. */
+    public List<String> suggestFor(String offer, List<String> targets) {
+        Set<String> out = new LinkedHashSet<>();
+        for (String t : targets) {
+            if (t == null || t.isBlank()) continue;
+            out.add(TARGET_NICHES.getOrDefault(t.trim().toLowerCase(Locale.ROOT), t.trim().toLowerCase(Locale.ROOT)));
+        }
+        if (out.size() < 5) out.addAll(suggestNiches(offer));
+        return out.stream().limit(8).toList();
+    }
+
     public List<String> suggestNiches(String serviceOffer) {
         if (serviceOffer == null || serviceOffer.isBlank()) {
             return defaultNiches();
