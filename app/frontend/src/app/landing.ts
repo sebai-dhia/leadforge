@@ -16,10 +16,12 @@ import { Logo } from './logo';
       <header class="top">
         <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="30" /></a>
         <nav [attr.aria-label]="t('landing.siteNav')">
-          <a href="#how" class="plain">{{ t('landing.how') }}</a>
-          <a href="#why" class="plain">{{ t('landing.why') }}</a>
-          <a routerLink="/login" class="btn ghost">{{ t('landing.signin') }}</a>
           <app-lang-switch />
+          <div class="links">
+            <a href="#how" class="plain">{{ t('landing.how') }}</a>
+            <a href="#why" class="plain">{{ t('landing.why') }}</a>
+            <a routerLink="/login" class="btn ghost signin">{{ t('landing.signin') }}</a>
+          </div>
         </nav>
       </header>
 
@@ -116,10 +118,13 @@ import { Logo } from './logo';
     .top, .hero, .block, .final, .foot { max-width: 1160px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; padding-top: 20px; padding-bottom: 20px; }
     .brand { text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
-    .top nav { display: flex; align-items: center; gap: 20px; flex-wrap: nowrap; flex: none; }
-    .top app-lang-switch { flex: none; margin-left: 4px; }
-    @media (max-width: 720px) { .top nav .plain { display: none; } }
-    @media (max-width: 480px) { .top nav .btn { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
+    .top nav { display: flex; align-items: center; gap: 28px; flex-wrap: nowrap; flex: none; }
+    .top app-lang-switch { flex: none; }
+    /* One fixed-width area for the links: the text changes with the language, the switch to its left does not move. */
+    .links { display: flex; align-items: center; justify-content: space-between; width: 440px; }
+    .signin { min-width: 156px; justify-content: center; }
+    @media (max-width: 900px) { .links { width: auto; } .top nav .plain { display: none; } }
+    @media (max-width: 480px) { .top nav .signin { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
     .plain { color: var(--mute); text-decoration: none; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; transition: color .2s ease; }
     .plain:hover { color: var(--ink); }
 

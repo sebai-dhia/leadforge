@@ -17,7 +17,7 @@ import { ApiService } from './api.service';
     <div class="wrap">
       <header class="top">
         <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="28" /></a>
-        <span class="right"><a routerLink="/" class="back">{{ t('login.back') }}</a><app-lang-switch /></span>
+        <span class="right"><app-lang-switch /><a routerLink="/" class="back">{{ t('login.back') }}</a></span>
       </header>
 
       <div class="center">
@@ -65,7 +65,7 @@ import { ApiService } from './api.service';
     .right { display: inline-flex; align-items: center; gap: 16px; flex-wrap: nowrap; justify-content: flex-end; flex: none; }
     .right app-lang-switch { flex: none; }
     @media (max-width: 480px) { .back { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
-    .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; }
+    .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-end; min-width: 9.5rem; }
     .back:hover { color: var(--ink); }
     .center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 24px 64px; }
     .box { width: 100%; max-width: 440px; }

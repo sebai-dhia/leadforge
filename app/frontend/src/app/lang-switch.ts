@@ -6,7 +6,6 @@ import { I18n } from './i18n';
   selector: 'app-lang-switch',
   template: `
     <div class="switch" role="group" aria-label="Language" [attr.data-lang]="i18n.lang()">
-      <svg class="globe" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>
       <span class="pills">
       <span class="thumb" aria-hidden="true"></span>
       <button type="button" [class.on]="i18n.lang() === 'en'" [attr.aria-pressed]="i18n.lang() === 'en'" (click)="i18n.set('en')" lang="en">EN</button>
@@ -16,8 +15,7 @@ import { I18n } from './i18n';
   `,
   styles: `
     :host { display: inline-flex; view-transition-name: lang-switch; }
-    .switch { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px 3px 3px 12px; }
-    .globe { color: var(--mute); flex: none; }
+    .switch { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px; }
     .pills { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; }
     .thumb { position: absolute; top: 0; bottom: 0; left: 0; width: 50%; border-radius: 999px; background: var(--accent);
       transition: transform .28s cubic-bezier(.4, 0, .2, 1); }
