@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { Dossier } from './dossier';
+import { FitLinesDirective } from './fit-lines';
 import { I18n, I18nKey } from './i18n';
 import { LangSwitch } from './lang-switch';
 import { Logo } from './logo';
@@ -19,7 +20,7 @@ import { SpecializationKey } from './specialization-picker';
  */
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Logo, LangSwitch, SpecializationDialog, Radar, Dossier, ProgressDirective, RevealDirective, StepWatchDirective],
+  imports: [RouterLink, Logo, LangSwitch, SpecializationDialog, Radar, Dossier, FitLinesDirective, ProgressDirective, RevealDirective, StepWatchDirective],
   template: `
     <div class="page">
       <header class="top">
@@ -41,7 +42,7 @@ import { SpecializationKey } from './specialization-picker';
             <span class="dot" [class.full]="full()"></span>
             {{ seatsLabel() }}
           </span>
-          <h1 [class.booting]="booting()" [attr.aria-label]="t('landing.title')">
+          <h1 [appFitLines]="3" [class.booting]="booting()" [attr.aria-label]="t('landing.title')">
             @for (w of titleWords(); track $index) { <span class="mask" aria-hidden="true"><span class="word" [style.--w]="$index">{{ w }}</span></span>{{ ' ' }} }
           </h1>
           <p class="sub">{{ t('landing.sub') }}</p>

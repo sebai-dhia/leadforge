@@ -57,9 +57,13 @@ import { I18n } from './i18n';
         <div class="count">{{ t('landing.radarCount', { n: 14, m: 6 }) }}</div>
       </div>
 
-      <app-dossier class="float-card" [compact]="true" />
-      <div class="chip chip-a">{{ t('landing.chipReach') }}</div>
-      <div class="chip chip-b">{{ t('landing.chipDraft') }}</div>
+      <div class="stack">
+        <div class="chips">
+          <span class="chip chip-a">{{ t('landing.chipReach') }}</span>
+          <span class="chip chip-b">{{ t('landing.chipDraft') }}</span>
+        </div>
+        <app-dossier [compact]="true" />
+      </div>
     </div>
   `,
   styles: `
@@ -95,26 +99,25 @@ import { I18n } from './i18n';
     .count { right: 18px; top: 16px; color: var(--accent); }
 
     /* layers above the map move faster than the map: depth */
-    .float-card { position: absolute; left: 0; bottom: 0; width: min(100%, 560px); z-index: 2; will-change: transform;
+    .stack { position: absolute; left: 0; bottom: 0; width: min(100%, 560px); z-index: 2; will-change: transform;
       transform: translate3d(0, calc(var(--p, 0) * -74px), 0); animation: float-in .9s .9s cubic-bezier(.2, .8, .2, 1) backwards; }
-    .chip { position: absolute; z-index: 3; font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 999px; white-space: nowrap; will-change: transform;
+    .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 12px; }
+    .chip { font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 999px; white-space: nowrap; will-change: transform;
       background: rgba(10, 20, 16, .82); border: 1px solid rgba(61, 220, 151, .4); color: var(--ink); backdrop-filter: blur(10px);
       box-shadow: 0 14px 40px -12px rgba(0, 0, 0, .7); animation: float-in .8s cubic-bezier(.2, .8, .2, 1) backwards; }
     .chip::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--accent); }
-    .chip-a { right: -2%; top: 22%; transform: translate3d(0, calc(var(--p, 0) * -120px), 0); animation-delay: 1.4s; }
-    .chip-b { right: 5%; top: calc(var(--w) * .74); transform: translate3d(0, calc(var(--p, 0) * -48px), 0); animation-delay: 1.7s; }
+    .chip-a { animation-delay: 1.4s; } .chip-b { animation-delay: 1.7s; }
     @keyframes float-in { from { opacity: 0; translate: 0 26px; } }
 
     @media (max-width: 960px) {
       .radar { --w: min(100%, 540px); height: auto; margin-bottom: 150px; }
       .panel { position: relative; width: 100%; max-width: 540px; margin-left: auto; }
-      .float-card { bottom: -130px; width: 94%; max-width: 560px; }
-      .chip-a { right: 0; } .chip-b { right: 4%; top: 62%; }
+      .stack { bottom: -130px; width: 94%; max-width: 560px; }
     }
-    @media (max-width: 520px) { .chip-b { display: none; } .radar { margin-bottom: 190px; } .float-card { width: 100%; bottom: -170px; } }
+    @media (max-width: 520px) { .chip-b { display: none; } .radar { margin-bottom: 190px; } .stack { width: 100%; bottom: -170px; } }
     @media (prefers-reduced-motion: reduce) {
-      .map, .float-card, .chip { transform: none !important; }
-      .sweep, .ping, .dot, .area, .float-card, .chip { animation: none !important; }
+      .map, .stack { transform: none !important; }
+      .sweep, .ping, .dot, .area, .stack, .chip { animation: none !important; }
     }
   `,
 })
