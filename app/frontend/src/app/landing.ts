@@ -177,7 +177,7 @@ import { SpecializationKey } from './specialization-picker';
     @media (max-width: 480px) { .top nav .signin { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
 
     /* ---------- hero ---------- */
-    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 56px; align-items: center; min-height: calc(100svh - 96px); padding-top: 12px; padding-bottom: 40px; }
+    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 56px; align-items: center; min-height: calc(100svh - 152px); padding-top: 8px; padding-bottom: 24px; }
     .hero::before { content: ''; position: absolute; z-index: -1; inset: -120px -20vw auto auto; width: 70vw; max-width: 900px; aspect-ratio: 1; pointer-events: none;
       background: radial-gradient(closest-side, rgba(61, 220, 151, .16), transparent); }
     .hero::after { content: ''; position: absolute; z-index: -1; inset: -80px -40vw 0; pointer-events: none; opacity: .5; mix-blend-mode: overlay;
@@ -187,12 +187,12 @@ import { SpecializationKey } from './specialization-picker';
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 rgba(61, 220, 151, .6); animation: beat 2.4s ease-out infinite; }
     .dot.full { background: var(--warn); animation: none; }
     @keyframes beat { 70%, 100% { box-shadow: 0 0 0 9px rgba(61, 220, 151, 0); } }
-    h1 { font-size: clamp(34px, min(5vw, 7.4vh), 66px); line-height: 1; letter-spacing: -.04em; margin: 20px 0 18px; font-weight: 700; text-wrap: balance; }
+    h1 { font-size: clamp(32px, min(4.8vw, 6.8vh), 66px); line-height: 1; letter-spacing: -.04em; margin: 18px 0 16px; font-weight: 700; text-wrap: balance; }
     .mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .12em; margin-bottom: -.12em; }
     .word { display: inline-block; }
     .booting .word { animation: rise 1s calc(.12s + var(--w) * .075s) cubic-bezier(.2, .9, .2, 1) backwards; }
     @keyframes rise { from { transform: translateY(112%); } }
-    .sub { font-size: clamp(16px, 2.2vh, 19px); color: var(--mute); max-width: 520px; margin: 0 0 26px; }
+    .sub { font-size: clamp(15px, 2.1vh, 19px); line-height: 1.5; color: var(--mute); max-width: 540px; margin: 0 0 22px; }
     .cta { display: flex; gap: 14px; flex-wrap: wrap; }
     .btn.big { min-height: 54px; padding: 0 28px; border-radius: 14px; font-size: 17px; }
     .fine { font-size: 14px; color: var(--mute); margin: 14px 0 0; max-width: 460px; }

@@ -64,7 +64,7 @@ import { I18n } from './i18n';
   `,
   styles: `
     :host { display: block; }
-    .radar { position: relative; width: 100%; max-width: min(540px, calc((100svh - 150px) / 1.24)); aspect-ratio: 520 / 560; margin: 0 auto 16%; }
+    .radar { --w: min(540px, calc((100svh - 220px) / 1.24)); position: relative; width: 100%; max-width: var(--w); aspect-ratio: 520 / 560; margin: 0 auto calc(var(--w) * .16); }
     .panel { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; isolation: isolate;
       background: radial-gradient(120% 90% at 50% 0%, #0f1c17 0%, #08110e 70%);
       border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 60px 120px -40px rgba(0, 0, 0, .8), 0 0 90px -30px rgba(61, 220, 151, .28); }
@@ -104,7 +104,7 @@ import { I18n } from './i18n';
     .chip-b { right: 3%; bottom: 9%; transform: translate3d(0, calc(var(--p, 0) * -48px), 0); animation-delay: 1.7s; }
     @keyframes float-in { from { opacity: 0; translate: 0 26px; } }
 
-    @media (max-width: 960px) { .float-card { left: 0; width: 90%; bottom: -22%; } .radar { margin-bottom: 22%; } .chip-a { right: 0; } }
+    @media (max-width: 960px) { .float-card { left: 0; width: 90%; bottom: -22%; } .radar { --w: 540px; max-width: 540px; margin-bottom: 22%; } .chip-a { right: 0; } }
     @media (max-width: 520px) { .chip-b { display: none; } .float-card { width: 100%; } }
     @media (prefers-reduced-motion: reduce) {
       .map, .float-card, .chip { transform: none !important; }
