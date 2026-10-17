@@ -53,7 +53,7 @@ import { I18n } from './i18n';
           }
         </svg>
         <div class="sweep" aria-hidden="true"></div>
-        <div class="coords" aria-hidden="true">36.80°N · 10.18°E</div>
+        <div class="coords" aria-hidden="true">{{ t('landing.coords') }}</div>
         <div class="count">{{ t('landing.radarCount', { n: 14, m: 6 }) }}</div>
       </div>
 
@@ -64,7 +64,7 @@ import { I18n } from './i18n';
   `,
   styles: `
     :host { display: block; }
-    .radar { position: relative; width: 100%; max-width: 540px; aspect-ratio: 520 / 560; margin: 0 auto 16%; }
+    .radar { position: relative; width: 100%; max-width: min(540px, calc((100svh - 150px) / 1.24)); aspect-ratio: 520 / 560; margin: 0 auto 16%; }
     .panel { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; isolation: isolate;
       background: radial-gradient(120% 90% at 50% 0%, #0f1c17 0%, #08110e 70%);
       border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 60px 120px -40px rgba(0, 0, 0, .8), 0 0 90px -30px rgba(61, 220, 151, .28); }
