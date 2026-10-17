@@ -208,3 +208,20 @@ app-lead-card.enter { animation: rise .35s ease both; animation-delay: calc(var(
 .lead .toggle { border-radius: 999px; }
 
 .qa svg.wa { fill: currentColor; stroke: none; }
+
+/* Custom select: Chrome's customizable select (base-select). Other browsers keep the native one, themed by color-scheme. */
+@supports (appearance: base-select) {
+  select, select::picker(select) { appearance: base-select; }
+  select { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; padding: 0 14px; transition: border-color .2s ease; }
+  select:hover { border-color: var(--accent); }
+  select::picker-icon { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--mute); border-bottom: 2px solid var(--mute); transform: translateY(-2px) rotate(45deg); transition: transform .2s ease; }
+  select:open::picker-icon { transform: translateY(2px) rotate(-135deg); }
+  select::picker(select) { margin-top: 6px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--card); box-shadow: 0 16px 40px rgb(0 0 0 / .35); min-width: anchor-size(width); }
+  select option { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 9px; color: var(--ink); cursor: pointer; font: inherit; }
+  select option:hover, select option:focus-visible { background: var(--accent-soft); outline: 0; }
+  select option:checked { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+  select option::checkmark { content: ""; width: 6px; height: 11px; margin-left: auto; order: 1; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translate(-2px, -2px); }
+  select::picker(select) { opacity: 0; transform: translateY(-4px); transition: opacity .15s ease, transform .15s ease, display .15s allow-discrete, overlay .15s allow-discrete; }
+  select::picker(select):popover-open { opacity: 1; transform: none; }
+  @starting-style { select::picker(select):popover-open { opacity: 0; transform: translateY(-4px); } }
+}
