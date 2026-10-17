@@ -1,16 +1,25 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { Dossier } from './dossier';
 import { I18n, I18nKey } from './i18n';
 import { LangSwitch } from './lang-switch';
+import { Logo } from './logo';
+import { Radar } from './radar';
+import { ProgressDirective, RevealDirective, StepWatchDirective } from './scroll-fx';
 import { SpecializationDialog } from './specialization-dialog';
 import { SpecializationKey } from './specialization-picker';
-import { Logo } from './logo';
 
+/**
+ * Landing page. Direction: a night map, editorial type, one emerald signal.
+ * Motion follows the scroll: the hero map zooms and its layers drift at different speeds (parallax), a sticky
+ * stage changes with the step being read, a line is drawn down the steps (scroll-linked), and blocks fade up
+ * once as they arrive (scroll-triggered). Without motion everything shows in its finished state.
+ */
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Logo, LangSwitch, SpecializationDialog],
+  imports: [RouterLink, Logo, LangSwitch, SpecializationDialog, Radar, Dossier, ProgressDirective, RevealDirective, StepWatchDirective],
   template: `
     <div class="page">
       <header class="top">
@@ -25,13 +34,16 @@ import { Logo } from './logo';
         </nav>
       </header>
 
-      <section class="hero">
+      <!-- Hero -->
+      <section class="hero" appProgress="leave" [settled]="0">
         <div class="copy">
           <span class="seats" role="status">
             <span class="dot" [class.full]="full()"></span>
             {{ seatsLabel() }}
           </span>
-          <h1>{{ t('landing.title') }}</h1>
+          <h1 [class.booting]="booting()" [attr.aria-label]="t('landing.title')">
+            @for (w of titleWords(); track $index) { <span class="mask" aria-hidden="true"><span class="word" [style.--w]="$index">{{ w }}</span></span>{{ ' ' }} }
+          </h1>
           <p class="sub">{{ t('landing.sub') }}</p>
           <div class="cta">
             <button type="button" class="btn big" [disabled]="busy() || full()" [attr.aria-expanded]="choosing()" (click)="choose()">
@@ -43,65 +55,101 @@ import { Logo } from './logo';
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <p class="fine">{{ t('landing.fine') }}</p>
         </div>
+        <div class="visual" aria-hidden="true"><app-radar /></div>
+      </section>
 
-        <div class="preview" aria-hidden="true">
-          <div class="lead-sample">
-            <div class="row-top">
-              <div>
-                <div class="name">{{ t('landing.sampleName') }}</div>
-                <div class="meta">{{ t('landing.sampleMeta') }}</div>
+      <!-- Business types, drifting past -->
+      <section class="ticker" [attr.aria-label]="t('landing.tickerLabel')">
+        <div class="track">
+          @for (pass of [0, 1]; track pass) {
+            <ul [attr.aria-hidden]="pass === 1">
+              @for (k of niches; track k) { <li>{{ i18n.niche(k) }}</li> }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- How it works: a sticky stage that changes with the step being read -->
+      <section id="how" class="story">
+        <div class="story-head" appReveal>
+          <div class="eyebrow">{{ t('landing.howEyebrow') }}</div>
+          <h2>{{ t('landing.howTitle') }}</h2>
+        </div>
+        <div class="story-grid">
+          <ol class="steps" appProgress="through">
+            <span class="thread" aria-hidden="true"><span class="fill"></span></span>
+            @for (s of steps; track s.n; let i = $index) {
+              <li class="step" [class.on]="active() === i" [appStepWatch]="i" (activated)="active.set($event)">
+                <span class="num">0{{ s.n }}</span>
+                <h3>{{ t(s.title) }}</h3>
+                <p>{{ t(s.text) }}</p>
+              </li>
+            }
+          </ol>
+
+          <div class="stage" aria-hidden="true">
+            <div class="frame">
+              <div class="tabs">
+                @for (s of steps; track s.n; let i = $index) { <span [class.on]="active() === i">{{ t(s.stage) }}</span> }
               </div>
-              <div class="score"><b>9</b><span>{{ t('landing.fit') }}</span></div>
-            </div>
-            <p class="reason">{{ t('landing.sampleReason') }}</p>
-            <div class="chips-row">
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>{{ t('landing.phone') }}</span>
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>{{ t('landing.email') }}</span>
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>{{ t('landing.social') }}</span>
-            </div>
-            <div class="draft">
-              <div class="label">{{ t('landing.draftLabel') }}</div>
-              <div class="bubble">{{ t('landing.draftText') }}</div>
+
+              <div class="layer l1" [class.on]="active() === 0">
+                @for (o of specs; track o.key; let i = $index) {
+                  <div class="opt" [style.--i]="i">
+                    <span class="check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>
+                    <strong>{{ t(o.title) }}</strong>
+                    <span>{{ t(o.text) }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="layer l2" [class.on]="active() === 1">
+                <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                  <defs>
+                    <pattern id="g2" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="rgba(255,255,255,.06)" /></pattern>
+                  </defs>
+                  <rect width="400" height="300" fill="url(#g2)" />
+                  <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.3" stroke-linecap="round">
+                    <path d="M-10 90 C 120 60, 260 130, 410 80" /><path d="M150 -10 C 170 120, 130 200, 190 310" /><path d="M-10 210 L 410 170" />
+                  </g>
+                  <rect class="draw" x="70" y="52" width="250" height="176" rx="6" pathLength="100" fill="rgba(61,220,151,.05)" stroke="var(--accent)" stroke-width="1.6" />
+                  @for (d of stageDots; track $index) {
+                    <circle class="sd" [class.hot]="d[2]" [style.--k]="$index" [attr.cx]="d[0]" [attr.cy]="d[1]" r="4.5" />
+                  }
+                </svg>
+                <span class="found">{{ t('landing.radarCount', { n: 14, m: 6 }) }}</span>
+              </div>
+
+              <div class="layer l3" [class.on]="active() === 2"><app-dossier [play]="active() === 2" /></div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="how" class="block">
-        <div class="eyebrow">{{ t('landing.howEyebrow') }}</div>
-        <h2>{{ t('landing.howTitle') }}</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
-            <h3>{{ t('landing.step1') }}</h3>
-            <p>{{ t('landing.step1Text') }}</p>
-          </div>
-          <div class="step">
-            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
-            <h3>{{ t('landing.step2') }}</h3>
-            <p>{{ t('landing.step2Text') }}</p>
-          </div>
-          <div class="step">
-            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg></div>
-            <h3>{{ t('landing.step3') }}</h3>
-            <p>{{ t('landing.step3Text') }}</p>
-          </div>
-        </div>
+      <!-- Principles -->
+      <section id="why" class="trust">
+        <h2 class="trust-title" appReveal>{{ t('landing.whyTitle') }}</h2>
+        <ol class="principles">
+          @for (p of principles; track p.n; let i = $index) {
+            <li [appReveal]="i * 120">
+              <span class="idx">0{{ p.n }}</span>
+              <h3>{{ t(p.title) }}</h3>
+              <p>{{ t(p.text) }}</p>
+            </li>
+          }
+        </ol>
       </section>
 
-      <section id="why" class="block">
-        <div class="why">
-          <h2>{{ t('landing.whyTitle') }}</h2>
-          <div><h3>{{ t('landing.why1') }}</h3><p>{{ t('landing.why1Text') }}</p></div>
-          <div><h3>{{ t('landing.why2') }}</h3><p>{{ t('landing.why2Text') }}</p></div>
-          <div><h3>{{ t('landing.why3') }}</h3><p>{{ t('landing.why3Text') }}</p></div>
+      <!-- Closing: the panel zooms in as it arrives -->
+      <section class="final" appProgress="through">
+        <div class="final-card">
+          <h2>{{ t('landing.finalTitle') }}</h2>
+          <p>{{ t('landing.finalText') }}</p>
+          <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose()">
+            {{ t('landing.guest') }}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
         </div>
-      </section>
-
-      <section class="final">
-        <h2>{{ t('landing.finalTitle') }}</h2>
-        <p>{{ t('landing.finalText') }}</p>
-        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose()">{{ t('landing.guest') }}</button>
       </section>
 
       <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="tryDemo($event)" />
@@ -113,75 +161,148 @@ import { Logo } from './logo';
     </div>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; overflow-x: clip; }
     .page { font-size: 17px; line-height: 1.6; }
-    .top, .hero, .block, .final, .foot { max-width: 1160px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; padding-top: 20px; padding-bottom: 20px; }
+    .top, .hero, .story, .trust, .final, .foot { max-width: 1180px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; padding-top: 20px; padding-bottom: 20px; position: relative; z-index: 5; }
     .brand { text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
     .top nav { display: flex; align-items: center; gap: 28px; flex-wrap: nowrap; flex: none; }
     .top app-lang-switch { flex: none; }
     /* One fixed-width area for the links: the text changes with the language, the switch to its left does not move. */
     .links { display: flex; align-items: center; justify-content: space-between; width: 520px; }
     .signin { min-width: 156px; justify-content: center; }
-    @media (max-width: 960px) { .links { width: auto; } .top nav .plain { display: none; } }
-    @media (max-width: 480px) { .top nav .signin { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
     .plain { color: var(--mute); text-decoration: none; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; transition: color .2s ease; }
     .plain:hover { color: var(--ink); }
+    @media (max-width: 960px) { .links { width: auto; } .top nav .plain { display: none; } }
+    @media (max-width: 480px) { .top nav .signin { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
 
-    .hero { display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; padding-top: 48px; padding-bottom: 88px; }
-    .copy { flex: 1 1 440px; min-width: 0; }
-    .seats { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; color: var(--mute); }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-    .dot.full { background: var(--warn); }
-    h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.04; letter-spacing: -0.03em; margin: 22px 0 18px; }
-    .sub { font-size: 19px; color: var(--mute); max-width: 540px; margin: 0 0 32px; }
+    /* ---------- hero ---------- */
+    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 56px; align-items: center; padding-top: 36px; padding-bottom: 112px; }
+    .hero::before { content: ''; position: absolute; z-index: -1; inset: -120px -20vw auto auto; width: 70vw; max-width: 900px; aspect-ratio: 1; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(61, 220, 151, .16), transparent); }
+    .hero::after { content: ''; position: absolute; z-index: -1; inset: -80px -40vw 0; pointer-events: none; opacity: .5; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+    .seats { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(255, 255, 255, .03);
+      font-family: var(--font-mono); font-size: 12px; letter-spacing: .04em; color: var(--mute); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 rgba(61, 220, 151, .6); animation: beat 2.4s ease-out infinite; }
+    .dot.full { background: var(--warn); animation: none; }
+    @keyframes beat { 70%, 100% { box-shadow: 0 0 0 9px rgba(61, 220, 151, 0); } }
+    h1 { font-size: clamp(40px, 6.2vw, 78px); line-height: .98; letter-spacing: -.04em; margin: 24px 0 22px; font-weight: 700; text-wrap: balance; }
+    .mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .12em; margin-bottom: -.12em; }
+    .word { display: inline-block; }
+    .booting .word { animation: rise 1s calc(.12s + var(--w) * .075s) cubic-bezier(.2, .9, .2, 1) backwards; }
+    @keyframes rise { from { transform: translateY(112%); } }
+    .sub { font-size: 19px; color: var(--mute); max-width: 520px; margin: 0 0 32px; }
     .cta { display: flex; gap: 14px; flex-wrap: wrap; }
-    .btn.big { min-height: 52px; padding: 0 28px; border-radius: 12px; font-size: 17px; }
-    .fine { font-size: 14px; color: var(--mute); margin: 16px 0 0; }
+    .btn.big { min-height: 54px; padding: 0 28px; border-radius: 14px; font-size: 17px; }
+    .fine { font-size: 14px; color: var(--mute); margin: 18px 0 0; max-width: 460px; }
+    .visual { min-width: 0; }
+    @media (max-width: 960px) { .hero { grid-template-columns: 1fr; gap: 40px; padding-bottom: 96px; } }
+    @media (max-width: 600px) { .hero { padding-top: 16px; } }
 
-    .preview { flex: 1 1 400px; min-width: 0; max-width: 520px; margin: 0 auto; }
-    .lead-sample { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
-    .row-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-    .name { font-family: var(--font-display); font-weight: 700; font-size: 21px; letter-spacing: -0.01em; }
-    .meta { color: var(--mute); font-size: 14px; margin-top: 4px; }
-    .score { display: flex; flex-direction: column; align-items: center; min-width: 56px; padding: 8px 12px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--line-strong); }
-    .score b { font-family: var(--font-display); font-size: 24px; line-height: 1; color: var(--accent); }
-    .score span { font-size: 11px; color: var(--mute); letter-spacing: .05em; }
-    .reason { color: var(--mute); font-size: 15px; margin: 16px 0 18px; }
-    .chips-row { display: flex; flex-wrap: wrap; gap: 10px; }
-    .chips-row span { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 10px; font-size: 14px; background: var(--accent-soft); }
-    .chips-row svg { color: var(--accent); }
-    .draft { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 18px; }
-    .label { font-size: 12px; color: var(--mute); letter-spacing: .06em; margin-bottom: 8px; }
-    .bubble { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14.5px; color: var(--ink); }
+    /* ---------- ticker ---------- */
+    .ticker { border-block: 1px solid var(--line); background: rgba(255, 255, 255, .015); overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .track { display: flex; width: max-content; animation: drift 46s linear infinite; }
+    .ticker:hover .track { animation-play-state: paused; }
+    .track ul { display: flex; list-style: none; margin: 0; padding: 0; }
+    .track li { display: inline-flex; align-items: center; gap: 22px; padding: 18px 22px 18px 0; font-family: var(--font-mono); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); white-space: nowrap; }
+    .track li::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: .7; }
+    @keyframes drift { to { transform: translateX(-50%); } }
 
-    .block { padding-top: 16px; padding-bottom: 88px; }
-    .eyebrow { font-size: 14px; letter-spacing: .08em; color: var(--accent); font-weight: 600; }
-    .block h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.02em; line-height: 1.1; margin: 12px 0 36px; max-width: 640px; }
-    .steps { display: flex; flex-wrap: wrap; gap: 20px; }
-    .step { flex: 1 1 280px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
-    .step h3 { font-size: 21px; margin: 0 0 8px; }
-    .step p, .why p { color: var(--mute); font-size: 16px; margin: 0; }
-    .ico { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: var(--accent); }
+    /* ---------- story ---------- */
+    .story { padding-top: 120px; padding-bottom: 40px; }
+    .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; color: var(--accent); }
+    .story-head h2, .trust-title { font-size: clamp(30px, 4.4vw, 54px); line-height: 1.04; letter-spacing: -.03em; margin: 14px 0 0; max-width: 760px; text-wrap: balance; }
+    .story-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 72px; margin-top: 56px; align-items: start; }
+    .steps { position: relative; list-style: none; margin: 0; padding: 0 0 0 44px; }
+    .thread { position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: var(--line); border-radius: 2px; }
+    .fill { position: absolute; inset: 0; background: var(--accent); border-radius: 2px; transform-origin: top; transform: scaleY(min(1, calc(var(--p, 1) * 1.35))); }
+    .step { position: relative; min-height: 72vh; display: flex; flex-direction: column; justify-content: center; opacity: .38; transition: opacity .45s ease; }
+    .step.on { opacity: 1; }
+    .step::before { content: ''; position: absolute; left: -40px; top: calc(50% - 90px); width: 18px; height: 18px; border-radius: 50%; background: var(--bg); border: 2px solid var(--line-strong); transition: border-color .4s ease, background-color .4s ease, box-shadow .4s ease; }
+    .step.on::before { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 6px rgba(61, 220, 151, .16); }
+    .num { font-family: var(--font-mono); font-size: 13px; letter-spacing: .12em; color: var(--accent); }
+    .step h3 { font-size: clamp(26px, 3vw, 38px); letter-spacing: -.025em; line-height: 1.08; margin: 12px 0 14px; }
+    .step p { color: var(--mute); font-size: 18px; max-width: 440px; margin: 0; }
 
-    .why { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 44px; display: flex; flex-wrap: wrap; gap: 36px; }
-    .why > * { flex: 1 1 240px; }
-    .why h2 { flex: 1 1 100%; margin: 0 0 4px; font-size: clamp(26px, 3.4vw, 34px); max-width: 720px; color: var(--ink); }
-    .why h3 { font-size: 17px; color: var(--accent); margin: 0 0 6px; }
+    .stage { position: sticky; top: 92px; height: min(600px, calc(100vh - 124px)); }
+    .frame { position: relative; height: 100%; border-radius: 28px; overflow: hidden; isolation: isolate; border: 1px solid rgba(255, 255, 255, .09);
+      background: radial-gradient(110% 80% at 50% 0%, #0f1c17, #08110e 70%); box-shadow: 0 50px 100px -40px rgba(0, 0, 0, .8), 0 0 80px -34px rgba(61, 220, 151, .3); }
+    .tabs { position: absolute; z-index: 3; left: 20px; right: 20px; top: 16px; display: flex; gap: 18px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .35); }
+    .tabs span { padding-bottom: 6px; border-bottom: 1px solid transparent; transition: color .35s ease, border-color .35s ease; }
+    .tabs .on { color: var(--accent); border-color: var(--accent); }
+    .layer { position: absolute; inset: 0; padding: 64px 24px 24px; opacity: 0; transform: translateY(18px) scale(.985); transition: opacity .5s ease, transform .6s cubic-bezier(.2, .8, .2, 1); pointer-events: none; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+    .layer.on { opacity: 1; transform: none; }
+    .l1 .opt { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 16px 18px 16px 52px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .03); color: var(--mute); font-size: 14px;
+      transform: translateX(26px); opacity: 0; transition: opacity .5s calc(var(--i) * .1s + .15s) ease, transform .6s calc(var(--i) * .1s + .15s) cubic-bezier(.2, .8, .2, 1), border-color .4s ease, background-color .4s ease; }
+    .l1.on .opt { opacity: 1; transform: none; }
+    .l1 .opt strong { color: var(--ink); font-family: var(--font-display); font-size: 18px; letter-spacing: -.01em; }
+    .check { position: absolute; left: 16px; top: 50%; width: 24px; height: 24px; translate: 0 -50%; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid rgba(255, 255, 255, .22); color: transparent; transition: all .4s .9s ease; }
+    .l1.on .opt:nth-child(2) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); transition-delay: .9s; }
+    .l1.on .opt:nth-child(2) .check { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+    .l2 { padding: 0; }
+    .l2 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .draw { stroke-dasharray: 100; stroke-dashoffset: 100; }
+    .l2.on .draw { animation: drawn 1.3s .25s ease forwards; }
+    @keyframes drawn { to { stroke-dashoffset: 0; } }
+    .sd { fill: rgba(255, 255, 255, .5); opacity: 0; transform-box: fill-box; transform-origin: center; }
+    .sd.hot { fill: var(--accent); }
+    .l2.on .sd { animation: pop .5s calc(1.1s + var(--k) * .1s) cubic-bezier(.2, .9, .3, 1.4) forwards; }
+    @keyframes pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
+    .found { position: absolute; left: 20px; bottom: 18px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--accent); padding: 7px 12px; border-radius: 999px; background: rgba(8, 17, 14, .85); border: 1px solid rgba(61, 220, 151, .35); }
+    @media (max-width: 960px) {
+      .story { padding-top: 88px; }
+      .story-grid { grid-template-columns: 1fr; gap: 0; margin-top: 36px; }
+      .stage { order: -1; top: 64px; height: 340px; z-index: 4; margin-bottom: 8px; }
+      .step { min-height: 52vh; }
+      .step::before { top: calc(50% - 40px); }
+    }
 
-    .final { text-align: center; padding-bottom: 88px; }
-    .final h2 { font-size: clamp(30px, 4.4vw, 44px); letter-spacing: -0.025em; line-height: 1.08; margin: 0 auto 14px; max-width: 700px; }
-    .final p { color: var(--mute); font-size: 18px; margin: 0 0 28px; }
+    /* ---------- principles ---------- */
+    .trust { padding-top: 140px; padding-bottom: 40px; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 72px; align-items: start; }
+    .trust-title { position: sticky; top: 110px; }
+    .principles { list-style: none; margin: 0; padding: 0; }
+    .principles li { position: relative; display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; padding: 34px 0 36px; border-top: 1px solid var(--line); }
+    .principles li:last-child { border-bottom: 1px solid var(--line); }
+    .principles li::after { content: ''; position: absolute; left: 0; top: -1px; height: 1px; width: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .8s .25s cubic-bezier(.2, .8, .2, 1); }
+    .principles li.in::after { transform: scaleX(.22); }
+    .idx { grid-row: span 2; font-family: var(--font-mono); font-size: 13px; letter-spacing: .1em; color: var(--accent); padding-top: 10px; }
+    .principles h3 { font-size: clamp(24px, 2.8vw, 34px); letter-spacing: -.025em; line-height: 1.1; margin: 0 0 10px; }
+    .principles p { margin: 0; color: var(--mute); font-size: 17px; max-width: 460px; }
+    @media (max-width: 960px) { .trust { grid-template-columns: 1fr; gap: 32px; padding-top: 96px; } .trust-title { position: static; } }
 
+    /* ---------- closing ---------- */
+    .final { padding-top: 120px; padding-bottom: 120px; }
+    .final-card { position: relative; text-align: center; padding: clamp(48px, 9vw, 112px) 24px; border-radius: 36px; overflow: hidden; isolation: isolate;
+      border: 1px solid rgba(255, 255, 255, .1); background: radial-gradient(70% 100% at 50% 0%, rgba(61, 220, 151, .2), transparent 70%), linear-gradient(180deg, #0d1814, #08110e);
+      transform: scale(calc(.9 + min(1, calc(var(--p, 1) * 1.7)) * .1)); will-change: transform; }
+    .final-card::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .5;
+      background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 44px), repeating-linear-gradient(90deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 44px);
+      -webkit-mask: radial-gradient(closest-side, #000, transparent); mask: radial-gradient(closest-side, #000, transparent); }
+    .final h2 { font-size: clamp(34px, 6vw, 76px); line-height: .98; letter-spacing: -.04em; margin: 0 auto 16px; max-width: 880px; text-wrap: balance; }
+    .final p { color: var(--mute); font-size: 19px; margin: 0 0 32px; }
     .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 28px; padding-bottom: 44px; color: var(--mute); font-size: 14px; }
-    @media (max-width: 600px) { .hero { gap: 36px; padding-top: 24px; padding-bottom: 56px; } .why { padding: 28px; } }
+
+    /* ---------- scroll-triggered reveal: a short fade and a 20px rise, once ---------- */
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s var(--d, 0ms) cubic-bezier(.2, .8, .2, 1), transform .7s var(--d, 0ms) cubic-bezier(.2, .8, .2, 1); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+      .track { animation: none; flex-wrap: wrap; width: auto; }
+      .ticker { -webkit-mask: none; mask: none; }
+      .dot, .booting .word, .draw, .sd, .layer, .l1 .opt, .step, .check { animation: none !important; transition: none !important; }
+      .draw { stroke-dashoffset: 0; } .sd { opacity: 1; } .l1 .opt { opacity: 1; transform: none; } .step { opacity: 1; }
+      .final-card { transform: none; } .fill { transform: none; }
+    }
   `,
 })
 export class Landing implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
-  protected readonly t = inject(I18n).t;
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
 
   readonly busy = signal(false);
   protected readonly choosing = signal(false);
@@ -193,7 +314,33 @@ export class Landing implements OnInit {
     return !s ? this.t('landing.seatsDefault') : this.t(s.full ? 'landing.seatsFull' : 'landing.seatsOpen', { n: s.n, max: s.max });
   };
 
+  /** The headline rises word by word once, when the page opens. A language change afterwards does not replay it. */
+  protected readonly booting = signal(true);
+  protected readonly titleWords = () => this.t('landing.title').split(' ');
+  protected readonly active = signal(0);
+
+  protected readonly niches = ['dental clinics', 'hotels', 'restaurants', 'gyms', 'hair salons', 'beauty salons', 'lawyers', 'pharmacies', 'bakeries', 'car repair', 'schools', 'cafes'];
+  protected readonly steps: { n: number; title: I18nKey; text: I18nKey; stage: I18nKey }[] = [
+    { n: 1, title: 'landing.step1', text: 'landing.step1Text', stage: 'landing.stage1' },
+    { n: 2, title: 'landing.step2', text: 'landing.step2Text', stage: 'landing.stage2' },
+    { n: 3, title: 'landing.step3', text: 'landing.step3Text', stage: 'landing.stage3' },
+  ];
+  protected readonly specs: { key: string; title: I18nKey; text: I18nKey }[] = [
+    { key: 'FULLSTACK', title: 'spec.fullstack', text: 'spec.fullstackText' },
+    { key: 'UXUI', title: 'spec.uxui', text: 'spec.uxuiText' },
+    { key: 'STRATEGY', title: 'spec.strategy', text: 'spec.strategyText' },
+  ];
+  protected readonly stageDots: [number, number, boolean][] = [
+    [110, 90, true], [160, 130, false], [214, 84, true], [262, 142, false], [120, 178, true], [200, 190, false], [276, 196, true], [300, 98, false],
+  ];
+  protected readonly principles: { n: number; title: I18nKey; text: I18nKey }[] = [
+    { n: 1, title: 'landing.why1', text: 'landing.why1Text' },
+    { n: 2, title: 'landing.why2', text: 'landing.why2Text' },
+    { n: 3, title: 'landing.why3', text: 'landing.why3Text' },
+  ];
+
   ngOnInit() {
+    setTimeout(() => this.booting.set(false), 2200);
     this.api.demoStatus().subscribe({
       next: s => {
         this.full.set(s.demoFull);
@@ -215,6 +362,7 @@ export class Landing implements OnInit {
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);
+        this.choosing.set(false);
         this.error.set(e.status === 429 ? 'landing.errFull' : 'landing.errServer');
         if (e.status === 429) this.full.set(true);
       },
