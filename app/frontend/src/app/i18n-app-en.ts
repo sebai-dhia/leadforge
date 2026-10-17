@@ -161,6 +161,11 @@ export const EN_APP = {
   'map.aria': 'Search area map',
   'map.coords': 'Coordinates (minLon, minLat, maxLon, maxLat):',
   'map.positioning': 'Positioning map…',
+  'map.draw': 'Draw area',
+  'map.drawHint': 'Drag on the map to draw the area to search.',
+  'map.drawnHint': 'Area drawn. Draw again to change it.',
+  'map.clearDraw': 'Use the visible map',
+  'map.big': 'That is a large area. Smaller areas give more useful results per search.',
 
   // profile
   'profile.loadingAria': 'Loading profile',

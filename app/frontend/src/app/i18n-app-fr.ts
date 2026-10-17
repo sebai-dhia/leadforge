@@ -155,6 +155,11 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'map.aria': 'Carte de la zone de recherche',
   'map.coords': 'Coordonnées (lon min, lat min, lon max, lat max) :',
   'map.positioning': 'Positionnement de la carte…',
+  'map.draw': 'Dessiner une zone',
+  'map.drawHint': 'Faites glisser sur la carte pour dessiner la zone à rechercher.',
+  'map.drawnHint': 'Zone dessinée. Dessinez-en une autre pour la changer.',
+  'map.clearDraw': 'Utiliser la carte visible',
+  'map.big': 'La zone est grande. Les petites zones donnent des résultats plus utiles par recherche.',
 
   'profile.loadingAria': 'Chargement du profil',
   'profile.yourName': 'Votre nom',
