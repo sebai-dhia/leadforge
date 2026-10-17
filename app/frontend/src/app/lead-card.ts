@@ -2,6 +2,7 @@ import { Component, computed, inject, input, linkedSignal, output, signal } from
 import { AreaPipe } from './area.pipe';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus } from './api.service';
+import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
 
 /** WhatsApp needs an international number. Only trust numbers that already carry a country code. */
@@ -159,6 +160,7 @@ export class LeadCard {
   readonly changed = output<Lead>();
 
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
 
@@ -183,7 +185,9 @@ export class LeadCard {
   protected readonly enrichResult = signal<EnrichResult | null>(null);
   protected readonly enrichError = signal<I18nKey | null>(null);
 
-  protected readonly language = linkedSignal<Lang>(() => this.current().draftLanguage ?? this.defaultLanguage());
+  /** A guest cannot set a message language, so drafts follow the language of the interface. */
+  protected readonly language = linkedSignal<Lang>(() =>
+    this.current().draftLanguage ?? (this.auth.isGuest() ? this.i18n.lang() : this.defaultLanguage()));
   protected readonly channel = linkedSignal<Channel>(() =>
     this.current().draftChannel ?? (this.current().emails.length || !whatsappDigits(this.current().phone) ? 'email' : 'whatsapp'));
   protected readonly subject = linkedSignal(() => this.current().subject ?? '');

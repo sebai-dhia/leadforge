@@ -71,8 +71,8 @@ public class ProfileController {
     @PutMapping
     public ProfileDto update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateProfile req) {
         AppUser u = load(jwt);
-        if (u.isDemo()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Demo profile is read-only.");
+        if (u.isDemo() || "GUEST".equals(u.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Guest profiles are read-only. Sign in to set up your own.");
         }
         if (req.displayName() != null) {
             if (req.displayName().isBlank()) throw bad("Your name cannot be empty.");

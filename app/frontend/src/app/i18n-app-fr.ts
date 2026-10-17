@@ -178,6 +178,8 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'profile.statDrafted': 'Messages rédigés',
   'profile.statContacted': 'Contactés',
   'profile.statReplied': 'Réponses',
+  'profile.guestLocked': 'Les comptes invités utilisent un profil par défaut. Connectez-vous pour définir vos services, vos liens et votre signature.',
+  'profile.guestSignIn': 'Connectez-vous pour modifier votre profil',
   'profile.errLoad': 'Impossible de charger votre profil. Actualisez la page.',
   'profile.err400': "Vérifiez votre nom, et que chaque lien a un nom et une adresse commençant par http:// ou https://.",
   'profile.err403': 'Ce profil ne peut pas être modifié.',

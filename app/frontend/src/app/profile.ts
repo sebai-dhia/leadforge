@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService, Lang, Profile, ProfileLink, ProfileStats, UsageMap } from './api.service';
 import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
@@ -18,18 +18,25 @@ import { I18n, I18nKey } from './i18n';
           <div class="avatar" aria-hidden="true">{{ initials() }}</div>
           <div class="who">
             <h1>{{ shownName(p) }}</h1>
-            <p class="headline">{{ p.headline || t('profile.addHeadline') }}</p>
+            <p class="headline">{{ p.headline || (auth.isGuest() ? '' : t('profile.addHeadline')) }}</p>
             <div class="facts">
               @if (p.city) { <span>{{ p.city }}</span> }
               <span>{{ t('profile.writesIn', { lang: langName(p.language) }) }}</span>
               @if (auth.isGuest()) { <span class="guest">{{ t('profile.guestAccount') }}</span> }
             </div>
           </div>
-          @if (!editing()) { <button type="button" class="ghost" (click)="startEdit()">{{ t('profile.edit') }}</button> }
+          @if (!editing() && !auth.isGuest()) { <button type="button" class="ghost" (click)="startEdit()">{{ t('profile.edit') }}</button> }
         </div>
       </section>
 
-      @if (editing()) {
+      @if (auth.isGuest()) {
+        <div class="notice guest-note" role="note">
+          <span>{{ t('profile.guestLocked') }}</span>
+          <button type="button" (click)="signInToEdit()">{{ t('profile.guestSignIn') }}</button>
+        </div>
+      }
+
+      @if (editing() && !auth.isGuest()) {
         <form class="card edit" (ngSubmit)="save()">
           <h2>{{ t('profile.edit') }}</h2>
           <div class="two">
@@ -77,28 +84,33 @@ import { I18n, I18nKey } from './i18n';
       <div class="cols">
         <div class="col main-col">
           <section class="card block">
-            <div class="block-head"><h2>{{ t('profile.offer') }}</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 1 }" class="btn ghost small">{{ t('profile.change') }}</a></div>
+            <div class="block-head"><h2>{{ t('profile.offer') }}</h2>@if (!auth.isGuest()) { <a routerLink="/welcome" [queryParams]="{ edit: 1, step: 1 }" class="btn ghost small">{{ t('profile.change') }}</a> }</div>
             @if (p.services.length) {
               <div class="chips">@for (s of p.services; track s) { <span class="chip on">{{ i18n.chip(s) }}</span> }</div>
-            } @else { <p class="mute">{{ t('profile.offerEmpty') }}</p> }
+            } @else if (auth.isGuest()) { <p class="mute">{{ p.offer }}</p> } @else { <p class="mute">{{ t('profile.offerEmpty') }}</p> }
           </section>
 
+          @if (!auth.isGuest() || p.targets.length) {
           <section class="card block">
-            <div class="block-head"><h2>{{ t('profile.reach') }}</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 2 }" class="btn ghost small">{{ t('profile.change') }}</a></div>
+            <div class="block-head"><h2>{{ t('profile.reach') }}</h2>@if (!auth.isGuest()) { <a routerLink="/welcome" [queryParams]="{ edit: 1, step: 2 }" class="btn ghost small">{{ t('profile.change') }}</a> }</div>
             @if (p.targets.length) {
               <div class="chips">@for (tg of p.targets; track tg) { <span class="chip">{{ i18n.chip(tg) }}</span> }</div>
               <p class="mute note">{{ t('profile.reachNote') }}</p>
             } @else { <p class="mute">{{ t('profile.reachEmpty') }}</p> }
           </section>
+          }
 
+          @if (!auth.isGuest() || p.about) {
           <section class="card block">
             <h2>{{ t('profile.about') }}</h2>
             @if (p.about) { <div class="about">{{ p.about }}</div> }
             @else { <p class="mute">{{ t('profile.aboutEmpty') }}</p> }
           </section>
+          }
         </div>
 
         <div class="col side-col">
+          @if (!auth.isGuest() || p.links.length) {
           <section class="card block">
             <h2>{{ t('profile.myLinks') }}</h2>
             <p class="mute note">{{ t('profile.linksNote') }}</p>
@@ -106,9 +118,10 @@ import { I18n, I18nKey } from './i18n';
               @for (l of p.links; track l.url) {
                 <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer"><strong>{{ l.label }}</strong><span>{{ l.url }}</span></a>
               } @empty { <p class="mute">{{ t('profile.noLinks') }}</p> }
-              <button type="button" class="link add" (click)="startEdit(true)">{{ t('profile.addLinkBtn') }}</button>
+              @if (!auth.isGuest()) { <button type="button" class="link add" (click)="startEdit(true)">{{ t('profile.addLinkBtn') }}</button> }
             </div>
           </section>
+          }
 
           <section class="card block">
             <h2>{{ t('profile.activity') }}</h2>
@@ -147,6 +160,7 @@ import { I18n, I18nKey } from './i18n';
     .facts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; color: var(--mute); font-size: 14px; }
     .guest { color: var(--warn); }
     .edit { margin-bottom: 24px; }
+    .guest-note { display: flex; gap: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; }
     .edit h2 { margin-top: 0; }
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 600px) { .two { grid-template-columns: 1fr; } }
@@ -183,6 +197,7 @@ import { I18n, I18nKey } from './i18n';
 export class ProfilePage {
   private readonly api = inject(ApiService);
   protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
 
@@ -246,6 +261,11 @@ export class ProfilePage {
   }
 
   protected langName(l: Lang) { return this.t(('lang.' + l) as I18nKey); }
+
+  protected signInToEdit() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
+  }
 
   protected startEdit(addLink = false) {
     const p = this.profile();

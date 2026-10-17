@@ -39,15 +39,15 @@ class GuestAccountIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void aGuestCanChangeTheirOwnProfile() throws Exception {
+    void aGuestProfileCannotBeChanged() throws Exception {
         mvc.perform(post("/api/auth/guest")).andExpect(status().isOk());
         AppUser g = users.findAll().get(0);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
                         .with(jwt().jwt(j -> j.subject(String.valueOf(g.getId()))))
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("{\"offer\":\"Logo design for cafes\",\"displayName\":\"Sam\",\"language\":\"fr\"}"))
-                .andExpect(status().isOk());
-        assertEquals("Logo design for cafes", users.findById(g.getId()).orElseThrow().getOffer());
+                .andExpect(status().isForbidden());
+        assertEquals("Websites and custom software for small local businesses", users.findById(g.getId()).orElseThrow().getOffer());
     }
 
     @Test

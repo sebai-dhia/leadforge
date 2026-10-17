@@ -183,6 +183,8 @@ export const EN_APP = {
   'profile.statDrafted': 'Messages drafted',
   'profile.statContacted': 'Contacted',
   'profile.statReplied': 'Replied',
+  'profile.guestLocked': 'Guest accounts use a default profile. Sign in to set your own services, links and signature.',
+  'profile.guestSignIn': 'Sign in to edit your profile',
   'profile.errLoad': 'Could not load your profile. Refresh the page.',
   'profile.err400': 'Check your name, and that each link has a name and an address starting with http:// or https://.',
   'profile.err403': 'This profile cannot be changed.',
