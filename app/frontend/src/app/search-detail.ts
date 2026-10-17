@@ -3,6 +3,7 @@ import { AreaPipe } from './area.pipe';
 import { RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadStatus } from './api.service';
 import { LeadCard } from './lead-card';
+import { I18n, I18nKey } from './i18n';
 
 type Filter = LeadStatus | 'ALL';
 
@@ -10,47 +11,47 @@ type Filter = LeadStatus | 'ALL';
   selector: 'app-search-detail',
   imports: [AreaPipe, RouterLink, LeadCard],
   template: `
-    <p><a routerLink="/searches">← All searches</a> · <a routerLink="/leads">All your leads</a></p>
+    <p><a routerLink="/searches">{{ t('sd.back') }}</a> · <a routerLink="/leads">{{ t('sd.all') }}</a></p>
 
     @if (!job()) {
-      <div class="card skeleton-card" aria-busy="true" aria-label="Loading"><span></span><span></span><span></span></div>
+      <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('sd.loadingAria')"><span></span><span></span><span></span></div>
     } @else {
-      <h1>{{ job()!.niche }} in {{ job()!.city | area }}</h1>
+      <h1>{{ t('find.searchIn', { niche: i18n.niche(job()!.niche), city: (job()!.city | area) }) }}</h1>
 
       @switch (job()!.status) {
         @case ('PENDING') {
           <div class="progress" role="status">
             <span class="dots" aria-hidden="true"></span>
-            Finding businesses and scoring them. This page updates by itself, about a minute.
+            {{ t('sd.progress') }}
           </div>
           <div class="card skeleton-card"><span></span><span></span><span></span></div>
           <div class="card skeleton-card"><span></span><span></span><span></span></div>
         }
         @case ('FAILED') {
-          <p class="err" role="alert">This search did not finish. Check that n8n is running, then start it again from the searches page.</p>
+          <p class="err" role="alert">{{ t('sd.failed') }}</p>
         }
         @default {
           @if (leads().length === 0) {
-            <p class="mute">No businesses were found. Try a broader business type or a different city.</p>
+            <p class="mute">{{ t('sd.none') }}</p>
           } @else {
             <p class="mute">
-              {{ leads().length }} businesses, best fit first.
+              {{ t('sd.summary', { n: leads().length }) }}
               @if (job()!.newCount !== null) {
-                <strong>{{ job()!.newCount }} new to you</strong>, {{ leads().length - job()!.newCount! }} already in your leads.
+                <strong>{{ t('sd.newToYou', { n: job()!.newCount ?? 0 }) }}</strong>, {{ t('sd.already', { m: leads().length - (job()!.newCount ?? 0) }) }}
               }
-              Open a lead to write a message when you want to contact it.
+              {{ t('sd.openHint') }}
             </p>
 
-            <div class="chips" role="group" aria-label="Filter leads">
+            <div class="chips" role="group" [attr.aria-label]="t('sd.filterAria')">
               @for (f of filters; track f.value) {
                 <button type="button" class="chip" [class.on]="filter() === f.value"
                   [attr.aria-pressed]="filter() === f.value" (click)="filter.set(f.value)">
-                  {{ f.label }} <span class="num">{{ count(f.value) }}</span>
+                  {{ t(f.key) }} <span class="num">{{ count(f.value) }}</span>
                 </button>
               }
               <button type="button" class="chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
                 (click)="reachable.set(!reachable())">
-                Has a way to contact <span class="num">{{ reachableCount() }}</span>
+                {{ t('leads.reachable') }} <span class="num">{{ reachableCount() }}</span>
               </button>
             </div>
 
@@ -58,8 +59,8 @@ type Filter = LeadStatus | 'ALL';
               <app-lead-card [lead]="l" [defaultLanguage]="lang()" [seenBefore]="isKnown(l)" (changed)="onChanged($event)" />
             } @empty {
               <div class="empty">
-                <p>No leads match this filter.</p>
-                <button type="button" class="ghost" (click)="reset()">Show all leads</button>
+                <p>{{ t('sd.noMatch') }}</p>
+                <button type="button" class="ghost" (click)="reset()">{{ t('sd.showAll') }}</button>
               </div>
             }
           }
@@ -72,6 +73,8 @@ export class SearchDetail {
   readonly id = input.required<string>(); // bound from the route param
 
   private readonly api = inject(ApiService);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
   protected readonly job = signal<Job | null>(null);
   protected readonly leads = signal<Lead[]>([]);
   protected readonly lang = signal<Lang>('en');
@@ -79,9 +82,9 @@ export class SearchDetail {
   protected readonly reachable = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
 
-  protected readonly filters: { value: Filter; label: string }[] = [
-    { value: 'ALL', label: 'All' }, { value: 'NEW', label: 'New' }, { value: 'CONTACTED', label: 'Contacted' },
-    { value: 'REPLIED', label: 'Replied' }, { value: 'NOT_INTERESTED', label: 'Not interested' },
+  protected readonly filters: { value: Filter; key: I18nKey }[] = [
+    { value: 'ALL', key: 'status.all' }, { value: 'NEW', key: 'status.new' }, { value: 'CONTACTED', key: 'status.contacted' },
+    { value: 'REPLIED', key: 'status.replied' }, { value: 'NOT_INTERESTED', key: 'status.notInterested' },
   ];
 
   private static isReachable(l: Lead) { return !!l.emails.length || !!l.phone || !!l.social.length; }

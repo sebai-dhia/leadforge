@@ -2,6 +2,7 @@ import { Component, computed, inject, input, linkedSignal, output, signal } from
 import { AreaPipe } from './area.pipe';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus } from './api.service';
+import { I18n, I18nKey } from './i18n';
 
 /** WhatsApp needs an international number. Only trust numbers that already carry a country code. */
 export function whatsappDigits(phone: string | null): string | null {
@@ -21,126 +22,126 @@ export function whatsappDigits(phone: string | null): string | null {
         <button type="button" class="lead-head" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
           <span class="lead-title">
             <bdi class="lead-name">{{ current().name }}</bdi>
-            @if (current().niche) { <span class="mute">{{ current().niche }} · {{ current().city | area }}</span> }
+            @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}</span> }
           </span>
           <span class="lead-meta">
-            <span class="fit" [attr.data-level]="fit().level">{{ fit().label }} <span class="num">{{ current().score }}/10</span></span>
-            <span class="reach" [class.none]="reach() === 'No contact'">{{ reach() }}</span>
-            <span class="pill" [attr.data-status]="current().status">{{ statusLabel() }}</span>
+            <span class="fit" [attr.data-level]="fit().level">{{ t(fit().key) }} <span class="num">{{ current().score }}/10</span></span>
+            <span class="reach" [class.none]="!reach().length">{{ reach().length ? reach().join(' + ') : t('reach.none') }}</span>
+            <span class="pill" [attr.data-status]="current().status">{{ t(statusKey()) }}</span>
             <span class="chev" [class.open]="expanded()" aria-hidden="true"></span>
           </span>
         </button>
       } @else {
         <div class="row">
           <h3 dir="auto">{{ current().name }}</h3>
-          <span class="fit" [attr.data-level]="fit().level" [title]="'Score ' + current().score + ' out of 10'">
-            {{ fit().label }} <span class="num">{{ current().score }}/10</span>
+          <span class="fit" [attr.data-level]="fit().level" [title]="t('card.scoreTitle', { s: current().score ?? 0 })">
+            {{ t(fit().key) }} <span class="num">{{ current().score }}/10</span>
           </span>
         </div>
-        @if (seenBefore()) { <span class="tag">Already in your leads</span> }
+        @if (seenBefore()) { <span class="tag">{{ t('card.alreadyIn') }}</span> }
       }
 
       @if (showBody()) {
       <p class="mute">
         <bdi>{{ current().address }}</bdi>
-        @if (!current().website) { · no website listed }
-        @if (current().rating) { · rated {{ current().rating }} ({{ current().reviews }}) }
+        @if (!current().website) { · {{ t('card.noWebsite') }} }
+        @if (current().rating) { · {{ t('card.rated', { r: current().rating ?? 0, n: current().reviews ?? 0 }) }} }
       </p>
-      <p>{{ current().reason }}</p>
+      <p>{{ i18n.reason(current().reason) }}</p>
 
-      <div class="contacts" aria-label="Contact options">
+      <div class="contacts" [attr.aria-label]="t('card.contactAria')">
         @if (telHref(); as tel) {
-          <a class="btn ghost" [href]="tel">Call {{ current().phone }}</a>
+          <a class="btn ghost" [href]="tel">{{ t('card.call', { phone: current().phone ?? '' }) }}</a>
         }
         @if (waHref(); as wa) {
-          <a class="btn ghost" [href]="wa" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn ghost" [href]="wa" target="_blank" rel="noopener">{{ t('card.whatsapp') }}</a>
         }
         @if (mailHref(); as mail) {
-          <a class="btn ghost" [href]="mail">Email {{ current().emails[0] }}</a>
+          <a class="btn ghost" [href]="mail">{{ t('card.email', { email: current().emails[0] }) }}</a>
         }
         @if (current().website; as site) {
-          <a class="btn ghost" [href]="site" target="_blank" rel="noopener">Website</a>
+          <a class="btn ghost" [href]="site" target="_blank" rel="noopener">{{ t('card.website') }}</a>
         }
         @for (s of socialLinks(); track s.url) {
           <a class="btn ghost" [href]="s.url" target="_blank" rel="noopener">{{ s.label }}</a>
         }
         @if (canEnrich()) {
           <button type="button" class="ghost" (click)="enrich()" [disabled]="enriching()">
-            {{ enriching() ? 'Looking…' : (current().contactCheckedAt ? 'Look again' : 'Find contact info') }}
+            {{ enriching() ? t('card.looking') : (current().contactCheckedAt ? t('card.lookAgain') : t('card.findContact')) }}
           </button>
         }
         @if (!telHref() && !current().emails.length && !current().website && !current().social.length) {
-          <span class="warn">No phone, email, website or social page found yet.</span>
+          <span class="warn">{{ t('card.noneFound') }}</span>
         }
       </div>
       @if (socialLinks().length) {
-        <p class="help">Social pages come from the business's own website or a web search. Check they are the right ones before writing.</p>
+        <p class="help">{{ t('card.socialNote') }}</p>
       }
       @if (enrichResult(); as r) {
         <p class="help" role="status">
-          @if (r.found.length) { <strong>Found: {{ r.found.join(', ') }}.</strong> } @else { <strong>Nothing new found.</strong> }
-          {{ r.note }}
+          @if (r.found.length) { <strong>{{ t('card.found', { list: foundList(r.found) }) }}</strong> } @else { <strong>{{ t('card.nothingNew') }}</strong> }
+          {{ i18n.note(r.note) }}
         </p>
       }
-      @if (enrichError()) { <p class="err" role="alert">{{ enrichError() }}</p> }
+      @if (enrichError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
 
-      <div class="seg" role="group" aria-label="Outreach status">
+      <div class="seg" role="group" [attr.aria-label]="t('card.outreachAria')">
         @for (s of statuses; track s.value) {
           <button type="button" class="seg-btn" [class.on]="current().status === s.value"
-            [attr.aria-pressed]="current().status === s.value" (click)="setStatus(s.value)">{{ s.label }}</button>
+            [attr.aria-pressed]="current().status === s.value" (click)="setStatus(s.value)">{{ t(s.key) }}</button>
         }
       </div>
-      @if (statusError()) { <p class="err" role="alert">{{ statusError() }}</p> }
+      @if (statusError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
 
       <button type="button" class="toggle" [attr.aria-expanded]="open()" (click)="open.set(!open())">
-        {{ open() ? 'Hide message' : (current().emailBody ? 'Show message' : 'Write a message') }}
+        {{ open() ? t('card.hide') : (current().emailBody ? t('card.show') : t('card.write')) }}
       </button>
 
       @if (open()) {
         <div class="composer">
           <div class="composer-controls">
-            <div class="seg" role="group" aria-label="Message language">
+            <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
               @for (l of languages; track l.value) {
-                <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="l.name"
+                <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
                   [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
               }
             </div>
-            <div class="seg" role="group" aria-label="Message channel">
+            <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
               <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
-                [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">Email</button>
+                [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
               <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
-                [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">WhatsApp</button>
+                [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
             </div>
             <button type="button" (click)="generate()" [disabled]="generating()">
-              {{ generating() ? 'Writing…' : (current().emailBody ? 'Write again' : 'Write message') }}
+              {{ generating() ? t('card.writing') : (current().emailBody ? t('card.writeAgain') : t('card.writeBtn')) }}
             </button>
           </div>
 
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+          @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
 
           @if (generating()) {
-            <div class="skeleton-card" aria-busy="true" aria-label="Writing the message"><span></span><span></span><span></span></div>
+            <div class="skeleton-card" aria-busy="true" [attr.aria-label]="t('card.writingAria')"><span></span><span></span><span></span></div>
           } @else if (current().emailBody) {
             @if (channel() === 'email') {
-              <label [attr.for]="'s' + current().id">Subject
+              <label [attr.for]="'s' + current().id">{{ t('card.subject') }}
                 <input [id]="'s' + current().id" dir="auto" [ngModel]="subject()" (ngModelChange)="subject.set($event)">
               </label>
             }
-            <label [attr.for]="'b' + current().id">Message
+            <label [attr.for]="'b' + current().id">{{ t('card.message') }}
               <textarea [id]="'b' + current().id" dir="auto" rows="7" [ngModel]="body()" (ngModelChange)="body.set($event)"></textarea>
             </label>
-            <p class="help">Written by AI from the facts above. Read it and fix anything that is not true before sending.</p>
+            <p class="help">{{ t('card.aiNote') }}</p>
             <div class="actions">
-              <button type="button" class="ghost" (click)="copy()">{{ copied() ? 'Copied' : 'Copy' }}</button>
+              <button type="button" class="ghost" (click)="copy()">{{ copied() ? t('card.copied') : t('card.copy') }}</button>
               @if (channel() === 'email' && mailHref()) {
-                <a class="btn" [href]="sendMail()">Open in mail app</a>
+                <a class="btn" [href]="sendMail()">{{ t('card.openMail') }}</a>
               }
               @if (channel() === 'whatsapp' && waHref()) {
-                <a class="btn" [href]="waHref()" target="_blank" rel="noopener">Send on WhatsApp</a>
+                <a class="btn" [href]="waHref()" target="_blank" rel="noopener">{{ t('card.sendWa') }}</a>
               }
             </div>
           } @else {
-            <p class="mute">Choose a language and channel, then write the message. It takes a few seconds.</p>
+            <p class="mute">{{ t('card.chooseHint') }}</p>
           }
         </div>
       }
@@ -158,14 +159,16 @@ export class LeadCard {
   readonly changed = output<Lead>();
 
   private readonly api = inject(ApiService);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
 
-  protected readonly statuses: { value: LeadStatus; label: string }[] = [
-    { value: 'NEW', label: 'New' }, { value: 'CONTACTED', label: 'Contacted' },
-    { value: 'REPLIED', label: 'Replied' }, { value: 'NOT_INTERESTED', label: 'Not interested' },
+  protected readonly statuses: { value: LeadStatus; key: I18nKey }[] = [
+    { value: 'NEW', key: 'status.new' }, { value: 'CONTACTED', key: 'status.contacted' },
+    { value: 'REPLIED', key: 'status.replied' }, { value: 'NOT_INTERESTED', key: 'status.notInterested' },
   ];
-  protected readonly languages: { value: Lang; short: string; name: string }[] = [
-    { value: 'en', short: 'EN', name: 'English' }, { value: 'fr', short: 'FR', name: 'French' },
-    { value: 'ar', short: 'AR', name: 'Arabic' },
+  protected readonly languages: { value: Lang; short: string; nameKey: I18nKey }[] = [
+    { value: 'en', short: 'EN', nameKey: 'lang.en' }, { value: 'fr', short: 'FR', nameKey: 'lang.fr' },
+    { value: 'ar', short: 'AR', nameKey: 'lang.ar' },
   ];
 
   protected readonly current = linkedSignal(() => this.lead());
@@ -174,11 +177,11 @@ export class LeadCard {
   protected readonly showBody = computed(() => !this.collapsible() || this.expanded());
   protected readonly generating = signal(false);
   protected readonly copied = signal(false);
-  protected readonly error = signal('');
-  protected readonly statusError = signal('');
+  protected readonly error = signal<I18nKey | null>(null);
+  protected readonly statusError = signal<I18nKey | null>(null);
   protected readonly enriching = signal(false);
   protected readonly enrichResult = signal<EnrichResult | null>(null);
-  protected readonly enrichError = signal('');
+  protected readonly enrichError = signal<I18nKey | null>(null);
 
   protected readonly language = linkedSignal<Lang>(() => this.current().draftLanguage ?? this.defaultLanguage());
   protected readonly channel = linkedSignal<Channel>(() =>
@@ -188,14 +191,13 @@ export class LeadCard {
 
   protected readonly fit = computed(() => {
     const s = this.current().score ?? 0;
-    return s >= 8 ? { label: 'Strong fit', level: 'high' } : s >= 6 ? { label: 'Possible fit', level: 'mid' }
-      : { label: 'Weak fit', level: 'low' };
+    return s >= 8 ? { key: 'fit.strong' as I18nKey, level: 'high' } : s >= 6 ? { key: 'fit.possible' as I18nKey, level: 'mid' }
+      : { key: 'fit.weak' as I18nKey, level: 'low' };
   });
 
   protected readonly reach = computed(() => {
     const l = this.current();
-    const ways = [l.phone ? 'Phone' : '', l.emails.length ? 'Email' : '', l.social.length ? 'Social' : ''].filter(Boolean);
-    return ways.length ? ways.join(' + ') : 'No contact';
+    return [l.phone ? this.t('reach.phone') : '', l.emails.length ? this.t('reach.email') : '', l.social.length ? this.t('reach.social') : ''].filter(Boolean);
   });
 
   protected readonly socialLinks = computed(() => this.current().social.map(url => ({
@@ -208,7 +210,8 @@ export class LeadCard {
     return !l.website || !l.emails.length || !l.phone || !l.social.length;
   });
 
-  protected readonly statusLabel = computed(() => this.statuses.find(s => s.value === this.current().status)?.label ?? '');
+  protected readonly statusKey = computed(() => (this.statuses.find(s => s.value === this.current().status)?.key ?? 'status.new') as I18nKey);
+  protected foundList(found: string[]) { return found.map(w => this.i18n.found(w)).join(', '); }
 
   protected readonly telHref = computed(() => {
     const p = this.current().phone;
@@ -235,31 +238,29 @@ export class LeadCard {
   protected setStatus(status: LeadStatus) {
     const before = this.current();
     if (before.status === status) return;
-    this.statusError.set('');
+    this.statusError.set(null);
     this.current.set({ ...before, status });
     this.api.setStatus(before.id, status).subscribe({
       next: l => this.changed.emit({ ...l }),
-      error: () => { this.current.set(before); this.statusError.set('Could not save the status. Try again.'); },
+      error: () => { this.current.set(before); this.statusError.set('card.errStatus'); },
     });
   }
 
   protected generate() {
     this.generating.set(true);
-    this.error.set('');
+    this.error.set(null);
     this.api.draft(this.current().id, this.language(), this.channel()).subscribe({
       next: l => { this.current.set(l); this.generating.set(false); this.changed.emit(l); },
       error: e => {
         this.generating.set(false);
-        this.error.set(e.status === 429 ? 'You have used all messages for today. The limit frees up gradually over 24 hours.'
-          : e.status === 502 ? 'The AI could not write this message. Try again in a moment.'
-          : 'Something went wrong. Try again.');
+        this.error.set(e.status === 429 ? 'card.errMsgLimit' : e.status === 502 ? 'card.errMsgAi' : 'card.errOther');
       },
     });
   }
 
   protected enrich() {
     this.enriching.set(true);
-    this.enrichError.set('');
+    this.enrichError.set(null);
     this.api.enrich(this.current().id).subscribe({
       next: r => {
         this.current.set(r.lead);
@@ -269,8 +270,7 @@ export class LeadCard {
       },
       error: e => {
         this.enriching.set(false);
-        this.enrichError.set(e.status === 429 ? 'You have used all contact lookups for today. The limit frees up gradually over 24 hours.'
-          : 'The lookup could not run. Check that n8n is running and try again.');
+        this.enrichError.set(e.status === 429 ? 'card.errLookLimit' : 'card.errLookRun');
       },
     });
   }

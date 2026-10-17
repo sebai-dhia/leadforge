@@ -94,7 +94,10 @@ export class UserMenu {
   private readonly profile = signal<Profile | null>(null);
   private readonly usage = signal<UsageMap | null>(null);
 
-  protected readonly displayName = computed(() => this.profile()?.displayName || this.auth.email() || '');
+  protected readonly displayName = computed(() => {
+    const name = this.profile()?.displayName;
+    return this.auth.isGuest() && (!name || name === 'Guest') ? this.t('menu.guest') : (name || this.auth.email() || '');
+  });
   protected readonly initials = computed(() => {
     const source = (this.profile()?.displayName || this.auth.email() || '?').trim();
     const parts = source.split(/[\s@._-]+/).filter(Boolean);

@@ -43,7 +43,7 @@ public class N8nClient {
     public void trigger(SearchJob job) {
         java.util.Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("jobId", job.getId());
-        payload.put("niche", job.getNiche());
+        payload.put("niche", NicheNormalizer.normalize(job.getNiche()));
         payload.put("city", job.getCity());
         if (job.getBbox() != null && !job.getBbox().isBlank()) {
             payload.put("bbox", job.getBbox());

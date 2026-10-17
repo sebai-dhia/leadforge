@@ -3,49 +3,50 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService, Lang, Profile, ProfileLink, ProfileStats, UsageMap } from './api.service';
 import { AuthService } from './auth.service';
+import { I18n, I18nKey } from './i18n';
 
 @Component({
   selector: 'app-profile',
   imports: [FormsModule, RouterLink],
   template: `
     @if (loading()) {
-      <div class="card skeleton-card" aria-busy="true" aria-label="Loading profile"><span></span><span></span><span></span></div>
+      <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('profile.loadingAria')"><span></span><span></span><span></span></div>
     } @else if (profile(); as p) {
       <section class="identity">
         <div class="banner"></div>
         <div class="id-body">
           <div class="avatar" aria-hidden="true">{{ initials() }}</div>
           <div class="who">
-            <h1>{{ p.displayName || 'Your name' }}</h1>
-            <p class="headline">{{ p.headline || 'Add a one-line headline' }}</p>
+            <h1>{{ shownName(p) }}</h1>
+            <p class="headline">{{ p.headline || t('profile.addHeadline') }}</p>
             <div class="facts">
               @if (p.city) { <span>{{ p.city }}</span> }
-              <span>Writes in {{ langName(p.language) }}</span>
-              @if (auth.isGuest()) { <span class="guest">Guest account</span> }
+              <span>{{ t('profile.writesIn', { lang: langName(p.language) }) }}</span>
+              @if (auth.isGuest()) { <span class="guest">{{ t('profile.guestAccount') }}</span> }
             </div>
           </div>
-          @if (!editing()) { <button type="button" class="ghost" (click)="startEdit()">Edit profile</button> }
+          @if (!editing()) { <button type="button" class="ghost" (click)="startEdit()">{{ t('profile.edit') }}</button> }
         </div>
       </section>
 
       @if (editing()) {
         <form class="card edit" (ngSubmit)="save()">
-          <h2>Edit profile</h2>
+          <h2>{{ t('profile.edit') }}</h2>
           <div class="two">
-            <label>Name <input name="displayName" required maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
-            <label>City <input name="city" maxlength="120" placeholder="Tunis, Tunisia" [(ngModel)]="city"></label>
+            <label>{{ t('profile.fieldName') }} <input name="displayName" required maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
+            <label>{{ t('profile.fieldCity') }} <input name="city" maxlength="120" [placeholder]="t('ob.basedPh')" [(ngModel)]="city"></label>
           </div>
-          <label>Headline
-            <input name="headline" maxlength="160" placeholder="Designer and developer for local businesses" [(ngModel)]="headline">
+          <label>{{ t('profile.fieldHeadline') }}
+            <input name="headline" maxlength="160" [(ngModel)]="headline">
           </label>
-          <label>About you, used to sign your messages
+          <label>{{ t('profile.fieldAbout') }}
             <textarea name="about" rows="3" maxlength="500" [(ngModel)]="about"
               placeholder="I design and build simple websites and booking tools for small local businesses."></textarea>
-            <span class="help">One or two plain sentences. Drafts only use what you write here.</span>
+            <span class="help">{{ t('profile.aboutHelp') }}</span>
           </label>
           <fieldset>
-            <legend>Language of your messages</legend>
-            <div class="seg" role="group" aria-label="Default message language">
+            <legend>{{ t('profile.msgLang') }}</legend>
+            <div class="seg" role="group" [attr.aria-label]="t('profile.msgLang')">
               @for (l of languages; track l.value) {
                 <button type="button" class="seg-btn" [class.on]="language() === l.value"
                   [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.label }}</button>
@@ -53,22 +54,22 @@ import { AuthService } from './auth.service';
             </div>
           </fieldset>
           <fieldset>
-            <legend>Your links, added under your messages</legend>
+            <legend>{{ t('profile.linksLegend') }}</legend>
             @for (l of links(); track $index) {
               <div class="link-row">
-                <input [attr.aria-label]="'Link name ' + ($index + 1)" maxlength="30" placeholder="Portfolio" [ngModel]="l.label"
+                <input [attr.aria-label]="t('profile.linkName', { n: $index + 1 })" maxlength="30" placeholder="Portfolio" [ngModel]="l.label"
                   (ngModelChange)="setLink($index, 'label', $event)" [ngModelOptions]="{ standalone: true }">
-                <input [attr.aria-label]="'Link address ' + ($index + 1)" maxlength="300" placeholder="https://" [ngModel]="l.url"
+                <input [attr.aria-label]="t('profile.linkAddr', { n: $index + 1 })" maxlength="300" placeholder="https://" [ngModel]="l.url"
                   (ngModelChange)="setLink($index, 'url', $event)" [ngModelOptions]="{ standalone: true }">
-                <button type="button" class="ghost icon" aria-label="Remove link" (click)="removeLink($index)">✕</button>
+                <button type="button" class="ghost icon" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">✕</button>
               </div>
             }
-            @if (links().length < 5) { <button type="button" class="ghost" (click)="addLink()">Add a link</button> }
+            @if (links().length < 5) { <button type="button" class="ghost" (click)="addLink()">{{ t('profile.addLink') }}</button> }
           </fieldset>
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+          @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <div class="actions">
-            <button type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save profile' }}</button>
-            <button type="button" class="ghost" (click)="editing.set(false)">Cancel</button>
+            <button type="submit" [disabled]="saving()">{{ saving() ? t('profile.saving') : t('profile.save') }}</button>
+            <button type="button" class="ghost" (click)="editing.set(false)">{{ t('profile.cancel') }}</button>
           </div>
         </form>
       }
@@ -76,62 +77,62 @@ import { AuthService } from './auth.service';
       <div class="cols">
         <div class="col main-col">
           <section class="card block">
-            <div class="block-head"><h2>What I offer</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 1 }" class="btn ghost small">Change</a></div>
+            <div class="block-head"><h2>{{ t('profile.offer') }}</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 1 }" class="btn ghost small">{{ t('profile.change') }}</a></div>
             @if (p.services.length) {
-              <div class="chips">@for (s of p.services; track s) { <span class="chip on">{{ s }}</span> }</div>
-            } @else { <p class="mute">Nothing picked yet. Choose what you offer so suggestions fit you.</p> }
+              <div class="chips">@for (s of p.services; track s) { <span class="chip on">{{ i18n.chip(s) }}</span> }</div>
+            } @else { <p class="mute">{{ t('profile.offerEmpty') }}</p> }
           </section>
 
           <section class="card block">
-            <div class="block-head"><h2>Who I want to reach</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 2 }" class="btn ghost small">Change</a></div>
+            <div class="block-head"><h2>{{ t('profile.reach') }}</h2><a routerLink="/welcome" [queryParams]="{ edit: 1, step: 2 }" class="btn ghost small">{{ t('profile.change') }}</a></div>
             @if (p.targets.length) {
-              <div class="chips">@for (t of p.targets; track t) { <span class="chip">{{ t }}</span> }</div>
-              <p class="mute note">Your searches suggest these first.</p>
-            } @else { <p class="mute">No industries picked yet.</p> }
+              <div class="chips">@for (tg of p.targets; track tg) { <span class="chip">{{ i18n.chip(tg) }}</span> }</div>
+              <p class="mute note">{{ t('profile.reachNote') }}</p>
+            } @else { <p class="mute">{{ t('profile.reachEmpty') }}</p> }
           </section>
 
           <section class="card block">
-            <h2>About me</h2>
+            <h2>{{ t('profile.about') }}</h2>
             @if (p.about) { <div class="about">{{ p.about }}</div> }
-            @else { <p class="mute">Add a sentence about you with Edit profile. Drafts use it to sound like you.</p> }
+            @else { <p class="mute">{{ t('profile.aboutEmpty') }}</p> }
           </section>
         </div>
 
         <div class="col side-col">
           <section class="card block">
-            <h2>My links</h2>
-            <p class="mute note">Added under your messages.</p>
+            <h2>{{ t('profile.myLinks') }}</h2>
+            <p class="mute note">{{ t('profile.linksNote') }}</p>
             <div class="links">
               @for (l of p.links; track l.url) {
                 <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer"><strong>{{ l.label }}</strong><span>{{ l.url }}</span></a>
-              } @empty { <p class="mute">No links yet.</p> }
-              <button type="button" class="link add" (click)="startEdit(true)">+ Add a link</button>
+              } @empty { <p class="mute">{{ t('profile.noLinks') }}</p> }
+              <button type="button" class="link add" (click)="startEdit(true)">{{ t('profile.addLinkBtn') }}</button>
             </div>
           </section>
 
           <section class="card block">
-            <h2>My activity</h2>
+            <h2>{{ t('profile.activity') }}</h2>
             <div class="stats">
-              @for (s of statList(); track s.label) {
-                <div class="stat"><div class="num big">{{ s.value }}</div><div class="mute">{{ s.label }}</div></div>
+              @for (s of statList(); track s.key) {
+                <div class="stat"><div class="num big">{{ s.value }}</div><div class="mute">{{ t(s.key) }}</div></div>
               }
             </div>
           </section>
 
           <section class="card block">
-            <h2>Today's allowance</h2>
-            <p class="mute note">Frees up gradually over 24 hours.</p>
-            @for (u of usageList(); track u.label) {
+            <h2>{{ t('menu.allowance') }}</h2>
+            <p class="mute note">{{ t('menu.frees') }}</p>
+            @for (u of usageList(); track u.key) {
               <div class="use">
-                <div class="use-row"><span>{{ u.label }}</span><span class="mute">{{ u.left }} of {{ u.limit }} left</span></div>
-                <div class="meter" role="img" [attr.aria-label]="u.left + ' of ' + u.limit + ' ' + u.label + ' left'"><div class="fill" [style.width.%]="u.pct"></div></div>
+                <div class="use-row"><span>{{ t(u.key) }}</span><span class="mute">{{ t('menu.left', { left: u.left, limit: u.limit }) }}</span></div>
+                <div class="meter" role="img" [attr.aria-label]="t(u.key) + ': ' + t('menu.left', { left: u.left, limit: u.limit })"><div class="fill" [style.width.%]="u.pct"></div></div>
               </div>
             }
           </section>
         </div>
       </div>
     } @else {
-      <p class="err" role="alert">{{ error() }}</p>
+      <p class="err" role="alert">{{ error() ? t(error()!) : '' }}</p>
     }
   `,
   styles: `
@@ -182,6 +183,9 @@ import { AuthService } from './auth.service';
 export class ProfilePage {
   private readonly api = inject(ApiService);
   protected readonly auth = inject(AuthService);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
+
 
   protected readonly languages: { value: Lang; label: string }[] = [
     { value: 'en', label: 'English' }, { value: 'fr', label: 'Français' }, { value: 'ar', label: 'العربية' },
@@ -193,7 +197,7 @@ export class ProfilePage {
   protected readonly loading = signal(true);
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);
-  protected readonly error = signal('');
+  protected readonly error = signal<I18nKey | null>(null);
 
   protected displayName = '';
   protected headline = '';
@@ -212,31 +216,36 @@ export class ProfilePage {
   protected readonly statList = computed(() => {
     const s = this.stats();
     return s ? [
-      { value: s.leads, label: 'Leads found' }, { value: s.drafted, label: 'Messages drafted' },
-      { value: s.contacted, label: 'Contacted' }, { value: s.replied, label: 'Replied' },
+      { value: s.leads, key: 'profile.statLeads' as I18nKey }, { value: s.drafted, key: 'profile.statDrafted' as I18nKey },
+      { value: s.contacted, key: 'profile.statContacted' as I18nKey }, { value: s.replied, key: 'profile.statReplied' as I18nKey },
     ] : [];
   });
 
   protected readonly usageList = computed(() => {
     const u = this.usage();
     if (!u) return [];
-    const row = (label: string, x: { used: number; limit: number }) => {
+    const row = (key: I18nKey, x: { used: number; limit: number }) => {
       const left = Math.max(0, x.limit - x.used);
-      return { label, left, limit: x.limit, pct: x.limit ? (left / x.limit) * 100 : 0 };
+      return { key, left, limit: x.limit, pct: x.limit ? (left / x.limit) * 100 : 0 };
     };
-    return [row('Searches', u.search), row('Contact lookups', u.enrich), row('Messages', u.draft)];
+    return [row('menu.searches', u.search), row('menu.lookups', u.enrich), row('menu.messages', u.draft)];
   });
 
   constructor() {
     this.api.profile().subscribe({
       next: p => { this.profile.set(p); this.loading.set(false); },
-      error: () => { this.loading.set(false); this.error.set('Could not load your profile. Refresh the page.'); },
+      error: () => { this.loading.set(false); this.error.set('profile.errLoad'); },
     });
     this.api.profileStats().subscribe({ next: s => this.stats.set(s), error: () => { /* the page works without it */ } });
     this.api.usage().subscribe({ next: u => this.usage.set(u), error: () => { /* the page works without it */ } });
   }
 
-  protected langName(l: Lang) { return this.languages.find(x => x.value === l)?.label ?? l; }
+  /** A guest's default name is shown in the interface language. */
+  protected shownName(p: Profile) {
+    return this.auth.isGuest() && p.displayName === 'Guest' ? this.t('menu.guest') : (p.displayName || this.t('profile.yourName'));
+  }
+
+  protected langName(l: Lang) { return this.t(('lang.' + l) as I18nKey); }
 
   protected startEdit(addLink = false) {
     const p = this.profile();
@@ -248,7 +257,7 @@ export class ProfilePage {
     this.language.set(p.language);
     this.links.set(p.links.map(l => ({ ...l })));
     if (addLink && this.links().length < 5) this.addLink();
-    this.error.set('');
+    this.error.set(null);
     this.editing.set(true);
   }
 
@@ -260,7 +269,7 @@ export class ProfilePage {
 
   protected save() {
     this.saving.set(true);
-    this.error.set('');
+    this.error.set(null);
     this.api.saveProfile({
       displayName: this.displayName, headline: this.headline, city: this.city, about: this.about,
       language: this.language(), links: this.links().filter(l => l.label.trim() || l.url.trim()),
@@ -268,9 +277,7 @@ export class ProfilePage {
       next: p => { this.profile.set(p); this.saving.set(false); this.editing.set(false); },
       error: e => {
         this.saving.set(false);
-        this.error.set(e.status === 400
-          ? 'Check your name, and that each link has a name and an address starting with http:// or https://.'
-          : e.status === 403 ? 'This profile cannot be changed.' : 'Could not save. Try again.');
+        this.error.set(e.status === 400 ? 'profile.err400' : e.status === 403 ? 'profile.err403' : 'profile.errSave');
       },
     });
   }

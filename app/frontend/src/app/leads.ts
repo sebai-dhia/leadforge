@@ -1,69 +1,70 @@
 import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { AreaPipe } from './area.pipe';
-import { DatePipe } from '@angular/common';
+import { I18n } from './i18n';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadFilters, LeadSort, LeadStatus } from './api.service';
+import { I18nKey } from './i18n';
 import { LeadCard } from './lead-card';
 
 type StatusFilter = LeadStatus | 'ALL';
 
 @Component({
   selector: 'app-leads',
-  imports: [AreaPipe, FormsModule, RouterLink, DatePipe, LeadCard],
+  imports: [AreaPipe, FormsModule, RouterLink, LeadCard],
   template: `
     <div class="page-head">
-      <h1>Your leads</h1>
+      <h1>{{ t('leads.title') }}</h1>
       <button type="button" class="ghost" (click)="download()" [disabled]="exporting() || total() === 0">
-        {{ exporting() ? 'Preparing…' : 'Export CSV' }}
+        {{ exporting() ? t('leads.preparing') : t('leads.export') }}
       </button>
     </div>
 
     @if (!loaded()) {
-      <div class="card skeleton-card" aria-busy="true" aria-label="Loading leads"><span></span><span></span><span></span></div>
+      <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('leads.loadingAria')"><span></span><span></span><span></span></div>
       <div class="card skeleton-card"><span></span><span></span><span></span></div>
     } @else if (everything() === 0 && !error()) {
       <div class="empty">
-        <p><strong>No leads yet.</strong></p>
-        <p>Every business you find is saved here once, even if several searches return it.</p>
-        <a class="btn" routerLink="/searches">Find your first leads</a>
+        <p><strong>{{ t('leads.emptyTitle') }}</strong></p>
+        <p>{{ t('leads.emptyText') }}</p>
+        <a class="btn" routerLink="/searches">{{ t('leads.emptyCta') }}</a>
       </div>
     } @else {
       <div class="toolbar">
-        <label class="grow" for="q">Search your leads
-          <input id="q" type="search" placeholder="Name or address" autocomplete="off" [ngModel]="q()" (ngModelChange)="onQuery($event)">
+        <label class="grow" for="q">{{ t('leads.searchLabel') }}
+          <input id="q" type="search" [placeholder]="t('leads.searchPh')" autocomplete="off" [ngModel]="q()" (ngModelChange)="onQuery($event)">
         </label>
-        <label for="search">From search
+        <label for="search">{{ t('leads.fromSearch') }}
           <select id="search" [ngModel]="searchId()" (ngModelChange)="setSearch($event)">
-            <option [ngValue]="0">All searches</option>
+            <option [ngValue]="0">{{ t('leads.allSearches') }}</option>
             @for (j of jobs(); track j.id) {
-              <option [ngValue]="j.id">{{ j.niche }} in {{ j.city | area }} ({{ j.createdAt | date: 'MMM d, HH:mm' }})</option>
+              <option [ngValue]="j.id">{{ t('leads.searchOption', { niche: i18n.niche(j.niche), city: (j.city | area), date: i18n.date(j.createdAt) }) }}</option>
             }
           </select>
         </label>
-        <label for="sort">Sort by
+        <label for="sort">{{ t('leads.sortBy') }}
           <select id="sort" [ngModel]="sort()" (ngModelChange)="setSort($event)">
-            <option value="score">Best fit</option>
-            <option value="recent">Recently found</option>
-            <option value="name">Name</option>
+            <option value="score">{{ t('leads.sortScore') }}</option>
+            <option value="recent">{{ t('leads.sortRecent') }}</option>
+            <option value="name">{{ t('leads.sortName') }}</option>
           </select>
         </label>
       </div>
 
-      <div class="chips" role="group" aria-label="Filter by status">
+      <div class="chips" role="group" [attr.aria-label]="t('status.filterAria')">
         @for (f of statusFilters; track f.value) {
           <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
-            (click)="setStatus(f.value)">{{ f.label }} <span class="num">{{ countFor(f.value) }}</span></button>
+            (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
         }
         <button type="button" class="chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
-          (click)="toggleReachable()">Has a way to contact</button>
+          (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
       </div>
 
-      @if (error()) { <p class="err" role="alert">{{ error() }} <button type="button" class="ghost" (click)="reload()">Try again</button></p> }
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }} <button type="button" class="ghost" (click)="reload()">{{ t('leads.tryAgain') }}</button></p> }
 
       <p class="mute" role="status">
-        @if (loading()) { Updating… }
-        @else { Showing {{ items().length }} of {{ total() }} {{ total() === 1 ? 'lead' : 'leads' }} }
+        @if (loading()) { {{ t('leads.updating') }} }
+        @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
       </p>
 
       @for (l of items(); track l.id) {
@@ -71,8 +72,8 @@ type StatusFilter = LeadStatus | 'ALL';
       } @empty {
         @if (!loading()) {
           <div class="empty">
-            <p>No leads match these filters.</p>
-            <button type="button" class="ghost" (click)="clearFilters()">Clear filters</button>
+            <p>{{ t('leads.noMatch') }}</p>
+            <button type="button" class="ghost" (click)="clearFilters()">{{ t('leads.clear') }}</button>
           </div>
         }
       }
@@ -80,7 +81,7 @@ type StatusFilter = LeadStatus | 'ALL';
       @if (items().length < total()) {
         <div class="more">
           <button type="button" class="ghost" (click)="loadMore()" [disabled]="loadingMore()">
-            {{ loadingMore() ? 'Loading…' : 'Load ' + remaining() + ' more' }}
+            {{ loadingMore() ? t('leads.loadingMore') : t('leads.loadMore', { n: remaining() }) }}
           </button>
         </div>
       }
@@ -89,10 +90,12 @@ type StatusFilter = LeadStatus | 'ALL';
 })
 export class LeadsPage {
   private readonly api = inject(ApiService);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
 
-  protected readonly statusFilters: { value: StatusFilter; label: string }[] = [
-    { value: 'ALL', label: 'All' }, { value: 'NEW', label: 'New' }, { value: 'CONTACTED', label: 'Contacted' },
-    { value: 'REPLIED', label: 'Replied' }, { value: 'NOT_INTERESTED', label: 'Not interested' },
+  protected readonly statusFilters: { value: StatusFilter; key: I18nKey }[] = [
+    { value: 'ALL', key: 'status.all' }, { value: 'NEW', key: 'status.new' }, { value: 'CONTACTED', key: 'status.contacted' },
+    { value: 'REPLIED', key: 'status.replied' }, { value: 'NOT_INTERESTED', key: 'status.notInterested' },
   ];
   private static readonly PAGE = 40;
 
@@ -114,7 +117,7 @@ export class LeadsPage {
   protected readonly loading = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly exporting = signal(false);
-  protected readonly error = signal('');
+  protected readonly error = signal<I18nKey | null>(null);
   protected readonly remaining = computed(() => Math.min(LeadsPage.PAGE, this.total() - this.items().length));
 
   private page = 0;
@@ -171,7 +174,7 @@ export class LeadsPage {
         URL.revokeObjectURL(url);
         this.exporting.set(false);
       },
-      error: () => { this.exporting.set(false); this.error.set('Could not create the file.'); },
+      error: () => { this.exporting.set(false); this.error.set('leads.errExport'); },
     });
   }
 
@@ -184,7 +187,7 @@ export class LeadsPage {
     const ticket = ++this.ticket;
     const page = reset ? 0 : this.page + 1;
     (reset ? this.loading : this.loadingMore).set(true);
-    this.error.set('');
+    this.error.set(null);
     this.api.leads(this.filters(), page, LeadsPage.PAGE).subscribe({
       next: r => {
         if (ticket !== this.ticket) return;
@@ -204,7 +207,7 @@ export class LeadsPage {
         this.loaded.set(true);
         this.loading.set(false);
         this.loadingMore.set(false);
-        this.error.set('Could not load your leads. Check that the backend is running.');
+        this.error.set('leads.errLoad');
       },
     });
   }

@@ -1,4 +1,7 @@
 import { ApplicationRef, Injectable, inject, signal } from '@angular/core';
+import { EN_APP } from './i18n-app-en';
+import { FR_APP } from './i18n-app-fr';
+import { translateChip, translateFound, translateNiche, translateNote, translateReason } from './i18n-generated';
 
 export type AppLang = 'en' | 'fr';
 
@@ -92,9 +95,10 @@ const EN = {
   'login.errGoogle': 'Google could not confirm your sign-in. Please try again.',
 } as const;
 
-export type I18nKey = keyof typeof EN;
+const EN_ALL = { ...EN, ...EN_APP };
+export type I18nKey = keyof typeof EN_ALL;
 
-const FR: Record<I18nKey, string> = {
+const FR_BASE: Record<keyof typeof EN, string> = {
   'nav.leads': 'Prospects',
   'nav.find': 'Trouver des prospects',
   'banner.guest': "Vous utilisez un compte invité temporaire. Vos prospects sont supprimés après quelques minutes d'inactivité.",
@@ -180,7 +184,7 @@ const FR: Record<I18nKey, string> = {
   'login.errGoogle': "Google n'a pas pu confirmer votre connexion. Réessayez.",
 };
 
-const DICTS: Record<AppLang, Record<I18nKey, string>> = { en: EN, fr: FR };
+const DICTS: Record<AppLang, Record<I18nKey, string>> = { en: EN_ALL, fr: { ...FR_BASE, ...FR_APP } };
 
 function read(): AppLang {
   try {
@@ -214,9 +218,29 @@ export class I18n {
     else apply();
   }
 
+  private fr() { return this.lang() === 'fr'; }
+
+  /** The reason line under a lead, the lookup note, business types and chips: fixed English phrases, shown in French. */
+  readonly reason = (text: string | null) => translateReason(text, this.fr());
+  readonly note = (text: string | null) => translateNote(text, this.fr());
+  readonly found = (word: string) => translateFound(word, this.fr());
+  readonly niche = (text: string | null) => translateNiche(text, this.fr());
+  readonly chip = (label: string) => translateChip(label, this.fr());
+
+  /** Dates in the interface language, e.g. "Oct 16, 20:46" or "16 oct., 20:46". */
+  readonly date = (iso: string | null, style: 'short' | 'long' = 'short'): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const locale = this.lang() === 'fr' ? 'fr-FR' : 'en-US';
+    return new Intl.DateTimeFormat(locale, style === 'short'
+      ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+      : { dateStyle: 'short', timeStyle: 'short' }).format(d);
+  };
+
   /** Reads the language signal, so a template that calls it updates when the language changes. */
   readonly t = (key: I18nKey, params?: Record<string, string | number>): string => {
-    let text = DICTS[this.lang()][key] ?? EN[key];
+    let text = DICTS[this.lang()][key] ?? EN_ALL[key];
     if (params) for (const [k, v] of Object.entries(params)) text = text.split(`{${k}}`).join(String(v));
     return text;
   };

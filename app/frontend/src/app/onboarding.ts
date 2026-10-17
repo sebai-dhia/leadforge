@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService, Lang, ProfileUpdate } from './api.service';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
+import { I18n, I18nKey } from './i18n';
 import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './profile-options';
 
 /** First-run picker, also reused to change the chips later (?edit=1&step=1|2|3). */
@@ -14,62 +15,62 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './pr
     <div class="wrap">
       <header class="top">
         <a routerLink="/" class="brand" aria-label="Leadforge home"><app-logo [size]="28" /></a>
-        <button type="button" class="skip" (click)="skip()">{{ editing ? 'Cancel' : 'Skip for now' }}</button>
+        <button type="button" class="skip" (click)="skip()">{{ editing ? t('ob.cancel') : t('ob.skip') }}</button>
       </header>
 
       <main class="main">
-        <div class="progress" role="img" [attr.aria-label]="'Step ' + step() + ' of 3'">
+        <div class="progress" role="img" [attr.aria-label]="t('ob.step', { n: step() })">
           @for (n of [1, 2, 3]; track n) { <span class="bar" [class.on]="n <= step()"></span> }
-          <span class="count">Step {{ step() }} of 3</span>
+          <span class="count">{{ t('ob.step', { n: step() }) }}</span>
         </div>
 
         @if (loading()) {
-          <div class="card skeleton-card" aria-busy="true" aria-label="Loading"><span></span><span></span><span></span></div>
+          <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('sd.loadingAria')"><span></span><span></span><span></span></div>
         } @else {
           @switch (step()) {
             @case (1) {
-              <h1>What do you offer?</h1>
-              <p class="sub">Pick up to {{ maxServices }}. We use them to suggest the businesses most likely to need you, and to write messages that sound like you.</p>
-              <div class="chips" role="group" aria-label="Services you offer">
+              <h1>{{ t('ob.s1Title') }}</h1>
+              <p class="sub">{{ t('ob.s1Sub', { max: maxServices }) }}</p>
+              <div class="chips" role="group" [attr.aria-label]="t('ob.servicesAria')">
                 @for (s of serviceChoices(); track s) {
                   <button type="button" class="pick" [class.on]="services().includes(s)"
                     [attr.aria-pressed]="services().includes(s)" [disabled]="locked(services(), s, maxServices)"
                     (click)="toggle(services, s, maxServices)">
-                    <span class="mark" aria-hidden="true">{{ services().includes(s) ? '✓' : '+' }}</span>{{ s }}
+                    <span class="mark" aria-hidden="true">{{ services().includes(s) ? '✓' : '+' }}</span>{{ i18n.chip(s) }}
                   </button>
                 }
               </div>
               <form class="other" (ngSubmit)="addOther()">
-                <label>Something else?
-                  <input name="other" maxlength="40" placeholder="For example: Data dashboards" [(ngModel)]="other">
+                <label>{{ t('ob.other') }}
+                  <input name="other" maxlength="40" [placeholder]="t('ob.otherPh')" [(ngModel)]="other">
                 </label>
-                <button type="submit" class="ghost" [disabled]="!other.trim() || services().length >= maxServices">Add</button>
+                <button type="submit" class="ghost" [disabled]="!other.trim() || services().length >= maxServices">{{ t('ob.add') }}</button>
               </form>
-              <p class="count-note" role="status">{{ services().length }} of {{ maxServices }} selected</p>
+              <p class="count-note" role="status">{{ t('ob.selected', { n: services().length, max: maxServices }) }}</p>
             }
             @case (2) {
-              <h1>Who do you want to work with?</h1>
-              <p class="sub">Pick up to {{ maxTargets }} kinds of business. Your searches will suggest these first.</p>
-              <div class="chips" role="group" aria-label="Kinds of business">
-                @for (t of targetChoices; track t) {
-                  <button type="button" class="pick" [class.on]="targets().includes(t)"
-                    [attr.aria-pressed]="targets().includes(t)" [disabled]="locked(targets(), t, maxTargets)"
-                    (click)="toggle(targets, t, maxTargets)">
-                    <span class="mark" aria-hidden="true">{{ targets().includes(t) ? '✓' : '+' }}</span>{{ t }}
+              <h1>{{ t('ob.s2Title') }}</h1>
+              <p class="sub">{{ t('ob.s2Sub', { max: maxTargets }) }}</p>
+              <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
+                @for (tg of targetChoices; track tg) {
+                  <button type="button" class="pick" [class.on]="targets().includes(tg)"
+                    [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
+                    (click)="toggle(targets, tg, maxTargets)">
+                    <span class="mark" aria-hidden="true">{{ targets().includes(tg) ? '✓' : '+' }}</span>{{ i18n.chip(tg) }}
                   </button>
                 }
               </div>
-              <p class="count-note" role="status">{{ targets().length }} of {{ maxTargets }} selected</p>
+              <p class="count-note" role="status">{{ t('ob.selected', { n: targets().length, max: maxTargets }) }}</p>
             }
             @default {
-              <h1>A little about you</h1>
-              <p class="sub">This signs your messages. You can change everything later on your profile.</p>
+              <h1>{{ t('ob.s3Title') }}</h1>
+              <p class="sub">{{ t('ob.s3Sub') }}</p>
               <div class="fields">
-                <label>Your name <input name="name" maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
-                <label>Where are you based? <input name="city" maxlength="120" placeholder="Tunis, Tunisia" [(ngModel)]="city"></label>
+                <label>{{ t('ob.yourName') }} <input name="name" maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
+                <label>{{ t('ob.based') }} <input name="city" maxlength="120" [placeholder]="t('ob.basedPh')" [(ngModel)]="city"></label>
                 <fieldset>
-                  <legend>Language of your messages</legend>
-                  <div class="seg" role="group" aria-label="Default message language">
+                  <legend>{{ t('ob.msgLang') }}</legend>
+                  <div class="seg" role="group" [attr.aria-label]="t('ob.msgLang')">
                     @for (l of languages; track l.value) {
                       <button type="button" class="seg-btn" [class.on]="language() === l.value"
                         [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.label }}</button>
@@ -80,11 +81,11 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './pr
             }
           }
 
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+          @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <div class="nav">
-            @if (step() > 1 && !singleStep) { <button type="button" class="ghost" (click)="step.set(step() - 1)">Back</button> } @else { <span></span> }
+            @if (step() > 1 && !singleStep) { <button type="button" class="ghost" (click)="step.set(step() - 1)">{{ t('ob.back') }}</button> } @else { <span></span> }
             <button type="button" class="next" [disabled]="saving() || (step() === 1 && !services().length && !editing)" (click)="next()">
-              {{ last() ? (saving() ? 'Saving…' : (editing ? 'Save' : 'Finish')) : 'Continue' }}
+              {{ last() ? (saving() ? t('ob.saving') : (editing ? t('ob.save') : t('ob.finish'))) : t('ob.continue') }}
             </button>
           </div>
         }
@@ -124,6 +125,8 @@ export class Onboarding {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
 
   protected readonly maxServices = MAX_SERVICES;
   protected readonly maxTargets = MAX_TARGETS;
@@ -145,7 +148,7 @@ export class Onboarding {
   protected other = '';
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
-  protected readonly error = signal('');
+  protected readonly error = signal<I18nKey | null>(null);
 
   constructor() {
     this.api.profile().subscribe({
@@ -157,7 +160,7 @@ export class Onboarding {
         this.city = p.city;
         this.loading.set(false);
       },
-      error: () => { this.loading.set(false); this.error.set('Could not load your profile. Refresh the page.'); },
+      error: () => { this.loading.set(false); this.error.set('ob.errLoad'); },
     });
   }
 
@@ -187,7 +190,7 @@ export class Onboarding {
   protected next() {
     if (!this.last()) { this.step.set(this.step() + 1); return; }
     this.saving.set(true);
-    this.error.set('');
+    this.error.set(null);
     const body: ProfileUpdate = { onboarded: true };
     if (!this.singleStep || this.firstStep === 1) body.services = this.services();
     if (!this.singleStep || this.firstStep === 2) body.targets = this.targets();
@@ -198,7 +201,7 @@ export class Onboarding {
     }
     this.api.saveProfile(body).subscribe({
       next: () => { this.auth.markOnboarded(); this.router.navigateByUrl(this.editing ? '/profile' : '/searches'); },
-      error: () => { this.saving.set(false); this.error.set('Could not save. Try again.'); },
+      error: () => { this.saving.set(false); this.error.set('ob.errSave'); },
     });
   }
 

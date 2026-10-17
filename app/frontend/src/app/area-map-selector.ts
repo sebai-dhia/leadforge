@@ -1,5 +1,6 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, inject, output, signal, viewChild } from '@angular/core';
 import * as L from 'leaflet';
+import { I18n } from './i18n';
 
 /**
  * Interactive map selector using Leaflet and OpenStreetMap tiles.
@@ -10,13 +11,13 @@ import * as L from 'leaflet';
   template: `
     <div class="map-wrapper">
       <div class="map-toolbar">
-        <span class="mute">Pan/zoom the map to frame your search area.</span>
-        <button type="button" class="btn ghost small" (click)="locateDefault()">Reset to Tunis</button>
+        <span class="mute">{{ t('map.hint') }}</span>
+        <button type="button" class="btn ghost small" (click)="locateDefault()">{{ t('map.reset') }}</button>
       </div>
-      <div #mapContainer class="leaflet-container-view" aria-label="Geographic Search Map"></div>
+      <div #mapContainer class="leaflet-container-view" [attr.aria-label]="t('map.aria')"></div>
       <div class="bbox-readout">
-        <span class="label">Coordinates (minLon, minLat, maxLon, maxLat):</span>
-        <code>{{ currentBbox() || 'Positioning map…' }}</code>
+        <span class="label">{{ t('map.coords') }}</span>
+        <code>{{ currentBbox() || t('map.positioning') }}</code>
       </div>
     </div>
   `,
@@ -66,6 +67,7 @@ import * as L from 'leaflet';
 export class AreaMapSelector implements AfterViewInit, OnDestroy {
   readonly mapContainer = viewChild<ElementRef<HTMLDivElement>>('mapContainer');
   readonly bboxChange = output<string>();
+  protected readonly t = inject(I18n).t;
 
   protected readonly currentBbox = signal<string>('');
   private map: L.Map | null = null;

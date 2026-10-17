@@ -1,56 +1,56 @@
 import { Component, inject, signal } from '@angular/core';
 import { AreaPipe } from './area.pipe';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Job, NewSearch, Usage } from './api.service';
 import { AreaMapSelector } from './area-map-selector';
+import { I18n, I18nKey } from './i18n';
 
 @Component({
   selector: 'app-searches',
-  imports: [AreaPipe, FormsModule, RouterLink, DatePipe, AreaMapSelector],
+  imports: [AreaPipe, FormsModule, RouterLink, AreaMapSelector],
   template: `
-    <h1>Find leads</h1>
+    <h1>{{ t('find.title') }}</h1>
 
     @if (profileReady() === false) {
       <div class="notice" role="status">
-        Add what you offer and your name before searching, so every message can be written for you.
-        <a routerLink="/profile">Complete your profile</a>
+        {{ t('find.profileNotice') }}
+        <a routerLink="/profile">{{ t('find.completeProfile') }}</a>
       </div>
     }
 
     <form class="card" (ngSubmit)="submit()">
       <div class="grid">
-        <label for="niche" class="full">Business type
+        <label for="niche" class="full">{{ t('find.nicheLabel') }}
           <input id="niche" name="niche" required list="niches" autocomplete="off" maxlength="120"
-            placeholder="dental clinics, hair salons, law firms…" [(ngModel)]="niche">
+            [placeholder]="t('find.nichePh')" [(ngModel)]="niche">
         </label>
       </div>
 
       @if (suggested().length) {
         <div style="margin-top: -4px; margin-bottom: 10px;">
-          <span class="help" style="margin-bottom: 6px;">Recommended for your profile:</span>
+          <span class="help" style="margin-bottom: 6px;">{{ t('find.recommended') }}</span>
           <div class="row" style="gap: 6px; justify-content: flex-start;">
             @for (s of suggested(); track s) {
-              <button type="button" class="btn ghost small" (click)="niche = s"
-                style="min-height: 28px; padding: 3px 8px; font-size: 12px;">{{ s }}</button>
+              <button type="button" class="btn ghost small" (click)="niche = i18n.niche(s)"
+                style="min-height: 28px; padding: 3px 8px; font-size: 12px;">{{ i18n.niche(s) }}</button>
             }
           </div>
         </div>
       }
 
       <div class="row" style="margin-top: 8px; margin-bottom: 8px;">
-        <span class="mute" style="font-size: 13px;">Area Selection Method:</span>
-        <div class="seg" role="group" aria-label="Area Mode">
-          <button type="button" class="seg-btn" [class.on]="mode() === 'city'" (click)="mode.set('city')">Regions / Cities (up to 3)</button>
-          <button type="button" class="seg-btn" [class.on]="mode() === 'map'" (click)="mode.set('map')">Map Bounding Box</button>
+        <span class="mute" style="font-size: 13px;">{{ t('find.areaMethod') }}</span>
+        <div class="seg" role="group" [attr.aria-label]="t('find.areaAria')">
+          <button type="button" class="seg-btn" [class.on]="mode() === 'city'" (click)="mode.set('city')">{{ t('find.modeCity') }}</button>
+          <button type="button" class="seg-btn" [class.on]="mode() === 'map'" (click)="mode.set('map')">{{ t('find.modeMap') }}</button>
         </div>
       </div>
 
       @if (mode() === 'city') {
-        <label for="city">Cities / Regions (up to 3, comma-separated)
-          <input id="city" name="city" required maxlength="250" placeholder="e.g. Tunis, Ariana, La Marsa" [(ngModel)]="city">
-          <span class="help">Enter up to 3 cities or districts. One discovery query runs per area.</span>
+        <label for="city">{{ t('find.citiesLabel') }}
+          <input id="city" name="city" required maxlength="250" [placeholder]="t('find.citiesPh')" [(ngModel)]="city">
+          <span class="help">{{ t('find.citiesHelp') }}</span>
         </label>
       } @else {
         <app-area-map-selector (bboxChange)="onBboxChange($event)"></app-area-map-selector>
@@ -58,7 +58,7 @@ import { AreaMapSelector } from './area-map-selector';
 
       <div class="actions" style="margin-top: 14px;">
         <button type="submit" [disabled]="busy() || profileReady() === false || limitReached() || isFormInvalid()">
-          {{ busy() ? 'Starting…' : 'Find leads' }}
+          {{ busy() ? t('find.starting') : t('find.go') }}
         </button>
       </div>
 
@@ -67,33 +67,33 @@ import { AreaMapSelector } from './area-map-selector';
       </datalist>
 
       <p class="help">
-        Each search queries OpenStreetMap / Geoapify places.
+        {{ t('find.source') }}
         @if (usage(); as u) {
           <span [class.err]="u.used >= u.limit">
-            {{ u.used >= u.limit ? 'You have used all ' + u.limit + ' searches for today.' : (u.limit - u.used) + ' of ' + u.limit + ' searches left today.' }}
+            {{ u.used >= u.limit ? t('find.usedAll', { limit: u.limit }) : t('find.left', { left: u.limit - u.used, limit: u.limit }) }}
           </span>
         }
       </p>
-      @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
     </form>
 
-    <h2>Your searches</h2>
+    <h2>{{ t('find.yourSearches') }}</h2>
     @if (loading()) {
-      <div class="card skeleton-card" aria-busy="true" aria-label="Loading searches"><span></span><span></span></div>
+      <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('find.loadingAria')"><span></span><span></span></div>
     } @else {
       @for (j of jobs(); track j.id) {
         <a class="card row link" [routerLink]="['/searches', j.id]">
           <span>
-            <strong>{{ j.niche }}</strong> in {{ j.city | area }}
+            <strong>{{ i18n.niche(j.niche) }}</strong> {{ t('find.in') }} {{ j.city | area }}
             
           </span>
           <span class="mute">
-            @if (j.status === 'DONE' && j.foundCount !== null) { {{ j.foundCount }} found, {{ j.newCount }} new · }
-            {{ j.createdAt | date: 'short' }} · <span [class]="'badge ' + j.status">{{ label(j.status) }}</span>
+            @if (j.status === 'DONE' && j.foundCount !== null) { {{ t('find.foundNew', { found: j.foundCount, new: j.newCount ?? 0 }) }} · }
+            {{ i18n.date(j.createdAt, 'long') }} · <span [class]="'badge ' + j.status">{{ t(label(j.status)) }}</span>
           </span>
         </a>
       } @empty {
-        <p class="mute">No searches yet. Choose a business type and an area above to find your first leads.</p>
+        <p class="mute">{{ t('find.none') }}</p>
       }
     }
   `,
@@ -101,6 +101,8 @@ import { AreaMapSelector } from './area-map-selector';
 export class Searches {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  protected readonly i18n = inject(I18n);
+  protected readonly t = this.i18n.t;
 
   protected readonly niches = [
     'dental clinics', 'doctors and clinics', 'pharmacies', 'restaurants', 'cafes', 'hotels', 'gyms',
@@ -110,7 +112,7 @@ export class Searches {
   protected readonly jobs = signal<Job[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
-  protected readonly error = signal('');
+  protected readonly error = signal<I18nKey | null>(null);
   protected readonly mode = signal<'city' | 'map'>('city');
   protected readonly profileReady = signal<boolean | null>(null);
   protected readonly usage = signal<Usage | null>(null);
@@ -145,13 +147,13 @@ export class Searches {
     this.selectedBbox = bbox;
   }
 
-  protected label(s: Job['status']) {
-    return s === 'PENDING' ? 'Searching' : s === 'DONE' ? 'Done' : 'Failed';
+  protected label(s: Job['status']): I18nKey {
+    return s === 'PENDING' ? 'job.pending' : s === 'DONE' ? 'job.done' : 'job.failed';
   }
 
   protected submit() {
     this.busy.set(true);
-    this.error.set('');
+    this.error.set(null);
 
     const payload: NewSearch = {
       niche: this.niche.trim(),
@@ -171,8 +173,8 @@ export class Searches {
       error: e => {
         this.busy.set(false);
         if (e.status === 422) this.profileReady.set(false);
-        else if (e.status === 429) this.error.set('You have reached today\'s search limit. It frees up gradually over 24 hours.');
-        else this.error.set('Could not start the search. Check that the backend is running and try again.');
+        else if (e.status === 429) this.error.set('find.errLimit');
+        else this.error.set('find.errStart');
       },
     });
   }
