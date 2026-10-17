@@ -2,6 +2,7 @@
 export const EN_APP = {
   // specialization (guests)
   'spec.aria': 'Your specialization',
+  'spec.close': 'Close',
   'spec.title': 'What do you do?',
   'spec.sub': 'Pick one. It shapes the businesses we suggest and the messages we write.',
   'spec.fullstack': 'I build software',

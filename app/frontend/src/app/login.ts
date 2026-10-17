@@ -4,14 +4,15 @@ import { Router, RouterLink } from '@angular/router';
 import { Logo } from './logo';
 import { GoogleSignIn } from './google-sign-in';
 import { LangSwitch } from './lang-switch';
-import { SpecializationKey, SpecializationPicker } from './specialization-picker';
+import { SpecializationDialog } from './specialization-dialog';
+import { SpecializationKey } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch, SpecializationPicker],
+  imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch, SpecializationDialog],
   template: `
     <div class="wrap">
       <header class="top">
@@ -32,13 +33,9 @@ import { ApiService } from './api.service';
             @if (demoFull()) {
               <div class="alert" role="alert">{{ t('login.full') }}</div>
             }
-            <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(!choosing())">
+            <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(true)">
               <span>{{ t('login.guest') }}</span><span aria-hidden="true">→</span>
             </button>
-            @if (choosing()) {
-              <p class="fine pick-title"><strong>{{ t('spec.title') }}</strong> {{ t('spec.sub') }}</p>
-              <app-specialization-picker [disabled]="busy()" (picked)="guest($event)" />
-            }
             <p class="fine">{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
           </section>
 
@@ -58,13 +55,16 @@ import { ApiService } from './api.service';
           </form>
         </div>
       </div>
+      <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="guest($event)" />
     </div>
   `,
   styles: `
     .wrap { min-height: 100vh; display: flex; flex-direction: column; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1160px; width: 100%; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; }
     .brand { text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
-    .right { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+    .right { display: inline-flex; align-items: center; gap: 16px; flex-wrap: nowrap; justify-content: flex-end; flex: none; }
+    .right app-lang-switch { flex: none; }
+    @media (max-width: 480px) { .back { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
     .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; }
     .back:hover { color: var(--ink); }
     .center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 24px 64px; }
@@ -80,7 +80,6 @@ import { ApiService } from './api.service';
     .demo-buttons { display: flex; flex-direction: column; gap: 10px; }
     .demo-btn { justify-content: space-between; min-height: 52px; border-radius: 12px; padding: 0 18px; font-size: 16px; }
     .center-text { text-align: center; }
-    .pick-title { margin: 14px 0 10px; }
     .fine { font-size: 13px; color: var(--mute); margin: 14px 0 0; }
     .or { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: var(--mute); font-size: 13px; }
     .or span { flex: 1; height: 1px; background: var(--line); }

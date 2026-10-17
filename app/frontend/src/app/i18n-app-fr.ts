@@ -3,6 +3,7 @@ import { EN_APP } from './i18n-app-en';
 /** French text for the screens behind sign-in. Typed against the English keys, so a missing key fails the build. */
 export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'spec.aria': 'Votre spécialisation',
+  'spec.close': 'Fermer',
   'spec.title': 'Que faites-vous ?',
   'spec.sub': 'Choisissez-en une. Elle oriente les entreprises suggérées et les messages rédigés.',
   'spec.fullstack': 'Je développe des logiciels',

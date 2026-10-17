@@ -4,12 +4,13 @@ import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
 import { LangSwitch } from './lang-switch';
-import { SpecializationKey, SpecializationPicker } from './specialization-picker';
+import { SpecializationDialog } from './specialization-dialog';
+import { SpecializationKey } from './specialization-picker';
 import { Logo } from './logo';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Logo, LangSwitch, SpecializationPicker],
+  imports: [RouterLink, Logo, LangSwitch, SpecializationDialog],
   template: `
     <div class="page">
       <header class="top">
@@ -37,13 +38,6 @@ import { Logo } from './logo';
             </button>
             <a routerLink="/login" class="btn ghost big">{{ t('landing.signin') }}</a>
           </div>
-          @if (choosing()) {
-            <div class="choose" id="start">
-              <h2>{{ t('spec.title') }}</h2>
-              <p class="fine">{{ t('spec.sub') }}</p>
-              <app-specialization-picker [disabled]="busy()" (picked)="tryDemo($event)" />
-            </div>
-          }
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <p class="fine">{{ t('landing.fine') }}</p>
         </div>
@@ -105,8 +99,10 @@ import { Logo } from './logo';
       <section class="final">
         <h2>{{ t('landing.finalTitle') }}</h2>
         <p>{{ t('landing.finalText') }}</p>
-        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose(true)">{{ t('landing.guest') }}</button>
+        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose()">{{ t('landing.guest') }}</button>
       </section>
+
+      <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="tryDemo($event)" />
 
       <footer class="foot">
         <span>{{ t('landing.footDemo') }}</span>
@@ -118,13 +114,16 @@ import { Logo } from './logo';
     :host { display: block; }
     .page { font-size: 17px; line-height: 1.6; }
     .top, .hero, .block, .final, .foot { max-width: 1160px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 20px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; padding-top: 20px; padding-bottom: 20px; }
     .brand { text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
-    .top nav { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    .top nav { display: flex; align-items: center; gap: 20px; flex-wrap: nowrap; flex: none; }
+    .top app-lang-switch { flex: none; margin-left: 4px; }
+    @media (max-width: 720px) { .top nav .plain { display: none; } }
+    @media (max-width: 480px) { .top nav .btn { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
     .plain { color: var(--mute); text-decoration: none; font-size: 15px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; transition: color .2s ease; }
     .plain:hover { color: var(--ink); }
 
-    .hero { display: flex; flex-wrap: wrap; gap: 56px; align-items: center; padding-top: 48px; padding-bottom: 88px; }
+    .hero { display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; padding-top: 48px; padding-bottom: 88px; }
     .copy { flex: 1 1 440px; min-width: 0; }
     .seats { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; color: var(--mute); }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
@@ -133,9 +132,6 @@ import { Logo } from './logo';
     .sub { font-size: 19px; color: var(--mute); max-width: 540px; margin: 0 0 32px; }
     .cta { display: flex; gap: 14px; flex-wrap: wrap; }
     .btn.big { min-height: 52px; padding: 0 28px; border-radius: 12px; font-size: 17px; }
-    .choose { margin-top: 24px; max-width: 640px; }
-    .choose h2 { font-size: 20px; margin: 0 0 4px; }
-    .choose .fine { margin: 0 0 14px; }
     .fine { font-size: 14px; color: var(--mute); margin: 16px 0 0; }
 
     .preview { flex: 1 1 400px; min-width: 0; max-width: 520px; margin: 0 auto; }
@@ -203,9 +199,8 @@ export class Landing implements OnInit {
   }
 
   /** The guest button first asks what the person does; picking one creates the guest. */
-  protected choose(scroll = false) {
+  protected choose() {
     this.choosing.set(true);
-    if (scroll) setTimeout(() => document.getElementById('start')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 
   tryDemo(spec: SpecializationKey) {
