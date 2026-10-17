@@ -53,6 +53,16 @@ public class AuthThrottle {
         record("reg:" + ip);
     }
 
+    /** Counts every guest account created from an address. */
+    public void checkAndRecordGuest(String ip) {
+        Duration window = Duration.ofHours(1);
+        if (count("guest:" + ip, window) >= props.guest().perIpPerHour()) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many guest sessions from this address. Try again later or sign in with Google.");
+        }
+        record("guest:" + ip);
+    }
+
     private void record(String key) {
         Deque<Instant> q = events.computeIfAbsent(key, k -> new ArrayDeque<>());
         synchronized (q) {
@@ -70,6 +80,11 @@ public class AuthThrottle {
             }
             return q.size();
         }
+    }
+
+    /** Forgets every counter. Used by tests so one test does not use up the next one's allowance. */
+    public void reset() {
+        events.clear();
     }
 
     /** Drops idle entries so the map cannot grow without bound. */

@@ -10,4 +10,6 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
     boolean existsByEmail(String email);
 
     Optional<AppUser> findByGoogleSub(String googleSub);
+
+    java.util.List<AppUser> findByRoleAndCreatedAtBefore(String role, java.time.Instant before);
 }

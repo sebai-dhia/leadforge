@@ -19,25 +19,20 @@ import { ApiService } from './api.service';
       <div class="center">
         <div class="box">
           <h1>Welcome to Leadforge</h1>
-          <p class="lede">Open the demo in one click, or sign in with your account.</p>
+          <p class="lede">Try it as a guest in one click, or sign in to keep your leads.</p>
 
-          <section class="demo" aria-label="Public demo">
+          <section class="demo" aria-label="Guest access">
             <div class="demo-head">
-              <span>Public demo</span>
+              <span>Just looking?</span>
               <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ activeCount() }} of {{ maxCount() }} seats in use</span>
             </div>
             @if (demoFull()) {
               <div class="alert" role="alert">The demo is full right now. Please try again in a few minutes.</div>
             }
-            <div class="demo-buttons">
-              <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" (click)="demo(1)">
-                <span>Demo · Web apps (English)</span><span aria-hidden="true">→</span>
-              </button>
-              <button type="button" class="btn ghost demo-btn" [disabled]="busy() || demoFull()" (click)="demo(2)">
-                <span>Demo · Refonte web (Français)</span><span aria-hidden="true">→</span>
-              </button>
-            </div>
-            <p class="fine">Sessions end after {{ idleMinutes() }} minutes without activity.</p>
+            <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" (click)="guest()">
+              <span>Try as guest</span><span aria-hidden="true">→</span>
+            </button>
+            <p class="fine">A private temporary account. It is deleted after {{ idleMinutes() }} minutes without activity.</p>
           </section>
 
           <div class="or"><span></span>or<span></span></div>
@@ -117,10 +112,10 @@ export class Login implements OnInit {
     });
   }
 
-  demo(which: 1 | 2) {
+  guest() {
     this.busy.set(true);
     this.error.set('');
-    this.auth.demoLogin(which).subscribe({
+    this.auth.guest().subscribe({
       next: () => this.router.navigateByUrl('/leads'),
       error: e => this.fail(e),
     });
@@ -155,7 +150,7 @@ export class Login implements OnInit {
   private fail(e: { status: number }) {
     this.busy.set(false);
     if (e.status === 429) {
-      this.error.set('Demo is currently full (5 active sessions). Please try again in a few minutes.');
+      this.error.set('The demo is full right now. Please try again in a few minutes.');
       this.refreshStatus();
       return;
     }

@@ -35,6 +35,7 @@ public class UsageService {
 
     private final UsageEventRepository events;
     private final AppProperties props;
+    private final com.leadfinder.auth.UserRepository users;
 
     public int limit(Kind kind) {
         AppProperties.Limits l = props.limits();
@@ -45,9 +46,21 @@ public class UsageService {
         };
     }
 
+    /** Guests get smaller limits than real accounts. */
+    public int limit(Long userId, Kind kind) {
+        AppProperties.Guest g = props.guest();
+        boolean guest = g != null && users.findById(userId).map(u -> "GUEST".equals(u.getRole())).orElse(false);
+        if (!guest) return limit(kind);
+        return switch (kind) {
+            case SEARCH -> g.searchesPerDay();
+            case DRAFT -> g.draftsPerDay();
+            case ENRICH -> g.enrichPerDay();
+        };
+    }
+
     public Usage usage(Long userId, Kind kind) {
         long used = events.countByUserIdAndKindAndCreatedAtAfter(userId, kind.name(), Instant.now().minus(WINDOW));
-        return new Usage((int) used, limit(kind));
+        return new Usage((int) used, limit(userId, kind));
     }
 
     public Map<String, Usage> all(Long userId) {

@@ -34,6 +34,8 @@ p { margin: 0 0 10px; }
 .app-bar nav a.on svg { color: var(--accent); }
 .user { color: var(--mute); font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .demo-chip { padding: 3px 10px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 12.5px; color: var(--mute); }
+.guest-banner { display: flex; align-items: center; justify-content: center; gap: 8px 16px; flex-wrap: wrap; padding: 10px 24px; background: var(--accent-soft); border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink); text-align: center; }
+.guest-banner button { min-height: 36px; padding: 4px 14px; font-size: 13.5px; }
 .app-main { max-width: 1160px; margin: 0 auto; padding: 32px 24px 64px; }
 .narrow-page { max-width: 640px; }
 .lede { color: var(--mute); margin-bottom: 18px; }

@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
 
@@ -23,11 +23,17 @@ import { Logo } from './logo';
               Profile</a>
           </nav>
           <span class="user">
-            @if (auth.isDemo()) { <span class="demo-chip">Demo</span> } @else { {{ auth.email() }} }
+            @if (auth.isGuest()) { <span class="demo-chip">Guest</span> } @else { {{ auth.email() }} }
             <button class="ghost" (click)="auth.logout()">Log out</button>
           </span>
         </div>
       </header>
+      @if (auth.isGuest()) {
+        <div class="guest-banner" role="note">
+          <span>You are using a temporary guest account. Your leads are deleted after a few minutes without activity.</span>
+          <button type="button" class="ghost" (click)="keepLeads()">Sign in to keep them</button>
+        </div>
+      }
     }
     <main [class.app-main]="auth.loggedIn()"><router-outlet /></main>
     @if (auth.loggedIn()) {
@@ -37,4 +43,10 @@ import { Logo } from './logo';
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected keepLeads() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
+  }
 }

@@ -111,6 +111,23 @@ public class AuthController {
         return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
     }
 
+    /** One click, no form: a private temporary account that is deleted after a short idle time. */
+    @PostMapping("/guest")
+    public TokenResponse guest(HttpServletRequest request) {
+        if (props.guest() == null || !props.guest().enabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Guest access is not enabled");
+        }
+        requireFreeSeatForNewUser();
+        throttle.checkAndRecordGuest(request.getRemoteAddr());
+        AppUser u = new AppUser();
+        u.setEmail("guest-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "@guest.leadforge.local");
+        u.setRole("GUEST");
+        u.setDisplayName("Guest");
+        u.setOffer("Websites and custom software for small local businesses");
+        users.save(u);
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo());
+    }
+
     private void requireFreeSeat(AppUser u) {
         if (!u.isAdmin() && !sessionRegistry.canAcceptVisitor()) full();
     }

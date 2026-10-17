@@ -22,11 +22,23 @@ public class ActiveSessionRegistry {
 
     private final AppProperties props;
     private final Map<String, Instant> demoSessions = new ConcurrentHashMap<>();
+    private final Map<String, Long> sessionUsers = new ConcurrentHashMap<>();
 
     public boolean canAcceptVisitor() {
         if (!isDemoEnabled()) return true;
         cleanIdleSessions();
         return demoSessions.size() < props.demo().maxSessions();
+    }
+
+    public void registerSession(String sessionId, Long userId) {
+        registerSession(sessionId);
+        if (sessionId != null && userId != null) sessionUsers.put(sessionId, userId);
+    }
+
+    /** Users who currently hold an active session. */
+    public java.util.Set<Long> activeUserIds() {
+        cleanIdleSessions();
+        return new java.util.HashSet<>(sessionUsers.values());
     }
 
     public void registerSession(String sessionId) {
@@ -42,11 +54,13 @@ public class ActiveSessionRegistry {
     /** Forgets every session. Used by tests so one test's sign-ins do not fill the seats of the next. */
     public void reset() {
         demoSessions.clear();
+        sessionUsers.clear();
     }
 
     public void removeSession(String sessionId) {
         if (sessionId != null) {
             demoSessions.remove(sessionId);
+            sessionUsers.remove(sessionId);
         }
     }
 
@@ -65,6 +79,10 @@ public class ActiveSessionRegistry {
     private void cleanIdleSessions() {
         int idleMinutes = isDemoEnabled() ? props.demo().idleMinutes() : 15;
         Instant cutoff = Instant.now().minus(Duration.ofMinutes(idleMinutes));
-        demoSessions.entrySet().removeIf(entry -> entry.getValue().isBefore(cutoff));
+        demoSessions.entrySet().removeIf(entry -> {
+            boolean idle = entry.getValue().isBefore(cutoff);
+            if (idle) sessionUsers.remove(entry.getKey());
+            return idle;
+        });
     }
 }

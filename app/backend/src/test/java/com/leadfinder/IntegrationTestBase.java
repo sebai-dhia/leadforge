@@ -36,6 +36,9 @@ public abstract class IntegrationTestBase {
     protected com.leadfinder.auth.ActiveSessionRegistry sessions;
 
     @Autowired
+    protected com.leadfinder.auth.AuthThrottle throttle;
+
+    @Autowired
     protected JdbcTemplate jdbc;
     @Autowired
     protected UserRepository users;
@@ -45,6 +48,7 @@ public abstract class IntegrationTestBase {
     @BeforeEach
     void cleanDatabase() {
         sessions.reset();
+        throttle.reset();
         jdbc.execute("TRUNCATE usage_events, search_leads, leads, search_jobs, users RESTART IDENTITY CASCADE");
     }
 

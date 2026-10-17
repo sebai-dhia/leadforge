@@ -29,6 +29,7 @@ export class AuthService {
   readonly role = signal<string | null>(read('lf_role'));
   readonly isDemo = signal<boolean>(read('lf_is_demo') === 'true');
   readonly loggedIn = computed(() => this.token() !== null);
+  readonly isGuest = computed(() => this.role() === 'GUEST');
 
   login(email: string, password: string) { return this.auth('login', email, password); }
   register(email: string, password: string) { return this.auth('register', email, password); }
@@ -38,7 +39,11 @@ export class AuthService {
     return this.http.post<TokenResponse>(`${API}/auth/google`, { credential })
       .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
   }
-  demoLogin(which: 1 | 2) { return this.login(`demo${which}@leadforge.dev`, 'demo1234'); }
+  /** One click: a private temporary account that is deleted after a short idle time. */
+  guest() {
+    return this.http.post<TokenResponse>(`${API}/auth/guest`, {})
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false)));
+  }
 
   logout() {
     this.set(null, null, null, false);

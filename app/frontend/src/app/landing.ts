@@ -28,13 +28,13 @@ import { Logo } from './logo';
           <p class="sub">Describe your service, pick a city or draw an area on the map, and review a ranked list of businesses with phone, email and social links. Leadforge drafts the message. You press send.</p>
           <div class="cta">
             <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">
-              Try the demo
+              Try as guest
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>
             <a routerLink="/login" class="btn ghost big">Sign in</a>
           </div>
           @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-          <p class="fine">No card and no sign-up form. The demo opens with a ready-made account.</p>
+          <p class="fine">No card and no sign-up form. You get a private temporary account, deleted when you leave.</p>
         </div>
 
         <div class="preview" aria-hidden="true">
@@ -93,8 +93,8 @@ import { Logo } from './logo';
 
       <section class="final">
         <h2>See your first list of leads in a minute.</h2>
-        <p>Open the demo and search your own city.</p>
-        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">Try the demo</button>
+        <p>Open a guest session and search your own city.</p>
+        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">Try as guest</button>
       </section>
 
       <footer class="foot">
@@ -187,7 +187,7 @@ export class Landing implements OnInit {
   tryDemo() {
     this.busy.set(true);
     this.error.set('');
-    this.auth.demoLogin(1).subscribe({
+    this.auth.guest().subscribe({
       next: () => this.router.navigateByUrl('/leads'),
       error: e => {
         this.busy.set(false);
