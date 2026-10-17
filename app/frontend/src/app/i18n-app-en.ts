@@ -92,6 +92,7 @@ export const EN_APP = {
   'card.chooseHint': 'Choose a language and channel, then write the message. It takes a few seconds.',
   'card.writingAria': 'Writing the message',
   'card.scoreTitle': 'Score {s} out of 10',
+  'card.details': 'Show details for {name}',
   'card.errStatus': 'Could not save the status. Try again.',
   'card.errMsgLimit': 'You have used all messages for today. The limit frees up gradually over 24 hours.',
   'card.errMsgAi': 'The AI could not write this message. Try again in a moment.',

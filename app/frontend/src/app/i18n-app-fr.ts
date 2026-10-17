@@ -89,6 +89,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'card.chooseHint': 'Choisissez une langue et un canal, puis écrivez le message. Cela prend quelques secondes.',
   'card.writingAria': 'Rédaction du message',
   'card.scoreTitle': 'Score {s} sur 10',
+  'card.details': 'Afficher les détails de {name}',
   'card.errStatus': "Impossible d'enregistrer le statut. Réessayez.",
   'card.errMsgLimit': "Vous avez utilisé tous vos messages pour aujourd'hui. La limite se libère progressivement sur 24 heures.",
   'card.errMsgAi': "L'IA n'a pas pu écrire ce message. Réessayez dans un instant.",

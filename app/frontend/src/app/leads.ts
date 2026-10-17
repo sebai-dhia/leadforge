@@ -31,8 +31,11 @@ type StatusFilter = LeadStatus | 'ALL';
       </div>
     } @else {
       <div class="toolbar">
-        <label class="grow" for="q">{{ t('leads.searchLabel') }}
-          <input id="q" type="search" [placeholder]="t('leads.searchPh')" autocomplete="off" [ngModel]="q()" (ngModelChange)="onQuery($event)">
+        <label class="grow search" for="q">{{ t('leads.searchLabel') }}
+          <span class="field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+            <input id="q" type="search" [placeholder]="t('leads.searchPh')" autocomplete="off" [ngModel]="q()" (ngModelChange)="onQuery($event)">
+          </span>
         </label>
         <label for="search">{{ t('leads.fromSearch') }}
           <select id="search" [ngModel]="searchId()" (ngModelChange)="setSearch($event)">
@@ -56,7 +59,8 @@ type StatusFilter = LeadStatus | 'ALL';
           <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
             (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
         }
-        <button type="button" class="chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
+        <span class="sp"></span>
+        <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
       </div>
 
@@ -67,8 +71,8 @@ type StatusFilter = LeadStatus | 'ALL';
         @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
       </p>
 
-      @for (l of items(); track l.id) {
-        <app-lead-card [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
+      @for (l of items(); track l.id; let i = $index) {
+        <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
       } @empty {
         @if (!loading()) {
           <div class="empty">

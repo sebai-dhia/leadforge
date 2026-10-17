@@ -20,18 +20,37 @@ export function whatsappDigits(phone: string | null): string | null {
   template: `
     <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED'" [class.compact]="collapsible()">
       @if (collapsible()) {
-        <button type="button" class="lead-head" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
-          <span class="lead-title">
-            <bdi class="lead-name">{{ current().name }}</bdi>
-            @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}</span> }
-          </span>
-          <span class="lead-meta">
-            <span class="fit" [attr.data-level]="fit().level">{{ t(fit().key) }} <span class="num">{{ current().score }}/10</span></span>
-            <span class="reach" [class.none]="!reach().length">{{ reach().length ? reach().join(' + ') : t('reach.none') }}</span>
+        <div class="lead-row">
+          <button type="button" class="lead-main" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
+            <span class="ring" [attr.data-level]="fit().level" [style.--p]="(current().score ?? 0) * 10"
+              [title]="t(fit().key) + ' · ' + t('card.scoreTitle', { s: current().score ?? 0 })"><span class="num">{{ current().score }}</span></span>
+            <span class="lead-title">
+              <bdi class="lead-name">{{ current().name }}</bdi>
+              @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}</span> }
+            </span>
+          </button>
+          <div class="lead-actions">
+            @if (telHref(); as tel) {
+              <a class="qa" [href]="tel" [attr.aria-label]="t('card.call', { phone: current().phone ?? '' })" [title]="current().phone ?? ''">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+              </a>
+            }
+            @if (waHref(); as wa) {
+              <a class="qa" [href]="wa" target="_blank" rel="noopener" [attr.aria-label]="t('card.whatsapp')" [title]="t('card.whatsapp')">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-4.2A8 8 0 1 1 8.3 18.8z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-.8.8a3.5 3.5 0 0 1-1.5-1.5l.8-.8-1-2z"/></svg>
+              </a>
+            }
+            @if (mailHref(); as mail) {
+              <a class="qa" [href]="mail" [attr.aria-label]="t('card.email', { email: current().emails[0] })" [title]="current().emails[0]">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
+              </a>
+            }
+            @if (!reach().length) { <span class="reach none">{{ t('reach.none') }}</span> }
             <span class="pill" [attr.data-status]="current().status">{{ t(statusKey()) }}</span>
-            <span class="chev" [class.open]="expanded()" aria-hidden="true"></span>
-          </span>
-        </button>
+            <button type="button" class="chev-btn" [attr.aria-expanded]="expanded()" [attr.aria-label]="t('card.details', { name: current().name })"
+              (click)="expanded.set(!expanded())"><span class="chev" [class.open]="expanded()" aria-hidden="true"></span></button>
+          </div>
+        </div>
       } @else {
         <div class="row">
           <h3 dir="auto">{{ current().name }}</h3>
