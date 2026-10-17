@@ -58,8 +58,11 @@ import { SpecializationKey } from './specialization-picker';
         <div class="top">
           <a routerLink="/" class="brand brand-m" [attr.aria-label]="t('landing.home')"><app-logo [size]="28" /></a>
           <span class="right">
+            <a routerLink="/" class="back">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg>
+              {{ t('login.back') }}
+            </a>
             <app-lang-switch />
-            <a routerLink="/" class="back">{{ t('login.back') }}</a>
           </span>
         </div>
 
@@ -148,7 +151,9 @@ import { SpecializationKey } from './specialization-picker';
     .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 32px; }
     .brand-m { display: none; }
     .right { display: inline-flex; align-items: center; gap: 20px; margin-left: auto; }
-    .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; }
+    .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding-right: 20px; border-right: 1px solid var(--line); transition: color .2s ease; }
+    .back svg { transition: transform .2s ease; }
+    .back:hover svg { transform: translateX(-3px); }
     .back:hover { color: var(--ink); }
     .center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 24px 28px; }
     .box { width: 100%; max-width: 400px; }
@@ -187,6 +192,7 @@ import { SpecializationKey } from './specialization-picker';
       .center { align-items: flex-start; padding-top: 12px; }
     }
     @media (max-width: 480px) { .back { display: none; } h1 { font-size: 30px; } }
+    @media (prefers-reduced-motion: reduce) { .back svg { transition: none; } }
     @media (prefers-reduced-motion: reduce) { .ping.hot { animation: none; } }
   `,
 })
