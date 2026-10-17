@@ -225,3 +225,6 @@ app-lead-card.enter { animation: rise .35s ease both; animation-delay: calc(var(
   select::picker(select):popover-open { opacity: 1; transform: none; }
   @starting-style { select::picker(select):popover-open { opacity: 0; transform: translateY(-4px); } }
 }
+/* One even border: the focus ring follows the select's own radius instead of drawing a second, differently rounded outline */
+select, input, textarea { border-radius: 10px; }
+select:focus-visible, select:open, input:focus-visible, textarea:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
