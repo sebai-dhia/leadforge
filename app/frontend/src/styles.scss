@@ -206,3 +206,5 @@ app-lead-card.enter { animation: rise .35s ease both; animation-delay: calc(var(
 .lead .composer { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-top: 14px; }
 .lead .composer textarea, .lead .composer input { background: var(--card); }
 .lead .toggle { border-radius: 999px; }
+
+.qa svg.wa { fill: currentColor; stroke: none; }
