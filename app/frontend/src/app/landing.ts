@@ -2,19 +2,22 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { I18n, I18nKey } from './i18n';
+import { LangSwitch } from './lang-switch';
 import { Logo } from './logo';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Logo],
+  imports: [RouterLink, Logo, LangSwitch],
   template: `
     <div class="page">
       <header class="top">
-        <a routerLink="/" class="brand" aria-label="Leadforge home"><app-logo [size]="30" /></a>
-        <nav aria-label="Site">
-          <a href="#how" class="plain">How it works</a>
-          <a href="#why" class="plain">Why Leadforge</a>
-          <a routerLink="/login" class="btn ghost">Sign in</a>
+        <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="30" /></a>
+        <nav [attr.aria-label]="t('landing.siteNav')">
+          <app-lang-switch />
+          <a href="#how" class="plain">{{ t('landing.how') }}</a>
+          <a href="#why" class="plain">{{ t('landing.why') }}</a>
+          <a routerLink="/login" class="btn ghost">{{ t('landing.signin') }}</a>
         </nav>
       </header>
 
@@ -24,82 +27,82 @@ import { Logo } from './logo';
             <span class="dot" [class.full]="full()"></span>
             {{ seatsLabel() }}
           </span>
-          <h1>Find local businesses that need you, and a way to reach them.</h1>
-          <p class="sub">Describe your service, pick a city or draw an area on the map, and review a ranked list of businesses with phone, email and social links. Leadforge drafts the message. You press send.</p>
+          <h1>{{ t('landing.title') }}</h1>
+          <p class="sub">{{ t('landing.sub') }}</p>
           <div class="cta">
             <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">
-              Try as guest
+              {{ t('landing.guest') }}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>
-            <a routerLink="/login" class="btn ghost big">Sign in</a>
+            <a routerLink="/login" class="btn ghost big">{{ t('landing.signin') }}</a>
           </div>
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-          <p class="fine">No card and no sign-up form. You get a private temporary account, deleted when you leave.</p>
+          @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+          <p class="fine">{{ t('landing.fine') }}</p>
         </div>
 
         <div class="preview" aria-hidden="true">
           <div class="lead-sample">
             <div class="row-top">
               <div>
-                <div class="name">Cabinet Dentaire [Name]</div>
-                <div class="meta">Dental clinic · Tunis</div>
+                <div class="name">{{ t('landing.sampleName') }}</div>
+                <div class="meta">{{ t('landing.sampleMeta') }}</div>
               </div>
-              <div class="score"><b>9</b><span>FIT</span></div>
+              <div class="score"><b>9</b><span>{{ t('landing.fit') }}</span></div>
             </div>
-            <p class="reason">Appointment-based business with no website. Phone and a social page found.</p>
+            <p class="reason">{{ t('landing.sampleReason') }}</p>
             <div class="chips-row">
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>Phone</span>
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Email</span>
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>Social page</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>{{ t('landing.phone') }}</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>{{ t('landing.email') }}</span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>{{ t('landing.social') }}</span>
             </div>
             <div class="draft">
-              <div class="label">DRAFT · ENGLISH · WHATSAPP</div>
-              <div class="bubble">Hello [Name], I build simple booking tools for dental clinics. I noticed your clinic takes appointments by phone only…</div>
+              <div class="label">{{ t('landing.draftLabel') }}</div>
+              <div class="bubble">{{ t('landing.draftText') }}</div>
             </div>
           </div>
         </div>
       </section>
 
       <section id="how" class="block">
-        <div class="eyebrow">HOW IT WORKS</div>
-        <h2>From a service idea to a message in three steps.</h2>
+        <div class="eyebrow">{{ t('landing.howEyebrow') }}</div>
+        <h2>{{ t('landing.howTitle') }}</h2>
         <div class="steps">
           <div class="step">
             <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
-            <h3>1. Tell us what you offer</h3>
-            <p>Write your service in one line. Leadforge suggests the kinds of businesses most likely to need it.</p>
+            <h3>{{ t('landing.step1') }}</h3>
+            <p>{{ t('landing.step1Text') }}</p>
           </div>
           <div class="step">
             <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
-            <h3>2. Pick where to look</h3>
-            <p>Type up to three cities, or draw an area on the map. Results come with phone, email and social links when they exist.</p>
+            <h3>{{ t('landing.step2') }}</h3>
+            <p>{{ t('landing.step2Text') }}</p>
           </div>
           <div class="step">
             <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg></div>
-            <h3>3. Review, then reach out</h3>
-            <p>Reachable leads rank first. Open a draft in English, French or Arabic and send it by email or WhatsApp yourself.</p>
+            <h3>{{ t('landing.step3') }}</h3>
+            <p>{{ t('landing.step3Text') }}</p>
           </div>
         </div>
       </section>
 
       <section id="why" class="block">
         <div class="why">
-          <h2>Built to help you reach people, not to spam them.</h2>
-          <div><h3>Drafts only</h3><p>Nothing is ever sent for you. You read, edit and send every message.</p></div>
-          <div><h3>Honest contact data</h3><p>Details come from open map data and the business's own pages. When none exist, the lead says so.</p></div>
-          <div><h3>Free to try</h3><p>The public demo is open to a few people at a time so it stays fast.</p></div>
+          <h2>{{ t('landing.whyTitle') }}</h2>
+          <div><h3>{{ t('landing.why1') }}</h3><p>{{ t('landing.why1Text') }}</p></div>
+          <div><h3>{{ t('landing.why2') }}</h3><p>{{ t('landing.why2Text') }}</p></div>
+          <div><h3>{{ t('landing.why3') }}</h3><p>{{ t('landing.why3Text') }}</p></div>
         </div>
       </section>
 
       <section class="final">
-        <h2>See your first list of leads in a minute.</h2>
-        <p>Open a guest session and search your own city.</p>
-        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">Try as guest</button>
+        <h2>{{ t('landing.finalTitle') }}</h2>
+        <p>{{ t('landing.finalText') }}</p>
+        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">{{ t('landing.guest') }}</button>
       </section>
 
       <footer class="foot">
-        <span>Leadforge · demo version</span>
-        <span>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a></span>
+        <span>{{ t('landing.footDemo') }}</span>
+        <span>{{ t('landing.mapData') }} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{ t('landing.osm') }}</a></span>
       </footer>
     </div>
   `,
@@ -166,19 +169,22 @@ export class Landing implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  protected readonly t = inject(I18n).t;
 
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly error = signal<I18nKey | null>(null);
   readonly full = signal(false);
-  readonly seatsLabel = signal('Public demo');
+  private readonly seats = signal<{ n: number; max: number; full: boolean } | null>(null);
+  protected readonly seatsLabel = () => {
+    const s = this.seats();
+    return !s ? this.t('landing.seatsDefault') : this.t(s.full ? 'landing.seatsFull' : 'landing.seatsOpen', { n: s.n, max: s.max });
+  };
 
   ngOnInit() {
     this.api.demoStatus().subscribe({
       next: s => {
         this.full.set(s.demoFull);
-        this.seatsLabel.set(s.demoFull
-          ? `Demo full · ${s.activeSessions} of ${s.maxSessions} seats in use`
-          : `Demo open · ${s.activeSessions} of ${s.maxSessions} seats in use`);
+        this.seats.set({ n: s.activeSessions, max: s.maxSessions, full: s.demoFull });
       },
       error: () => { /* the page still works without the live count */ },
     });
@@ -186,14 +192,12 @@ export class Landing implements OnInit {
 
   tryDemo() {
     this.busy.set(true);
-    this.error.set('');
+    this.error.set(null);
     this.auth.guest().subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);
-        this.error.set(e.status === 429
-          ? 'The demo is full right now. Please try again in a few minutes.'
-          : 'Could not reach the server. Please try again.');
+        this.error.set(e.status === 429 ? 'landing.errFull' : 'landing.errServer');
         if (e.status === 429) this.full.set(true);
       },
     });

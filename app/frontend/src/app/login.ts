@@ -3,51 +3,53 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Logo } from './logo';
 import { GoogleSignIn } from './google-sign-in';
+import { LangSwitch } from './lang-switch';
+import { I18n, I18nKey } from './i18n';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink, Logo, GoogleSignIn],
+  imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch],
   template: `
     <div class="wrap">
       <header class="top">
-        <a routerLink="/" class="brand" aria-label="Leadforge home"><app-logo [size]="28" /></a>
-        <a routerLink="/" class="back">Back to home</a>
+        <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="28" /></a>
+        <span class="right"><app-lang-switch /><a routerLink="/" class="back">{{ t('login.back') }}</a></span>
       </header>
 
       <div class="center">
         <div class="box">
-          <h1>Welcome to Leadforge</h1>
-          <p class="lede">Try it as a guest in one click, or sign in to keep your leads.</p>
+          <h1>{{ t('login.title') }}</h1>
+          <p class="lede">{{ t('login.lede') }}</p>
 
-          <section class="demo" aria-label="Guest access">
+          <section class="demo" [attr.aria-label]="t('login.justLooking')">
             <div class="demo-head">
-              <span>Just looking?</span>
-              <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ activeCount() }} of {{ maxCount() }} seats in use</span>
+              <span>{{ t('login.justLooking') }}</span>
+              <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ t('login.seats', { n: activeCount(), max: maxCount() }) }}</span>
             </div>
             @if (demoFull()) {
-              <div class="alert" role="alert">The demo is full right now. Please try again in a few minutes.</div>
+              <div class="alert" role="alert">{{ t('login.full') }}</div>
             }
             <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" (click)="guest()">
-              <span>Try as guest</span><span aria-hidden="true">→</span>
+              <span>{{ t('login.guest') }}</span><span aria-hidden="true">→</span>
             </button>
-            <p class="fine">A private temporary account. It is deleted after {{ idleMinutes() }} minutes without activity.</p>
+            <p class="fine">{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
           </section>
 
-          <div class="or"><span></span>or<span></span></div>
+          <div class="or"><span></span>{{ t('login.or') }}<span></span></div>
           <app-google-sign-in (credential)="google($event)" (failed)="googleUnavailable.set(true)" />
-          @if (googleUnavailable()) { <p class="fine center-text">Google sign-in could not load. Use email and password instead.</p> }
-          @if (googleError()) { <p class="err center-text" role="alert">{{ googleError() }}</p> }
+          @if (googleUnavailable()) { <p class="fine center-text">{{ t('login.googleUnavailable') }}</p> }
+          @if (googleError(); as e) { <p class="err center-text" role="alert">{{ t(e) }}</p> }
 
-          <div class="or"><span></span>or sign in with email<span></span></div>
+          <div class="or"><span></span>{{ t('login.orEmail') }}<span></span></div>
 
           <form (ngSubmit)="submit()">
-            <label>Email <input name="email" type="email" required autocomplete="email" placeholder="you@example.com" [(ngModel)]="email"></label>
-            <label>Password <input name="password" type="password" required minlength="8"
-              autocomplete="current-password" placeholder="Your password" [(ngModel)]="password"></label>
-            @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-            <button type="submit" class="btn ghost submit" [disabled]="busy()">Sign in</button>
+            <label>{{ t('login.email') }} <input name="email" type="email" required autocomplete="email" placeholder="you@example.com" [(ngModel)]="email"></label>
+            <label>{{ t('login.password') }} <input name="password" type="password" required minlength="8"
+              autocomplete="current-password" [placeholder]="t('login.passwordHint')" [(ngModel)]="password"></label>
+            @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+            <button type="submit" class="btn ghost submit" [disabled]="busy()">{{ t('login.signin') }}</button>
           </form>
         </div>
       </div>
@@ -57,6 +59,7 @@ import { ApiService } from './api.service';
     .wrap { min-height: 100vh; display: flex; flex-direction: column; }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1160px; width: 100%; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; }
     .brand { text-decoration: none; display: inline-flex; min-height: 44px; align-items: center; }
+    .right { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
     .back { color: var(--mute); text-decoration: none; font-size: 15px; min-height: 44px; display: inline-flex; align-items: center; }
     .back:hover { color: var(--ink); }
     .center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 24px 64px; }
@@ -84,17 +87,18 @@ export class Login implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  protected readonly t = inject(I18n).t;
 
   email = '';
   password = '';
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly error = signal<I18nKey | null>(null);
   readonly activeCount = signal(0);
   readonly maxCount = signal(5);
   readonly idleMinutes = signal(15);
   readonly demoFull = signal(false);
   readonly googleUnavailable = signal(false);
-  readonly googleError = signal('');
+  readonly googleError = signal<I18nKey | null>(null);
 
   ngOnInit() {
     this.refreshStatus();
@@ -114,7 +118,7 @@ export class Login implements OnInit {
 
   guest() {
     this.busy.set(true);
-    this.error.set('');
+    this.error.set(null);
     this.auth.guest().subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => this.fail(e),
@@ -123,7 +127,7 @@ export class Login implements OnInit {
 
   submit() {
     this.busy.set(true);
-    this.error.set('');
+    this.error.set(null);
     this.auth.login(this.email, this.password).subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => this.fail(e),
@@ -132,16 +136,16 @@ export class Login implements OnInit {
 
   google(credential: string) {
     this.busy.set(true);
-    this.googleError.set('');
+    this.googleError.set(null);
     this.auth.google(credential).subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);
         this.googleError.set(
-          e.status === 429 ? 'The demo is full right now. Please try again in a few minutes.'
-          : e.status === 409 ? 'An account with this email already exists. Sign in with its password instead.'
-          : e.status === 401 ? 'Google could not confirm your sign-in. Please try again.'
-          : 'Could not reach the server. Please try again.');
+          e.status === 429 ? 'login.full'
+          : e.status === 409 ? 'login.errExists'
+          : e.status === 401 ? 'login.errGoogle'
+          : 'login.errServer');
         if (e.status === 429) this.refreshStatus();
       },
     });
@@ -150,14 +154,14 @@ export class Login implements OnInit {
   private fail(e: { status: number }) {
     this.busy.set(false);
     if (e.status === 429) {
-      this.error.set('The demo is full right now. Please try again in a few minutes.');
+      this.error.set('login.full');
       this.refreshStatus();
       return;
     }
     if (e.status === 401) {
-      this.error.set('Wrong email or password.');
+      this.error.set('login.errWrong');
       return;
     }
-    this.error.set('Could not reach the server. Please try again.');
+    this.error.set('login.errServer');
   }
 }
