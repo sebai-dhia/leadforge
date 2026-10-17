@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { AreaPipe } from './area.pipe';
-import { RouterLink } from '@angular/router';
-import { ApiService, Job, Lang, Lead, LeadStatus } from './api.service';
+import { Router, RouterLink } from '@angular/router';
+import { ApiService, Job, Lang, Lead, LeadStatus, NewSearch } from './api.service';
 import { LeadCard } from './lead-card';
 import { I18n, I18nKey } from './i18n';
 
@@ -29,6 +29,10 @@ type Filter = LeadStatus | 'ALL';
         }
         @case ('FAILED') {
           <p class="err" role="alert">{{ t('sd.failed') }}</p>
+          <div class="actions">
+            <button type="button" [disabled]="retrying()" (click)="retry()">{{ retrying() ? t('sd.retrying') : t('sd.retry') }}</button>
+          </div>
+          @if (retryError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
         }
         @default {
           @if (leads().length === 0) {
@@ -73,6 +77,7 @@ export class SearchDetail {
   readonly id = input.required<string>(); // bound from the route param
 
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
   protected readonly job = signal<Job | null>(null);
@@ -80,6 +85,8 @@ export class SearchDetail {
   protected readonly lang = signal<Lang>('en');
   protected readonly filter = signal<Filter>('ALL');
   protected readonly reachable = signal(false);
+  protected readonly retrying = signal(false);
+  protected readonly retryError = signal<I18nKey | null>(null);
   private timer?: ReturnType<typeof setTimeout>;
 
   protected readonly filters: { value: Filter; key: I18nKey }[] = [
@@ -111,6 +118,30 @@ export class SearchDetail {
   protected isKnown(l: Lead): boolean {
     const created = this.job()?.createdAt;
     return !!l.firstSeenAt && !!created && new Date(l.firstSeenAt).getTime() < new Date(created).getTime();
+  }
+
+  /** Starts the same search again as a new one. The failed one was already refunded, so it costs nothing extra. */
+  protected retry() {
+    const job = this.job();
+    if (!job) return;
+    const payload: NewSearch = { niche: job.niche };
+    if (job.bbox) {
+      payload.bbox = job.bbox;
+      payload.city = job.city;
+    } else {
+      const cities = job.city.split('|').map(c => c.trim()).filter(Boolean);
+      payload.cities = cities;
+      payload.city = cities.join(', ');
+    }
+    this.retrying.set(true);
+    this.retryError.set(null);
+    this.api.create(payload).subscribe({
+      next: j => { this.retrying.set(false); this.router.navigate(['/searches', j.id]); },
+      error: e => {
+        this.retrying.set(false);
+        this.retryError.set(e.status === 429 ? 'find.errLimit' : 'find.errStart');
+      },
+    });
   }
 
   protected reset() {
