@@ -47,7 +47,7 @@ class GuestAccountIntegrationTest extends IntegrationTestBase {
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("{\"offer\":\"Logo design for cafes\",\"displayName\":\"Sam\",\"language\":\"fr\"}"))
                 .andExpect(status().isForbidden());
-        assertEquals("Websites and custom software for small local businesses", users.findById(g.getId()).orElseThrow().getOffer());
+        assertEquals("Custom websites, booking systems and automation for small local businesses", users.findById(g.getId()).orElseThrow().getOffer());
     }
 
     @Test
@@ -90,5 +90,74 @@ class GuestAccountIntegrationTest extends IntegrationTestBase {
         assertTrue(users.findById(idle.getId()).isEmpty(), "an idle guest is deleted");
         assertTrue(users.findById(real.getId()).isPresent(), "a real account is never deleted");
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM leads WHERE user_id = ?", Integer.class, idle.getId()));
+    }
+
+    private org.springframework.test.web.servlet.request.RequestPostProcessor as(AppUser u) {
+        return jwt().jwt(j -> j.subject(String.valueOf(u.getId())));
+    }
+
+    @Test
+    void aGuestPicksASpecializationWhichSetsServicesIndustriesAndOffer() throws Exception {
+        mvc.perform(post("/api/auth/guest").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"specialization\":\"UXUI\"}"))
+                .andExpect(status().isOk());
+        AppUser g = users.findAll().get(0);
+        mvc.perform(get("/api/profile").with(as(g)))
+                .andExpect(jsonPath("$.specialization").value("UXUI"))
+                .andExpect(jsonPath("$.headline").value("UX/UI designer"))
+                .andExpect(jsonPath("$.services[0]").value("UI/UX design"))
+                .andExpect(jsonPath("$.targets[0]").value("Hotels and guesthouses"))
+                .andExpect(jsonPath("$.offer").value("UX/UI design and website redesign for small local businesses"));
+    }
+
+    @Test
+    void theIndustriesSuggestedMatchTheSpecialization() throws Exception {
+        mvc.perform(post("/api/auth/guest").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"specialization\":\"STRATEGY\"}")).andExpect(status().isOk());
+        AppUser g = users.findAll().get(0);
+        mvc.perform(get("/api/searches/suggested-niches").with(as(g)))
+                .andExpect(jsonPath("$[0]").value("restaurants"))
+                .andExpect(jsonPath("$[1]").value("bakeries"));
+    }
+
+    @Test
+    void aGuestCanSwitchSpecializationButNotEditAnythingElse() throws Exception {
+        mvc.perform(post("/api/auth/guest")).andExpect(status().isOk());
+        AppUser g = users.findAll().get(0);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile/specialization")
+                        .with(as(g)).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"specialization\":\"STRATEGY\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.specialization").value("STRATEGY"))
+                .andExpect(jsonPath("$.services.length()").value(3));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
+                        .with(as(g)).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"headline\":\"hacked\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void anUnknownSpecializationIsRejected() throws Exception {
+        mvc.perform(post("/api/auth/guest").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"specialization\":\"HACKER\"}")).andExpect(status().isBadRequest());
+        assertEquals(0, users.count());
+        mvc.perform(post("/api/auth/guest")).andExpect(status().isOk());
+        AppUser g = users.findAll().get(0);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile/specialization")
+                        .with(as(g)).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"specialization\":\"HACKER\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aRealAccountDoesNotUsePresets() throws Exception {
+        AppUser real = new AppUser();
+        real.setEmail("real2@example.com");
+        real.setPasswordHash("hash");
+        real = users.save(real);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile/specialization")
+                        .with(as(real)).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"specialization\":\"UXUI\"}"))
+                .andExpect(status().isForbidden());
     }
 }

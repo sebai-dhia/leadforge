@@ -80,6 +80,7 @@ export function translateNiche(niche: string | null, fr: boolean): string {
 }
 
 const CHIPS_FR: Record<string, string> = {
+  'Full-stack developer': 'Développeur full-stack', 'UX/UI designer': 'Designer UX/UI', 'Creative strategist': 'Stratège créatif',
   'Web development': 'Développement web', 'UI/UX design': 'Design UI/UX', 'Mobile apps': 'Applications mobiles',
   'Branding and logos': 'Identité visuelle et logos', SEO: 'SEO (référencement)', Automation: 'Automatisation',
   Copywriting: 'Rédaction', 'Video and motion': 'Vidéo et animation', Photography: 'Photographie',

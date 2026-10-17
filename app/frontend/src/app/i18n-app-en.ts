@@ -1,5 +1,18 @@
 /** English text for the screens behind sign-in. The French file must have exactly the same keys. */
 export const EN_APP = {
+  // specialization (guests)
+  'spec.aria': 'Your specialization',
+  'spec.title': 'What do you do?',
+  'spec.sub': 'Pick one. It shapes the businesses we suggest and the messages we write.',
+  'spec.fullstack': 'I build software',
+  'spec.fullstackText': 'Websites, apps and automation',
+  'spec.uxui': 'I design interfaces',
+  'spec.uxuiText': 'UX/UI design and branding',
+  'spec.strategy': 'I shape brands',
+  'spec.strategyText': 'Social media, copy and creative strategy',
+  'spec.my': 'My specialization',
+  'spec.errSave': 'Could not change your specialization. Try again.',
+
   // shared
   'area.drawn': 'Drawn map area',
   'status.all': 'All',

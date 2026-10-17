@@ -2,6 +2,17 @@ import { EN_APP } from './i18n-app-en';
 
 /** French text for the screens behind sign-in. Typed against the English keys, so a missing key fails the build. */
 export const FR_APP: Record<keyof typeof EN_APP, string> = {
+  'spec.aria': 'Votre spécialisation',
+  'spec.title': 'Que faites-vous ?',
+  'spec.sub': 'Choisissez-en une. Elle oriente les entreprises suggérées et les messages rédigés.',
+  'spec.fullstack': 'Je développe des logiciels',
+  'spec.fullstackText': 'Sites, applications et automatisation',
+  'spec.uxui': 'Je conçois des interfaces',
+  'spec.uxuiText': 'Design UX/UI et identité visuelle',
+  'spec.strategy': 'Je façonne des marques',
+  'spec.strategyText': 'Réseaux sociaux, rédaction et stratégie créative',
+  'spec.my': 'Ma spécialisation',
+  'spec.errSave': 'Impossible de changer votre spécialisation. Réessayez.',
   'area.drawn': 'Zone dessinée sur la carte',
   'status.all': 'Tous',
   'status.new': 'Nouveau',

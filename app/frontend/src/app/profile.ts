@@ -3,11 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Lang, Profile, ProfileLink, ProfileStats, UsageMap } from './api.service';
 import { AuthService } from './auth.service';
+import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
 
 @Component({
   selector: 'app-profile',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SpecializationPicker],
   template: `
     @if (loading()) {
       <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('profile.loadingAria')"><span></span><span></span><span></span></div>
@@ -18,7 +19,7 @@ import { I18n, I18nKey } from './i18n';
           <div class="avatar" aria-hidden="true">{{ initials() }}</div>
           <div class="who">
             <h1>{{ shownName(p) }}</h1>
-            <p class="headline">{{ p.headline || (auth.isGuest() ? '' : t('profile.addHeadline')) }}</p>
+            <p class="headline">{{ p.headline ? i18n.chip(p.headline) : (auth.isGuest() ? '' : t('profile.addHeadline')) }}</p>
             <div class="facts">
               @if (p.city) { <span>{{ p.city }}</span> }
               <span>{{ t('profile.writesIn', { lang: langName(p.language) }) }}</span>
@@ -34,6 +35,15 @@ import { I18n, I18nKey } from './i18n';
           <span>{{ t('profile.guestLocked') }}</span>
           <button type="button" (click)="signInToEdit()">{{ t('profile.guestSignIn') }}</button>
         </div>
+      }
+
+      @if (auth.isGuest()) {
+        <section class="card block spec">
+          <h2>{{ t('spec.my') }}</h2>
+          <p class="mute note">{{ t('spec.sub') }}</p>
+          <app-specialization-picker [selected]="p.specialization ?? null" [disabled]="savingSpec()" (picked)="pickSpec($event)" />
+          @if (specError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+        </section>
       }
 
       @if (editing() && !auth.isGuest()) {
@@ -160,6 +170,7 @@ import { I18n, I18nKey } from './i18n';
     .facts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; color: var(--mute); font-size: 14px; }
     .guest { color: var(--warn); }
     .edit { margin-bottom: 24px; }
+    .spec { margin-bottom: 24px; }
     .guest-note { display: flex; gap: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; }
     .edit h2 { margin-top: 0; }
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -212,6 +223,8 @@ export class ProfilePage {
   protected readonly loading = signal(true);
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);
+  protected readonly savingSpec = signal(false);
+  protected readonly specError = signal<I18nKey | null>(null);
   protected readonly error = signal<I18nKey | null>(null);
 
   protected displayName = '';
@@ -261,6 +274,16 @@ export class ProfilePage {
   }
 
   protected langName(l: Lang) { return this.t(('lang.' + l) as I18nKey); }
+
+  protected pickSpec(spec: SpecializationKey) {
+    if (this.profile()?.specialization === spec) return;
+    this.savingSpec.set(true);
+    this.specError.set(null);
+    this.api.setSpecialization(spec).subscribe({
+      next: p => { this.profile.set(p); this.savingSpec.set(false); },
+      error: () => { this.savingSpec.set(false); this.specError.set('spec.errSave'); },
+    });
+  }
 
   protected signInToEdit() {
     this.auth.logout();

@@ -19,6 +19,8 @@ public class AuthController {
 
     public record Credentials(@Email @NotBlank String email, @NotBlank @Size(min = 8, max = 100) String password) {}
 
+    public record GuestRequest(@Size(max = 20) String specialization) {}
+
     public record GoogleLogin(@NotBlank @Size(max = 4096) String credential) {}
 
     public record TokenResponse(String token, String email, String role, boolean isDemo, boolean onboarded) {}
@@ -113,9 +115,15 @@ public class AuthController {
 
     /** One click, no form: a private temporary account that is deleted after a short idle time. */
     @PostMapping("/guest")
-    public TokenResponse guest(HttpServletRequest request) {
+    public TokenResponse guest(@RequestBody(required = false) GuestRequest body, HttpServletRequest request) {
         if (props.guest() == null || !props.guest().enabled()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Guest access is not enabled");
+        }
+        Specialization spec;
+        try {
+            spec = Specialization.parse(body == null ? null : body.specialization());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown specialization");
         }
         requireFreeSeatForNewUser();
         throttle.checkAndRecordGuest(request.getRemoteAddr());
@@ -124,7 +132,7 @@ public class AuthController {
         u.setRole("GUEST");
         u.setOnboarded(true); // a guest starts straight away with a default offer
         u.setDisplayName("Guest");
-        u.setOffer("Websites and custom software for small local businesses");
+        spec.apply(u);
         users.save(u);
         return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }

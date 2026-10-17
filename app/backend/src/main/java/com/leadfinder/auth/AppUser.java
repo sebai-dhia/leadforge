@@ -57,6 +57,10 @@ public class AppUser {
     @Column(nullable = false)
     private String links = "[]";
 
+    /** Guests only: FULLSTACK, UXUI or STRATEGY. */
+    @Column
+    private String specialization;
+
     /** True once the first-run picker was completed or skipped. */
     @Column(nullable = false)
     private boolean onboarded = false;

@@ -4,11 +4,12 @@ import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
 import { LangSwitch } from './lang-switch';
+import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { Logo } from './logo';
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, Logo, LangSwitch],
+  imports: [RouterLink, Logo, LangSwitch, SpecializationPicker],
   template: `
     <div class="page">
       <header class="top">
@@ -30,12 +31,19 @@ import { Logo } from './logo';
           <h1>{{ t('landing.title') }}</h1>
           <p class="sub">{{ t('landing.sub') }}</p>
           <div class="cta">
-            <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">
+            <button type="button" class="btn big" [disabled]="busy() || full()" [attr.aria-expanded]="choosing()" (click)="choose()">
               {{ t('landing.guest') }}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>
             <a routerLink="/login" class="btn ghost big">{{ t('landing.signin') }}</a>
           </div>
+          @if (choosing()) {
+            <div class="choose" id="start">
+              <h2>{{ t('spec.title') }}</h2>
+              <p class="fine">{{ t('spec.sub') }}</p>
+              <app-specialization-picker [disabled]="busy()" (picked)="tryDemo($event)" />
+            </div>
+          }
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <p class="fine">{{ t('landing.fine') }}</p>
         </div>
@@ -97,7 +105,7 @@ import { Logo } from './logo';
       <section class="final">
         <h2>{{ t('landing.finalTitle') }}</h2>
         <p>{{ t('landing.finalText') }}</p>
-        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="tryDemo()">{{ t('landing.guest') }}</button>
+        <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose(true)">{{ t('landing.guest') }}</button>
       </section>
 
       <footer class="foot">
@@ -125,6 +133,9 @@ import { Logo } from './logo';
     .sub { font-size: 19px; color: var(--mute); max-width: 540px; margin: 0 0 32px; }
     .cta { display: flex; gap: 14px; flex-wrap: wrap; }
     .btn.big { min-height: 52px; padding: 0 28px; border-radius: 12px; font-size: 17px; }
+    .choose { margin-top: 24px; max-width: 640px; }
+    .choose h2 { font-size: 20px; margin: 0 0 4px; }
+    .choose .fine { margin: 0 0 14px; }
     .fine { font-size: 14px; color: var(--mute); margin: 16px 0 0; }
 
     .preview { flex: 1 1 400px; min-width: 0; max-width: 520px; margin: 0 auto; }
@@ -172,6 +183,7 @@ export class Landing implements OnInit {
   protected readonly t = inject(I18n).t;
 
   readonly busy = signal(false);
+  protected readonly choosing = signal(false);
   readonly error = signal<I18nKey | null>(null);
   readonly full = signal(false);
   private readonly seats = signal<{ n: number; max: number; full: boolean } | null>(null);
@@ -190,10 +202,16 @@ export class Landing implements OnInit {
     });
   }
 
-  tryDemo() {
+  /** The guest button first asks what the person does; picking one creates the guest. */
+  protected choose(scroll = false) {
+    this.choosing.set(true);
+    if (scroll) setTimeout(() => document.getElementById('start')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }
+
+  tryDemo(spec: SpecializationKey) {
     this.busy.set(true);
     this.error.set(null);
-    this.auth.guest().subscribe({
+    this.auth.guest(spec).subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => {
         this.busy.set(false);

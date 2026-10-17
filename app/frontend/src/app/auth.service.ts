@@ -47,8 +47,8 @@ export class AuthService {
       .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
   /** One click: a private temporary account that is deleted after a short idle time. */
-  guest() {
-    return this.http.post<TokenResponse>(`${API}/auth/guest`, {})
+  guest(specialization?: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/guest`, specialization ? { specialization } : {})
       .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
 

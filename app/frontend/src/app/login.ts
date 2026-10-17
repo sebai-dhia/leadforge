@@ -4,13 +4,14 @@ import { Router, RouterLink } from '@angular/router';
 import { Logo } from './logo';
 import { GoogleSignIn } from './google-sign-in';
 import { LangSwitch } from './lang-switch';
+import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch],
+  imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch, SpecializationPicker],
   template: `
     <div class="wrap">
       <header class="top">
@@ -31,9 +32,13 @@ import { ApiService } from './api.service';
             @if (demoFull()) {
               <div class="alert" role="alert">{{ t('login.full') }}</div>
             }
-            <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" (click)="guest()">
+            <button type="button" class="btn demo-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(!choosing())">
               <span>{{ t('login.guest') }}</span><span aria-hidden="true">→</span>
             </button>
+            @if (choosing()) {
+              <p class="fine pick-title"><strong>{{ t('spec.title') }}</strong> {{ t('spec.sub') }}</p>
+              <app-specialization-picker [disabled]="busy()" (picked)="guest($event)" />
+            }
             <p class="fine">{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
           </section>
 
@@ -75,6 +80,7 @@ import { ApiService } from './api.service';
     .demo-buttons { display: flex; flex-direction: column; gap: 10px; }
     .demo-btn { justify-content: space-between; min-height: 52px; border-radius: 12px; padding: 0 18px; font-size: 16px; }
     .center-text { text-align: center; }
+    .pick-title { margin: 14px 0 10px; }
     .fine { font-size: 13px; color: var(--mute); margin: 14px 0 0; }
     .or { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: var(--mute); font-size: 13px; }
     .or span { flex: 1; height: 1px; background: var(--line); }
@@ -92,6 +98,7 @@ export class Login implements OnInit {
   email = '';
   password = '';
   readonly busy = signal(false);
+  protected readonly choosing = signal(false);
   readonly error = signal<I18nKey | null>(null);
   readonly activeCount = signal(0);
   readonly maxCount = signal(5);
@@ -116,10 +123,10 @@ export class Login implements OnInit {
     });
   }
 
-  guest() {
+  guest(spec: SpecializationKey) {
     this.busy.set(true);
     this.error.set(null);
-    this.auth.guest().subscribe({
+    this.auth.guest(spec).subscribe({
       next: () => this.router.navigateByUrl(this.auth.home()),
       error: e => this.fail(e),
     });

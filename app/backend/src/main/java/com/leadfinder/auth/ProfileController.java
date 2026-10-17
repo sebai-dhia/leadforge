@@ -28,13 +28,13 @@ public class ProfileController {
 
     public record ProfileDto(String email, String offer, String displayName, String headline, String city, String about,
                              List<String> services, List<String> targets, List<Link> links, String language,
-                             boolean onboarded, String role, boolean isDemo) {
+                             boolean onboarded, String role, boolean isDemo, String specialization) {
         public static ProfileDto of(AppUser u) {
             return new ProfileDto(u.getEmail(), u.getOffer(), u.getDisplayName(), u.getHeadline(), u.getCity(), u.getAbout(),
                     readList(u.getServices(), new TypeReference<List<String>>() {}),
                     readList(u.getTargets(), new TypeReference<List<String>>() {}),
                     readList(u.getLinks(), new TypeReference<List<Link>>() {}),
-                    u.getLanguage(), u.isOnboarded(), u.getRole(), u.isDemo());
+                    u.getLanguage(), u.isOnboarded(), u.getRole(), u.isDemo(), u.getSpecialization());
         }
     }
 
@@ -49,6 +49,8 @@ public class ProfileController {
                                 @Size(max = 5) List<@Valid Link> links,
                                 @Pattern(regexp = "en|fr|ar") String language,
                                 Boolean onboarded) {}
+
+    public record SpecializationRequest(@jakarta.validation.constraints.NotBlank String specialization) {}
 
     public record Stats(long leads, long drafted, long contacted, long replied) {}
 
@@ -66,6 +68,21 @@ public class ProfileController {
         long replied = leads.countByUserIdAndStatus(uid, "REPLIED");
         long contacted = leads.countByUserIdAndStatus(uid, "CONTACTED") + replied;
         return new Stats(leads.countByUserId(uid), leads.countDrafted(uid), contacted, replied);
+    }
+
+    /** A guest cannot edit their profile, but can switch between the three fixed specializations. */
+    @PutMapping("/specialization")
+    public ProfileDto specialization(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SpecializationRequest req) {
+        AppUser u = load(jwt);
+        if (!"GUEST".equals(u.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only guest accounts use a preset specialization.");
+        }
+        try {
+            Specialization.parse(req.specialization()).apply(u);
+        } catch (IllegalArgumentException e) {
+            throw bad("Unknown specialization.");
+        }
+        return ProfileDto.of(users.save(u));
     }
 
     @PutMapping
