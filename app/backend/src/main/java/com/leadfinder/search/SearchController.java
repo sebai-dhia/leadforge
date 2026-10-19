@@ -46,6 +46,7 @@ public class SearchController {
     private final N8nClient n8n;
     private final UsageService usage;
     private final NicheSuggestionService nicheSuggestions;
+    private final com.leadfinder.alert.AlertService alerts;
 
     @GetMapping("/suggested-niches")
     public List<String> suggestedNiches(@AuthenticationPrincipal Jwt jwt) {
@@ -74,6 +75,7 @@ public class SearchController {
         job.setBbox(req.bbox() != null && !req.bbox().isBlank() ? req.bbox().trim() : null);
         job.setService(user.getOffer());
         job.setSender(user.getDisplayName());
+        job.setAlertOwner(user.isAdmin());
         job.setLookupLimit("GUEST".equalsIgnoreCase(user.getRole()) ? 5 : 10);
         jobs.save(job);
 
@@ -82,7 +84,9 @@ public class SearchController {
         } catch (RuntimeException e) {
             log.error("Could not reach n8n for job {}", job.getId(), e);
             job.setStatus(SearchJob.Status.FAILED);
+            job.setFailureReason("Could not reach the search service: " + e.getClass().getSimpleName());
             jobs.save(job);
+            alerts.send("n8n-down", "A search could not start: the search service (n8n) did not answer. Job " + job.getId() + ".");
             usage.refund(usageId);
         }
         return JobDto.of(job);

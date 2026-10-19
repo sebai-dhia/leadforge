@@ -399,6 +399,8 @@ return [{ json: { jobId, leads: out } }];
 
 const telegramAlertCode = String.raw`
 const webhookBody = $('Webhook').first().json.body || {};
+// The backend sends the admin's chat id only for the admin's own searches; nothing to send otherwise.
+if (!webhookBody.alertChatId) return [];
 const input = $input.first().json || {};
 const leads = input.leads || [];
 
@@ -425,7 +427,7 @@ if (leads.length > 0) {
   html += '⚠️ <i>No leads were found for this search.</i>';
 }
 
-return [{ json: { chatId: '5285518045', text: html } }];
+return [{ json: { chatId: String(webhookBody.alertChatId), text: html } }];
 `.trim();
 
 const callbackUrl = "={{ $('Webhook').first().json.body.callbackUrl }}";
@@ -586,7 +588,7 @@ const workflow = {
     },
     {
       parameters: {
-        chatId: '5285518045',
+        chatId: '={{ $json.chatId }}',
         text: '={{ $json.text }}',
         additionalFields: {
           parse_mode: 'HTML'

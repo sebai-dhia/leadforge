@@ -36,6 +36,7 @@ public class UsageService {
     private final UsageEventRepository events;
     private final AppProperties props;
     private final com.leadfinder.auth.UserRepository users;
+    private final com.leadfinder.alert.AlertService alerts;
 
     public int limit(Kind kind) {
         AppProperties.Limits l = props.limits();
@@ -76,12 +77,30 @@ public class UsageService {
      * Returns the event id so a failed action can be refunded.
      */
     public Long consume(Long userId, Kind kind) {
+        checkGlobalCap(userId, kind);
         Usage u = usage(userId, kind);
         if (u.used() >= u.limit()) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Daily limit of " + u.limit() + " " + kind.label + " reached. It frees up gradually over 24 hours.");
         }
         return events.save(new UsageEvent(userId, kind.name())).getId();
+    }
+
+    /** The ceiling for all users together. The admin is never blocked by it. */
+    private void checkGlobalCap(Long userId, Kind kind) {
+        AppProperties.Caps c = props.caps();
+        if (c == null) return;
+        int cap = switch (kind) {
+            case SEARCH -> c.searchesPerDay();
+            case DRAFT -> c.draftsPerDay();
+            case ENRICH -> c.enrichPerDay();
+        };
+        if (cap <= 0) return;
+        if (events.countByKindAndCreatedAtAfter(kind.name(), Instant.now().minus(WINDOW)) < cap) return;
+        if (users.findById(userId).map(com.leadfinder.auth.AppUser::isAdmin).orElse(false)) return;
+        alerts.send("cap-" + kind.name(), "The daily cap of " + cap + " " + kind.label + " for all users is reached.");
+        throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                "The demo has reached its daily limit of " + kind.label + ". Please try again tomorrow.");
     }
 
     /** Gives a use back when the action failed through no fault of the user. */

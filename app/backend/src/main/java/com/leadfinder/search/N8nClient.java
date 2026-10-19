@@ -51,6 +51,8 @@ public class N8nClient {
         payload.put("service", job.getService());
         payload.put("sender", job.getSender());
         payload.put("lookupLimit", job.getLookupLimit());
+        AppProperties.Alerts alerts = props.alerts();
+        payload.put("alertChatId", job.isAlertOwner() && alerts != null && alerts.telegramChatId() != null ? alerts.telegramChatId() : "");
         payload.put("callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results");
 
         trigger.post()

@@ -393,7 +393,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const webhookBody = $('Webhook').first().json.body || {};\nconst input = $input.first().json || {};\nconst leads = input.leads || [];\n\nconst esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst niche = esc(webhookBody.niche || 'N/A');\nconst location = esc(webhookBody.city || (webhookBody.bbox ? 'Map Bounding Box' : 'N/A'));\nconst total = leads.length;\nconst reachable = leads.filter(l => Boolean(l.phone || (l.emails && l.emails.length) || (l.social && l.social.length))).length;\n\nlet html = '🎯 <b>Leadforge Alert: New Leads Discovered!</b>\\n\\n';\nhtml += '📍 <b>Niche:</b> ' + niche + '\\n';\nhtml += '🌍 <b>Location:</b> ' + location + '\\n';\nhtml += '📊 <b>Found:</b> ' + total + ' leads (' + reachable + ' reachable)\\n\\n';\n\nif (leads.length > 0) {\n  html += '🔥 <b>Top Opportunities:</b>\\n';\n  const top = leads.slice(0, 3);\n  top.forEach((l, idx) => {\n    const contact = esc(l.phone || (l.emails && l.emails[0]) || (l.website ? 'Website listed' : 'No contact found'));\n    html += (idx + 1) + '. <b>' + esc(l.name || 'Unnamed') + '</b> (Score: ' + (l.score || 0) + '/10)\\n   📞 ' + contact + '\\n';\n  });\n} else {\n  html += '⚠️ <i>No leads were found for this search.</i>';\n}\n\nreturn [{ json: { chatId: '5285518045', text: html } }];"
+        "jsCode": "const webhookBody = $('Webhook').first().json.body || {};\n// The backend sends the admin's chat id only for the admin's own searches; nothing to send otherwise.\nif (!webhookBody.alertChatId) return [];\nconst input = $input.first().json || {};\nconst leads = input.leads || [];\n\nconst esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst niche = esc(webhookBody.niche || 'N/A');\nconst location = esc(webhookBody.city || (webhookBody.bbox ? 'Map Bounding Box' : 'N/A'));\nconst total = leads.length;\nconst reachable = leads.filter(l => Boolean(l.phone || (l.emails && l.emails.length) || (l.social && l.social.length))).length;\n\nlet html = '🎯 <b>Leadforge Alert: New Leads Discovered!</b>\\n\\n';\nhtml += '📍 <b>Niche:</b> ' + niche + '\\n';\nhtml += '🌍 <b>Location:</b> ' + location + '\\n';\nhtml += '📊 <b>Found:</b> ' + total + ' leads (' + reachable + ' reachable)\\n\\n';\n\nif (leads.length > 0) {\n  html += '🔥 <b>Top Opportunities:</b>\\n';\n  const top = leads.slice(0, 3);\n  top.forEach((l, idx) => {\n    const contact = esc(l.phone || (l.emails && l.emails[0]) || (l.website ? 'Website listed' : 'No contact found'));\n    html += (idx + 1) + '. <b>' + esc(l.name || 'Unnamed') + '</b> (Score: ' + (l.score || 0) + '/10)\\n   📞 ' + contact + '\\n';\n  });\n} else {\n  html += '⚠️ <i>No leads were found for this search.</i>';\n}\n\nreturn [{ json: { chatId: String(webhookBody.alertChatId), text: html } }];"
       },
       "id": "n13",
       "name": "Build Telegram Alert",
@@ -406,7 +406,7 @@
     },
     {
       "parameters": {
-        "chatId": "5285518045",
+        "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
           "parse_mode": "HTML"

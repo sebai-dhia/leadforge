@@ -16,7 +16,8 @@ class ActiveSessionRegistryTest {
         AppProperties.Limits limits = new AppProperties.Limits(20, 100, 50, 5, 15, 10);
         AppProperties.N8n n8n = new AppProperties.N8n("http://n8n", "http://draft", "http://enrich", "wh-sec", "cb-sec");
         AppProperties.Demo demo = new AppProperties.Demo(true, 5, 15, false);
-        props = new AppProperties("secret-must-be-at-least-32-chars-long", "http://localhost:4200", "http://localhost:8081", n8n, limits, demo, new AppProperties.Google("test-client"), new AppProperties.Guest(true, 1, 1, 1, 3));
+        props = new AppProperties("secret-must-be-at-least-32-chars-long", "http://localhost:4200", "http://localhost:8081", n8n, limits, demo, new AppProperties.Google("test-client"), new AppProperties.Guest(true, 1, 1, 1, 3),
+                new AppProperties.Caps(0, 0, 0), new AppProperties.Alerts("", ""));
         registry = new ActiveSessionRegistry(props);
     }
 

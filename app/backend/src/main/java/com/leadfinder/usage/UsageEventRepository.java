@@ -6,4 +6,6 @@ import java.time.Instant;
 
 public interface UsageEventRepository extends JpaRepository<UsageEvent, Long> {
     long countByUserIdAndKindAndCreatedAtAfter(Long userId, String kind, Instant since);
+
+    long countByKindAndCreatedAtAfter(String kind, Instant since);
 }

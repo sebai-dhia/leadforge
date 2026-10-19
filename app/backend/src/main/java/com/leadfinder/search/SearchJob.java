@@ -30,6 +30,13 @@ public class SearchJob {
     @Transient
     private int lookupLimit = 10;
 
+    /** The owner is the admin: n8n sends the new-lead alert to Telegram. Not stored: only sent with the request. */
+    @Transient
+    private boolean alertOwner;
+
+    @Column(name = "failure_reason")
+    private String failureReason;
+
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;
 

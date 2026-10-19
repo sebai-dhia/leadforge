@@ -45,7 +45,11 @@ If n8n runs in Docker, set `PUBLIC_BASE_URL=http://host.docker.internal:8081` fo
 
 ## Config (environment variables)
 
-`DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (32+ chars), `CORS_ORIGIN`, `N8N_WEBHOOK_URL`, `N8N_DRAFT_URL`, `N8N_WEBHOOK_SECRET`, `N8N_CALLBACK_SECRET`, `PUBLIC_BASE_URL`. The defaults are for local development only. Change all secrets before deploying. Never put API keys in a workflow node: keep them in n8n credentials, because workflow JSON gets committed.
+`DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (32+ chars), `CORS_ORIGIN`, `N8N_WEBHOOK_URL`, `N8N_DRAFT_URL`, `N8N_WEBHOOK_SECRET`, `N8N_CALLBACK_SECRET`, `PUBLIC_BASE_URL`, `ADMIN_PASSWORD` (12+ chars; applied to the admin account at startup), `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (admin alerts: failed searches, caps reached, new leads from the admin's own searches), `CAP_SEARCHES_PER_DAY`, `CAP_DRAFTS_PER_DAY`, `CAP_ENRICH_PER_DAY` (ceilings for all users together; 0 turns one off). The defaults are for local development only. Change all secrets before deploying. Never put API keys in a workflow node: keep them in n8n credentials, because workflow JSON gets committed.
+
+## Lead quality benchmark
+
+`node tools/benchmark.js` runs five fixed real searches (gyms in a drawn area, restaurants in Tunis, dentists in Sousse, hair salons in Ariana, hotels in Hammamet) and prints how many leads are reachable, have a website and fit strongly, plus the top five of each search with their reasons. Set `BENCH_EMAIL` and `BENCH_PASSWORD` first. Run it after changing the workflow; it spends real API credits.
 
 ## API
 
