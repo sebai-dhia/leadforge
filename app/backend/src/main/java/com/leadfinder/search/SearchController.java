@@ -74,7 +74,7 @@ public class SearchController {
         job.setBbox(req.bbox() != null && !req.bbox().isBlank() ? req.bbox().trim() : null);
         job.setService(user.getOffer());
         job.setSender(user.getDisplayName());
-        job.setLookupLimit("GUEST".equalsIgnoreCase(user.getRole()) ? 8 : 15);
+        job.setLookupLimit("GUEST".equalsIgnoreCase(user.getRole()) ? 5 : 10);
         jobs.save(job);
 
         try {

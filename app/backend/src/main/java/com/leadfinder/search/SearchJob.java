@@ -28,7 +28,7 @@ public class SearchJob {
 
     /** How many businesses n8n may look up on the web for this search. Not stored: only sent with the request. */
     @Transient
-    private int lookupLimit = 15;
+    private int lookupLimit = 10;
 
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;

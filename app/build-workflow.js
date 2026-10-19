@@ -33,16 +33,26 @@ const categories = hit ? hit[1] : 'commercial,service,office,catering';
 const name = hit ? null : body.niche;
 
 // One item per area: a drawn rectangle comes straight from Expand Areas, a city comes back from the geocoder.
+// Each item carries the Google Maps query (Serper) and the Geoapify filter used when Maps returns nothing.
+const areas = $('Expand Areas').all();
 const out = [];
-for (const item of $input.all()) {
+$input.all().forEach((item, i) => {
   const j = item.json || {};
   if (j.bbox) {
-    out.push({ json: { filter: 'rect:' + j.bbox, categories, name } });
+    const [w, s, e, n] = String(j.bbox).split(',').map(Number);
+    const span = Math.max(e - w, n - s, 0.005);
+    const zoom = Math.max(10, Math.min(17, Math.round(Math.log2(1400 / span))));
+    out.push({ json: { filter: 'rect:' + j.bbox, categories, name, geo: true,
+      maps: { q: body.niche, ll: '@' + ((s + n) / 2).toFixed(5) + ',' + ((w + e) / 2).toFixed(5) + ',' + zoom + 'z' } } });
   } else {
     const g = (j.results || [])[0];
-    if (g) out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name } });
+    const text = ((areas[i] && areas[i].json.text) || '').trim();
+    if (g) out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name, geo: true,
+      maps: { q: (body.niche + ' ' + text).trim(), ll: '@' + Number(g.lat).toFixed(5) + ',' + Number(g.lon).toFixed(5) + ',13z' } } });
   }
-}
+});
+// a single area gets a second page of Maps results (no second Geoapify call)
+if (out.length === 1) out.push({ json: { ...out[0].json, geo: false, maps: { ...out[0].json.maps, page: 2 } } });
 return out.length ? out : [{ json: { _empty: true } }];
 `.trim();
 
@@ -71,13 +81,54 @@ function markLookup(item) {
 }
 
 const body = $('Webhook').first().json.body || {};
-const seen = new Set();
+const fix = u => (u && !/^https?:\/\//i.test(u) ? 'http://' + u : u) || null;
+const lead = (o) => ({ ...o,
+  // a social page is not a website: skip fetching it, the lead keeps the link
+  fetchUrl: /(facebook|instagram|linktr)\./i.test(o.website || '') ? null : safeUrl(o.website),
+  niche: body.niche, city: body.city, service: body.service, sender: body.sender });
+const generic = n => /^(restaurants?|fast ?food|caf[eé]s?|hotels?|pharmacy|pharmacies|shop|store|market|bakery|salon|gym|clinic)$/i.test(String(n || '').trim());
+
+// Google Maps places (Serper). The Google category must fit the business type searched for.
+const TYPES = [
+  [/dent/i, /dent|orthodon/i],
+  [/clinic|doctor|medical|physician|clinique|medecin/i, /clini|m[eé]decin|doctor|docteur|cabinet|sant[eé]|health|medical|polyclini/i],
+  [/pharmac/i, /pharmac/i],
+  [/restaurant/i, /restaurant|pizz|grill|fast|snack|brasserie|food|sandwich|burger|cuisine|traiteur/i],
+  [/caf[eé]|coffee/i, /caf[eé]|coffee|salon de th[eé]|tea/i],
+  [/hotel|guest ?house|riad/i, /h[oô]tel|guest|maison d'h[oô]tes|riad|resort|auberge|h[eé]bergement/i],
+  [/gym|fitness/i, /gym|fitness|musculation|sport|crossfit|yoga|pilates|boxing|boxe|arts martiaux/i],
+  [/hair|salon|beauty|barber|spa\b/i, /coiff|hair|beaut|barb|spa\b|esth[eé]ti|ongle|nail|institut/i],
+  [/lawyer|law firm|attorney|avocat/i, /avocat|lawyer|law|juridique|notaire|attorney/i],
+  [/car repair|garage|mechanic/i, /garage|m[eé]cani|auto|car repair|carross|pneu/i],
+  [/supermarket|grocery/i, /supermarch|march[eé]|grocery|[eé]picerie|hypermarch/i],
+  [/bakery|pastry|patisserie/i, /boulanger|p[aâ]tisser|bakery|pastry/i],
+  [/school|academy|training/i, /[eé]cole|school|academ|formation|training|centre de formation|institut/i],
+];
+const want = (TYPES.find(([re]) => re.test(body.niche || '')) || [])[1] || null;
+const box = body.bbox ? String(body.bbox).split(',').map(Number) : null;
+const inBox = p => !box || (p.longitude >= box[0] && p.latitude >= box[1] && p.longitude <= box[2] && p.latitude <= box[3]);
+const seen = new Set(), mapsLeads = [];
+for (const item of $('Maps Search').all()) {
+  for (const p of ((item.json && item.json.places) || [])) {
+    if (!p.title || generic(p.title) || !inBox(p)) continue;
+    const kinds = [p.type, ...(p.types || [])].filter(Boolean).join(' ');
+    if (want && !want.test(kinds)) continue;
+    const key = 'gm:' + (p.placeId || p.cid || p.title + '|' + p.address);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    mapsLeads.push(lead({ placeId: key, name: p.title, address: p.address || null, phone: p.phoneNumber || null,
+      osmEmail: null, rating: p.rating || null, reviews: p.ratingCount || 0, website: fix(p.website || null) }));
+  }
+}
+if (mapsLeads.length) return mapsLeads.map(l => markLookup({ json: l }));
+
+// Fallback: OpenStreetMap places from Geoapify
 const feats = [];
 for (const item of $input.all()) {
   for (const f of ((item.json && item.json.features) || [])) {
     if (!f.properties || !f.properties.name) continue;
     // a name that is only a category word is not a business a freelancer can write to
-    if (/^(restaurants?|fast ?food|caf[eé]s?|hotels?|pharmacy|pharmacies|shop|store|market|bakery|salon|gym|clinic)$/i.test(f.properties.name.trim())) continue;
+    if (generic(f.properties.name)) continue;
     const key = f.properties.place_id || (f.properties.name + '|' + f.properties.formatted);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -85,11 +136,9 @@ for (const item of $input.all()) {
   }
 }
 if (!feats.length) return [{ json: { _empty: true } }];
-const fix = u => (u && !/^https?:\/\//i.test(u) ? 'http://' + u : u) || null;
 return feats.map(f => {
   const p = f.properties, c = p.contact || {}, raw = (p.datasource && p.datasource.raw) || {};
-  const website = fix(p.website || c.website || raw.website || raw['contact:website'] || null);
-  return { json: {
+  return { json: lead({
     placeId: p.place_id || null,
     name: p.name,
     address: p.address_line2 || p.formatted || null,
@@ -97,12 +146,8 @@ return feats.map(f => {
     osmEmail: c.email || p.email || raw.email || raw['contact:email'] || null,
     rating: null,
     reviews: 0,
-    website,
-    // a social page is not a website: skip fetching it, the lead keeps the link
-    fetchUrl: /(facebook|instagram|linktr)./i.test(website || '') ? null : safeUrl(website),
-    niche: body.niche, city: body.city,
-    service: body.service, sender: body.sender
-  }};
+    website: fix(p.website || c.website || raw.website || raw['contact:website'] || null),
+  }) };
 }).map(markLookup);
 `.trim();
 
@@ -241,6 +286,7 @@ return $input.all().map(item => {
   }
 
   if (appointment || food) score += 1;
+  if ((l.reviews || 0) >= 20) { score += 1; flags.push('active on Google Maps'); }
   if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) { score -= 2; flags.push('looks like a large organisation'); }
 
   // Reachability: a good opportunity you cannot contact is worth little
@@ -353,11 +399,25 @@ const workflow = {
     },
     {
       parameters: {
-        url: 'https://api.geoapify.com/v2/places', ...geoQueryAuth,
+        // only when Google Maps gave nothing for this area (no credits left, service down, empty result)
+        url: "={{ ($json.places && $json.places.length) || !$('Build Query').item.json.geo ? 'http://invalid.invalid/' : 'https://api.geoapify.com/v2/places' }}",
+        ...geoQueryAuth,
         sendQuery: true, specifyQuery: 'json',
-        jsonQuery: "={{ JSON.stringify({ categories: $json.categories, filter: $json.filter, limit: 20, ...($json.name ? { name: $json.name } : {}) }) }}"
+        jsonQuery: "={{ (q => JSON.stringify({ categories: q.categories, filter: q.filter, limit: 20, ...(q.name ? { name: q.name } : {}) }))($('Build Query').item.json) }}"
       },
-      id: 'n2', name: 'Geoapify Places', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [660, 0],
+      id: 'n2', name: 'Geoapify Places', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [770, 0],
+      onError: 'continueRegularOutput'
+    },
+    {
+      parameters: {
+        method: 'POST', url: 'https://google.serper.dev/maps',
+        authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
+        sendBody: true, specifyBody: 'json',
+        jsonBody: '={{ JSON.stringify($json.maps || {}) }}',
+        options: { timeout: 15000 }
+      },
+      id: 'n19', name: 'Maps Search', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [600, 0],
+      credentials: { httpHeaderAuth: { id: 'cU0NuC0Q0GMMLVkw', name: 'Header Auth account 7' } },
       onError: 'continueRegularOutput'
     },
     {
@@ -446,7 +506,8 @@ const workflow = {
       [{ node: 'Geocode City', type: 'main', index: 0 }]
     ] },
     'Geocode City': { main: [[{ node: 'Build Query', type: 'main', index: 0 }]] },
-    'Build Query': { main: [[{ node: 'Geoapify Places', type: 'main', index: 0 }]] },
+    'Build Query': { main: [[{ node: 'Maps Search', type: 'main', index: 0 }]] },
+    'Maps Search': { main: [[{ node: 'Geoapify Places', type: 'main', index: 0 }]] },
     'Geoapify Places': { main: [[{ node: 'Prepare', type: 'main', index: 0 }]] },
     'Prepare': { main: [[{ node: 'Web Search', type: 'main', index: 0 }]] },
     'Web Search': { main: [[{ node: 'Match Lookup', type: 'main', index: 0 }]] },

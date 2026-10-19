@@ -39,6 +39,7 @@ const REASON_PHRASES: [string, string][] = [
   ["outdated software detected", "logiciel obsolète détecté"],
   ["no online booking or ordering", "pas de réservation ni de commande en ligne"],
   ["no clear opportunity seen", "aucune opportunité claire repérée"],
+  ["active on Google Maps", "active sur Google Maps"],
   ['no website listed', 'pas de site web connu'],
   ['no website', 'pas de site web'],
 ].sort((a, b) => b[0].length - a[0].length) as [string, string][];
