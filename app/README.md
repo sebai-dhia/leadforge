@@ -16,24 +16,28 @@ The browser never talks to n8n.
 
 ## Run it
 
-1. **Postgres**: `docker compose up -d` (host port 5433, so it does not clash with a local Postgres on 5432).
-2. **n8n**: `npx n8n`, then create the two workflows from `n8n/lead-finder.workflow.json` and `n8n/draft-message.workflow.json` (regenerate with `node build-workflow.js` and `node build-draft-workflow.js`).
-   n8n auto-fills the first credential of a type it finds, so check each node picked the right one. Credentials:
+1. **Postgres**: `docker compose up -d postgres` (host port 5433, so it does not clash with a local Postgres on 5432).
+2. **n8n** keeps its data in its own Postgres (`n8n-db` in `docker-compose.yml`), not in SQLite. Copy `.env.example` to `.env` and fill in `N8N_ENCRYPTION_KEY` and `N8N_DB_PASSWORD`, then either
+   - `docker compose up -d` (n8n in Docker; needs a recent Docker: 20.10 cannot unpack the n8n image), and set `PUBLIC_BASE_URL=http://host.docker.internal:8081` for the backend, or
+   - `tools/n8n-local.sh` (n8n on this machine, its database in Docker).
+
+   Create the credentials below once in n8n, put their ids in `n8n-deploy-ids.js`, then load all three workflows with `tools/deploy-workflows.sh` (it builds them from `build-*.js`, imports and publishes them). Restart n8n after a deploy and run one throwaway search: the first search after a restart can still use the previous version.
+   Credentials:
 
    | Node | Credential type | Name | Value |
    |---|---|---|---|
    | Webhook (both workflows) | Header Auth | `X-Webhook-Secret` | same as `N8N_WEBHOOK_SECRET` (default `dev-webhook-secret`) |
    | Geocode City, Geoapify Places | Query Auth | `apiKey` | your free Geoapify key (geoapify.com, no card) |
    | AI Write Message (draft workflow only) | Header Auth | `x-goog-api-key` | your Gemini API key |
-   | Serper Search (enrich workflow only) | Header Auth | `X-API-KEY` | your Serper key (serper.dev, free credits) |
+   | Maps Search, Web Search, Serper Search | Header Auth | `X-API-KEY` | your Serper key (serper.dev, free credits) |
+   | AI Check (lead-finder workflow) | Header Auth | `x-goog-api-key` | your Gemini API key (same credential as AI Write Message) |
 | Send Results to Backend | Header Auth | `X-Callback-Secret` | same as `N8N_CALLBACK_SECRET` (default `dev-callback-secret`) |
 | Telegram Alert (lead-finder workflow) | Telegram API | `Telegram account` | your Telegram Bot token from @BotFather |
 
-   Publish both workflows. The AI model is `gemini-flash-lite-latest`. Use a model alias like this one: a specific retired name can return a misleading `401`.
+   The AI model is `gemini-flash-lite-latest`. Use a model alias like this one: a specific retired name can return a misleading `401`.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8081, because 8080 is often taken; Flyway creates the tables).
 4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Use quick demo accounts or register (if enabled), fill in your profile, then search.
 
-If n8n runs in Docker, set `PUBLIC_BASE_URL=http://host.docker.internal:8081` for the backend so n8n can reach the callback.
 
 ## Features & Highlights
 

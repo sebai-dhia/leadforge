@@ -17,7 +17,13 @@
         0,
         0
       ],
-      "webhookId": "draft-message-backend"
+      "webhookId": "draft-message-backend",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YGPCoaeGLueDfqve",
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -53,7 +59,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "zl08YnKaBcKVRKg0",
+          "name": "Header Auth account 6"
+        }
+      }
     },
     {
       "parameters": {
@@ -134,5 +146,6 @@
   },
   "settings": {
     "executionOrder": "v1"
-  }
+  },
+  "id": "P3XODMGxV9yOHjNG"
 }

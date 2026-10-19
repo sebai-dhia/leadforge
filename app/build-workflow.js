@@ -2,6 +2,7 @@
 // Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch home page and contact page
 //       -> rule-based score -> POST results to the backend callback.
 const fs = require('fs');
+const { withDeployIds } = require('./n8n-deploy-ids');
 const { SAFE_URL, CONTACT_LINK, SCRAPE, AUDIT, NAME_MATCH, DIRECTORY_HOSTS } = require('./workflow-snippets');
 
 const expandAreasCode = String.raw`
@@ -47,12 +48,32 @@ $input.all().forEach((item, i) => {
   } else {
     const g = (j.results || [])[0];
     const text = ((areas[i] && areas[i].json.text) || '').trim();
-    if (g) out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name, geo: true,
-      maps: { q: (body.niche + ' ' + text).trim(), ll: '@' + Number(g.lat).toFixed(5) + ',' + Number(g.lon).toFixed(5) + ',13z' } } });
+    if (!g) return;
+    // A city keeps the map point, which brings the small local businesses. When the geocoder only found a whole
+    // region (its point can be far from the town), Google finds the town by name and the country keeps it local.
+    const town = /^(city|suburb|district|postcode|street|amenity|building)$/.test(String(g.result_type || ''));
+    out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name, geo: true,
+      maps: { q: (body.niche + ' ' + text).trim(), ...(g.country_code ? { gl: String(g.country_code).toLowerCase() } : {}),
+        ...(town ? { ll: '@' + Number(g.lat).toFixed(5) + ',' + Number(g.lon).toFixed(5) + ',13z' } : {}) } } });
   }
 });
-// a single area gets a second page of Maps results (no second Geoapify call)
-if (out.length === 1) out.push({ json: { ...out[0].json, geo: false, maps: { ...out[0].json.maps, page: 2 } } });
+// A single area gets a second Maps call (no second Geoapify call): the French name of the trade, since local
+// businesses are mostly listed in French; when no French name is known, the next page of the same query.
+const FR = [
+  [/dent/i, 'dentiste'], [/clinic|doctor|medical|physician/i, 'clinique médecin'], [/pharmac/i, 'pharmacie'],
+[/caf[eé]|coffee/i, 'café salon de thé'], [/hotel|guest ?house/i, 'hôtel'],
+  [/gym|fitness/i, 'salle de sport'], [/hair|barber/i, 'salon de coiffure'], [/beauty|spa\b/i, 'institut de beauté'],
+  [/lawyer|law firm|attorney/i, 'avocat'], [/car repair|garage|mechanic/i, 'garage mécanique auto'],
+  [/supermarket|grocery/i, 'supermarché'], [/bakery|bakeries|pastry/i, 'boulangerie pâtisserie'], [/school|academy|training/i, 'école centre de formation'],
+];
+if (out.length === 1) {
+  const fr = (FR.find(([re]) => re.test(body.niche || '')) || [])[1];
+  const area = ((areas[0] && areas[0].json.text) || '').trim();
+  const maps = fr && fr !== String(body.niche).toLowerCase()
+    ? { ...out[0].json.maps, q: (fr + ' ' + area).trim() }
+    : { ...out[0].json.maps, page: 2 };
+  out.push({ json: { ...out[0].json, geo: false, maps } });
+}
 return out.length ? out : [{ json: { _empty: true } }];
 `.trim();
 
@@ -595,13 +616,7 @@ const workflow = {
         }
       },
       id: 'n14', name: 'Telegram Alert', type: 'n8n-nodes-base.telegram', typeVersion: 1.2, position: [2680, 160],
-      onError: 'continueRegularOutput',
-      credentials: {
-        telegramApi: {
-          id: 'telegramApi',
-          name: 'Telegram account'
-        }
-      }
+      onError: 'continueRegularOutput'
     }
   ],
   connections: {
@@ -646,5 +661,5 @@ const workflow = {
 };
 
 fs.mkdirSync('n8n', { recursive: true });
-fs.writeFileSync('n8n/lead-finder.workflow.json', JSON.stringify(workflow, null, 2));
+fs.writeFileSync('n8n/lead-finder.workflow.json', JSON.stringify(withDeployIds(workflow), null, 2));
 console.log('written');

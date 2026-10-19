@@ -17,7 +17,13 @@
         0,
         0
       ],
-      "webhookId": "enrich-contact-backend"
+      "webhookId": "enrich-contact-backend",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YGPCoaeGLueDfqve",
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -56,7 +62,13 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1500,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cU0NuC0Q0GMMLVkw",
+          "name": "Header Auth account 7"
+        }
+      }
     },
     {
       "parameters": {
@@ -248,6 +260,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "utUwMpTrpnqQ6A4R"
 }

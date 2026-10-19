@@ -4,6 +4,7 @@
 // No AI is used: matching is by name tokens, so it is fast, cheap and explainable.
 // Facts returned (emails, phones, social links) come from pages we fetched or from search results.
 const fs = require('fs');
+const { withDeployIds } = require('./n8n-deploy-ids');
 const { SAFE_URL, CONTACT_LINK, SCRAPE, NAME_MATCH, DIRECTORY_HOSTS } = require('./workflow-snippets');
 
 const queryCode = String.raw`
@@ -179,5 +180,5 @@ const workflow = {
 };
 
 fs.mkdirSync('n8n', { recursive: true });
-fs.writeFileSync('n8n/enrich-contact.workflow.json', JSON.stringify(workflow, null, 2));
+fs.writeFileSync('n8n/enrich-contact.workflow.json', JSON.stringify(withDeployIds(workflow), null, 2));
 console.log('written');

@@ -1,6 +1,7 @@
 // Generates n8n/draft-message.workflow.json (run: node build-draft-workflow.js)
 // Flow: Webhook -> Build Prompt -> Gemini -> Parse -> Respond. The backend waits for the reply.
 const fs = require('fs');
+const { withDeployIds } = require('./n8n-deploy-ids');
 
 const promptCode = `
 const b = $json.body || {};
@@ -104,5 +105,5 @@ const workflow = {
 };
 
 fs.mkdirSync('n8n', { recursive: true });
-fs.writeFileSync('n8n/draft-message.workflow.json', JSON.stringify(workflow, null, 2));
+fs.writeFileSync('n8n/draft-message.workflow.json', JSON.stringify(withDeployIds(workflow), null, 2));
 console.log('written');

@@ -17,7 +17,13 @@
         0,
         0
       ],
-      "webhookId": "find-leads-backend"
+      "webhookId": "find-leads-backend",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YGPCoaeGLueDfqve",
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -82,11 +88,17 @@
         330,
         80
       ],
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "rGQixT3tQRwDkkSx",
+          "name": "Query Auth account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst map = [\n  [/dent/i, 'healthcare.dentist'],\n  [/clinic|doctor|medical|physician|clinique|medecin/i, 'healthcare.clinic_or_praxis'],\n  [/pharmac/i, 'healthcare.pharmacy'],\n  [/restaurant/i, 'catering.restaurant'],\n  [/caf[eé]|coffee/i, 'catering.cafe'],\n  [/hotel|guest ?house|riad/i, 'accommodation.hotel'],\n  [/gym|fitness/i, 'sport.fitness'],\n  [/hair|salon|beauty|barber|spa\\b/i, 'service.beauty'],\n  [/lawyer|law firm|attorney|avocat/i, 'office.lawyer'],\n  [/car repair|garage|mechanic/i, 'service.vehicle.repair.car'],\n  [/supermarket|grocery/i, 'commercial.supermarket'],\n  [/bakery|pastry|patisserie/i, 'commercial.food_and_drink.bakery'],\n  [/school|academy|training/i, 'education.school']\n];\nconst hit = map.find(([re]) => re.test(body.niche || ''));\nconst categories = hit ? hit[1] : 'commercial,service,office,catering';\nconst name = hit ? null : body.niche;\n\n// One item per area: a drawn rectangle comes straight from Expand Areas, a city comes back from the geocoder.\n// Each item carries the Google Maps query (Serper) and the Geoapify filter used when Maps returns nothing.\nconst areas = $('Expand Areas').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const j = item.json || {};\n  if (j.bbox) {\n    const [w, s, e, n] = String(j.bbox).split(',').map(Number);\n    const span = Math.max(e - w, n - s, 0.005);\n    const zoom = Math.max(10, Math.min(17, Math.round(Math.log2(1400 / span))));\n    out.push({ json: { filter: 'rect:' + j.bbox, categories, name, geo: true,\n      maps: { q: body.niche, ll: '@' + ((s + n) / 2).toFixed(5) + ',' + ((w + e) / 2).toFixed(5) + ',' + zoom + 'z' } } });\n  } else {\n    const g = (j.results || [])[0];\n    const text = ((areas[i] && areas[i].json.text) || '').trim();\n    if (g) out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name, geo: true,\n      maps: { q: (body.niche + ' ' + text).trim(), ll: '@' + Number(g.lat).toFixed(5) + ',' + Number(g.lon).toFixed(5) + ',13z' } } });\n  }\n});\n// a single area gets a second page of Maps results (no second Geoapify call)\nif (out.length === 1) out.push({ json: { ...out[0].json, geo: false, maps: { ...out[0].json.maps, page: 2 } } });\nreturn out.length ? out : [{ json: { _empty: true } }];"
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst map = [\n  [/dent/i, 'healthcare.dentist'],\n  [/clinic|doctor|medical|physician|clinique|medecin/i, 'healthcare.clinic_or_praxis'],\n  [/pharmac/i, 'healthcare.pharmacy'],\n  [/restaurant/i, 'catering.restaurant'],\n  [/caf[eé]|coffee/i, 'catering.cafe'],\n  [/hotel|guest ?house|riad/i, 'accommodation.hotel'],\n  [/gym|fitness/i, 'sport.fitness'],\n  [/hair|salon|beauty|barber|spa\\b/i, 'service.beauty'],\n  [/lawyer|law firm|attorney|avocat/i, 'office.lawyer'],\n  [/car repair|garage|mechanic/i, 'service.vehicle.repair.car'],\n  [/supermarket|grocery/i, 'commercial.supermarket'],\n  [/bakery|pastry|patisserie/i, 'commercial.food_and_drink.bakery'],\n  [/school|academy|training/i, 'education.school']\n];\nconst hit = map.find(([re]) => re.test(body.niche || ''));\nconst categories = hit ? hit[1] : 'commercial,service,office,catering';\nconst name = hit ? null : body.niche;\n\n// One item per area: a drawn rectangle comes straight from Expand Areas, a city comes back from the geocoder.\n// Each item carries the Google Maps query (Serper) and the Geoapify filter used when Maps returns nothing.\nconst areas = $('Expand Areas').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const j = item.json || {};\n  if (j.bbox) {\n    const [w, s, e, n] = String(j.bbox).split(',').map(Number);\n    const span = Math.max(e - w, n - s, 0.005);\n    const zoom = Math.max(10, Math.min(17, Math.round(Math.log2(1400 / span))));\n    out.push({ json: { filter: 'rect:' + j.bbox, categories, name, geo: true,\n      maps: { q: body.niche, ll: '@' + ((s + n) / 2).toFixed(5) + ',' + ((w + e) / 2).toFixed(5) + ',' + zoom + 'z' } } });\n  } else {\n    const g = (j.results || [])[0];\n    const text = ((areas[i] && areas[i].json.text) || '').trim();\n    if (!g) return;\n    // A city keeps the map point, which brings the small local businesses. When the geocoder only found a whole\n    // region (its point can be far from the town), Google finds the town by name and the country keeps it local.\n    const town = /^(city|suburb|district|postcode|street|amenity|building)$/.test(String(g.result_type || ''));\n    out.push({ json: { filter: 'circle:' + g.lon + ',' + g.lat + ',10000', categories, name, geo: true,\n      maps: { q: (body.niche + ' ' + text).trim(), ...(g.country_code ? { gl: String(g.country_code).toLowerCase() } : {}),\n        ...(town ? { ll: '@' + Number(g.lat).toFixed(5) + ',' + Number(g.lon).toFixed(5) + ',13z' } : {}) } } });\n  }\n});\n// A single area gets a second Maps call (no second Geoapify call): the French name of the trade, since local\n// businesses are mostly listed in French; when no French name is known, the next page of the same query.\nconst FR = [\n  [/dent/i, 'dentiste'], [/clinic|doctor|medical|physician/i, 'clinique médecin'], [/pharmac/i, 'pharmacie'],\n[/caf[eé]|coffee/i, 'café salon de thé'], [/hotel|guest ?house/i, 'hôtel'],\n  [/gym|fitness/i, 'salle de sport'], [/hair|barber/i, 'salon de coiffure'], [/beauty|spa\\b/i, 'institut de beauté'],\n  [/lawyer|law firm|attorney/i, 'avocat'], [/car repair|garage|mechanic/i, 'garage mécanique auto'],\n  [/supermarket|grocery/i, 'supermarché'], [/bakery|bakeries|pastry/i, 'boulangerie pâtisserie'], [/school|academy|training/i, 'école centre de formation'],\n];\nif (out.length === 1) {\n  const fr = (FR.find(([re]) => re.test(body.niche || '')) || [])[1];\n  const area = ((areas[0] && areas[0].json.text) || '').trim();\n  const maps = fr && fr !== String(body.niche).toLowerCase()\n    ? { ...out[0].json.maps, q: (fr + ' ' + area).trim() }\n    : { ...out[0].json.maps, page: 2 };\n  out.push({ json: { ...out[0].json, geo: false, maps } });\n}\nreturn out.length ? out : [{ json: { _empty: true } }];"
       },
       "id": "n10",
       "name": "Build Query",
@@ -114,7 +126,13 @@
         770,
         0
       ],
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "rGQixT3tQRwDkkSx",
+          "name": "Query Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -389,7 +407,13 @@
       "position": [
         2440,
         0
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qKkJSgmCjRN1FSKZ",
+          "name": "Header Auth account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -423,7 +447,7 @@
       "onError": "continueRegularOutput",
       "credentials": {
         "telegramApi": {
-          "id": "telegramApi",
+          "id": "MF2BrWxZhkIxsVfR",
           "name": "Telegram account"
         }
       }
@@ -665,5 +689,6 @@
   },
   "settings": {
     "executionOrder": "v1"
-  }
+  },
+  "id": "8ACMtHmOlXSVmmGx"
 }
