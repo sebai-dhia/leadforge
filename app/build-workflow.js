@@ -2,7 +2,7 @@
 // Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch home page and contact page
 //       -> rule-based score -> POST results to the backend callback.
 const fs = require('fs');
-const { SAFE_URL, CONTACT_LINK, SCRAPE } = require('./workflow-snippets');
+const { SAFE_URL, CONTACT_LINK, SCRAPE, AUDIT } = require('./workflow-snippets');
 
 const expandAreasCode = String.raw`
 const body = $('Webhook').first().json.body || {};
@@ -53,6 +53,8 @@ const feats = [];
 for (const item of $input.all()) {
   for (const f of ((item.json && item.json.features) || [])) {
     if (!f.properties || !f.properties.name) continue;
+    // a name that is only a category word is not a business a freelancer can write to
+    if (/^(restaurants?|fast ?food|caf[eé]s?|hotels?|pharmacy|pharmacies|shop|store|market|bakery|salon|gym|clinic)$/i.test(f.properties.name.trim())) continue;
     const key = f.properties.place_id || (f.properties.name + '|' + f.properties.formatted);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -73,7 +75,8 @@ return feats.map(f => {
     rating: null,
     reviews: 0,
     website,
-    fetchUrl: safeUrl(website),
+    // a social page is not a website: skip fetching it, the lead keeps the link
+    fetchUrl: /(facebook|instagram|linktr)./i.test(website || '') ? null : safeUrl(website),
     niche: body.niche, city: body.city,
     service: body.service, sender: body.sender
   }};
@@ -86,11 +89,13 @@ return $input.all().map((item, i) => {
   const lead = leads[i].json;
   const base = lead._empty ? null : lead.fetchUrl;
   const html = item.json && typeof item.json.data === 'string' ? item.json.data : '';
-  return { json: { contactUrl: base ? contactLink(html, base) : null } };
+  // the home page already gave a phone and an email: the contact page cannot add much, skip the extra request
+  const complete = lead.phone && /mailto:|[w.+-]+@[w-]+.[a-z]{2,}/i.test(html);
+  return { json: { contactUrl: base && !complete ? contactLink(html, base) : null } };
 });
 `.trim();
 
-const extractCode = SCRAPE + '\n' + String.raw`
+const extractCode = SCRAPE + '\n' + AUDIT + '\n' + String.raw`
 const leads = $('Prepare').all();
 const home = $('Fetch Website').all();
 return $input.all().map((contact, i) => {
@@ -101,69 +106,72 @@ return $input.all().map((contact, i) => {
   const emails = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...a.emails, ...b.emails].filter(Boolean))];
   const social = [...new Set([...a.social, ...b.social])].slice(0, 6);
   const phone = lead.phone || a.phones[0] || b.phones[0] || null;
-  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0 };
+  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0, audit: audit(home[i] && home[i].json ? home[i].json.data : '') };
   delete out.osmEmail; delete out.fetchUrl;
   return { json: out };
 });
 `.trim();
 
 const scoreCode = String.raw`
-// Contact-aware rule-based fit score (1-10).
-// Prioritizes reachable businesses so leads with a contact route rank at the top.
+// Fit score (1-10) for what THIS freelancer sells. The focus comes from the offer text in the request.
+const body = $('Webhook').first().json.body || {};
+const offer = String(body.service || '').toLowerCase();
+const focus = /strateg|social media|copywrit|content|brand/.test(offer) ? 'creative' : /\bux\b|\bui\b|design|logo/.test(offer) ? 'design' : 'dev';
 return $input.all().map(item => {
   const l = item.json;
   if (l._empty) return item;
   const niche = (l.niche || '').toLowerCase();
   const appointment = /dent|clinic|clinique|doctor|medecin|physio|kine|salon|hair|beauty|barber|spa\b|lawyer|avocat|law|gym|fitness|hotel|guest|garage|car repair|mechanic|pharmac/.test(niche);
   const food = /restaurant|caf[eé]|bakery|pastry|patisserie/.test(niche);
-
-  let score = appointment ? 5 : food ? 4 : 3;
-  const why = [appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business'];
-  const flags = [];
-
   const hasPhone = Boolean(l.phone);
   const hasEmail = Boolean(l.emails && l.emails.length);
   const hasSocial = Boolean(l.social && l.social.length);
   const isReachable = hasPhone || hasEmail || hasSocial;
+  const au = l.audit || null;
+  const noSite = !l.website;
+  const brokenSite = Boolean(l.website) && !l.siteChecked;
+  const flags = [];
+  let score = 2;
 
-  if (hasPhone) flags.push('phone available');
-  if (hasEmail) flags.push('email available');
-  if (hasSocial) flags.push('social profile available');
-
-  if (l.website) {
-    if (l.hasBooking) {
-      score -= 1;
-      flags.push('website already mentions online booking');
-    } else if (l.siteChecked) {
-      score += 2;
-      flags.push('website found, no online booking seen');
-    } else {
-      flags.push('website listed');
+  if (focus === 'design') {
+    if (noSite) { score += 4; flags.push('no website to design from'); }
+    else if (brokenSite) { score += 3; flags.push('website could not be loaded'); }
+    else if (au) {
+      let weak = 0;
+      if (au.noViewport) { weak += 3; flags.push('site is not mobile-friendly'); }
+      if (au.legacyMarkup) { weak += 3; flags.push('dated page layout'); }
+      if (au.stale) { weak += 2; flags.push('site looks outdated'); }
+      if (au.thin) { weak += 2; flags.push('very thin or unfinished site'); }
+      score += Math.min(weak, 5);
+      if (!weak) { score -= 1; flags.push('site looks modern'); }
     }
+  } else if (focus === 'creative') {
+    if (!hasSocial) { score += 3; flags.push('no social page found'); }
+    if (noSite) { score += 1; flags.push('no website'); }
+    else if (au && au.noPreview) { score += 1; flags.push('no social preview image on the site'); }
+    if (au && (au.noViewport || au.legacyMarkup || au.stale)) { score += 1; flags.push('weak online presence'); }
+    if (hasSocial && !flags.length) { score -= 1; flags.push('active online presence'); }
   } else {
-    if (isReachable) {
-      score += 2;
-      flags.push('no website (prime outreach candidate)');
-    } else {
-      flags.push('no website');
+    if (noSite) { score += 4; flags.push('no website (needs a build)'); }
+    else if (brokenSite) { score += 3; flags.push('website could not be loaded'); }
+    else if (au) {
+      if (au.outdatedSoftware) { score += 3; flags.push('outdated software detected'); }
+      if (!l.hasBooking && (appointment || food)) { score += 2; flags.push('no online booking or ordering'); }
+      else if (l.hasBooking) { score -= 1; flags.push('website already mentions online booking'); }
+      if (au.noViewport) { score += 1; flags.push('site is not mobile-friendly'); }
     }
   }
 
-  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) {
-    score -= 2;
-    flags.push('looks like a large organisation');
-  }
+  if (appointment || food) score += 1;
+  if (/group|groupe|international|global|network|holding|banque|bank|assurance|insurance|corporate/i.test(l.name || '')) { score -= 2; flags.push('looks like a large organisation'); }
 
-  // Reachability weighting: reachable leads rank high; unreachable leads are capped
-  if (isReachable) {
-    score += (hasPhone && hasEmail ? 2 : 1);
-  } else {
-    score = Math.min(score, 3);
-    flags.push('unreachable: no phone or email found yet');
-  }
+  // Reachability: a good opportunity you cannot contact is worth little
+  if (isReachable) score += (hasPhone && hasEmail ? 2 : 1);
+  else { score = Math.min(score, 3); flags.push('unreachable: no phone or email found yet'); }
 
   score = Math.max(1, Math.min(10, score));
-  return { json: { ...l, score, reason: why[0] + ': ' + flags.join(', ') + '.' } };
+  const why = appointment ? 'Appointment-based business' : food ? 'Reservation and ordering business' : 'Local business';
+  return { json: { ...l, score, reason: why + ': ' + (flags.length ? flags.join(', ') : 'no clear opportunity seen') + '.' } };
 });
 `.trim();
 
@@ -171,7 +179,7 @@ const formatCode = String.raw`
 const jobId = $('Webhook').first().json.body.jobId;
 const out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {
   const r = { ...l, subject: '', emailBody: '' };
-  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl']) delete r[k];
+  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl', 'audit']) delete r[k];
   return r;
 });
 out.sort((a, b) => {

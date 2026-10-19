@@ -88,4 +88,26 @@ function scrape(html) {
 }
 `.trim();
 
-module.exports = { SAFE_URL, CONTACT_LINK, SCRAPE };
+// Passive look at a home page that was fetched anyway: nothing is probed, only what the page itself shows.
+const AUDIT = String.raw`
+function audit(html) {
+  html = typeof html === 'string' ? html : '';
+  if (!html) return null;
+  const year = new Date().getFullYear();
+  const years = (html.match(/(?:©|&copy;|copyright)[^<]{0,40}?(20\d\d|19\d\d)/gi) || []).map(x => +x.match(/(20\d\d|19\d\d)/)[1]);
+  const lastYear = years.length ? Math.max(...years) : null;
+  const gen = (html.match(/<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)/i) || [])[1] || '';
+  const wp = gen.match(/wordpress\s+(\d+)/i);
+  const jq = html.match(/jquery[-.\/](\d)\.\d/i);
+  return {
+    noViewport: !/<meta[^>]+name=["']viewport["']/i.test(html),
+    legacyMarkup: /<(font|marquee|center|frameset)\b/i.test(html) || /\.swf\b|shockwave-flash/i.test(html) || (html.match(/<table\b/gi) || []).length >= 4,
+    stale: lastYear !== null && lastYear <= year - 4,
+    thin: html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, ' ').replace(/\s+/g, ' ').length < 400 || /under construction|coming soon|en construction|site en cours/i.test(html),
+    noPreview: !/property=["']og:image["']/i.test(html),
+    outdatedSoftware: Boolean((wp && +wp[1] < 6) || (jq && +jq[1] < 3) || /joomla!?\s*1\./i.test(gen)),
+  };
+}
+`.trim();
+
+module.exports = { SAFE_URL, CONTACT_LINK, SCRAPE, AUDIT };
