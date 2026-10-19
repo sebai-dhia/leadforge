@@ -50,6 +50,7 @@ public class N8nClient {
         }
         payload.put("service", job.getService());
         payload.put("sender", job.getSender());
+        payload.put("lookupLimit", job.getLookupLimit());
         payload.put("callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results");
 
         trigger.post()

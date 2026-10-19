@@ -2,7 +2,7 @@
 // Flow: Webhook (responds at once) -> geocode city -> Geoapify places -> fetch home page and contact page
 //       -> rule-based score -> POST results to the backend callback.
 const fs = require('fs');
-const { SAFE_URL, CONTACT_LINK, SCRAPE, AUDIT } = require('./workflow-snippets');
+const { SAFE_URL, CONTACT_LINK, SCRAPE, AUDIT, NAME_MATCH, DIRECTORY_HOSTS } = require('./workflow-snippets');
 
 const expandAreasCode = String.raw`
 const body = $('Webhook').first().json.body || {};
@@ -46,7 +46,30 @@ for (const item of $input.all()) {
 return out.length ? out : [{ json: { _empty: true } }];
 `.trim();
 
-const prepareCode = SAFE_URL + '\n' + String.raw`
+const prepareCode = SAFE_URL + '\n' + NAME_MATCH + '\n' + String.raw`
+// Web lookups cost search credits: only the first few leads that miss a website or a way to reach them,
+// and never a business looked up in the last 30 days (kept in the workflow's static data).
+const cache = $getWorkflowStaticData('global');
+cache.lookups = cache.lookups || {};
+const DAY = 86400000;
+let lookupsLeft = Math.max(0, Math.min(15, Number(($('Webhook').first().json.body || {}).lookupLimit) || 15));
+const areaOf = addr => String(addr || '').split(',').map(x => x.trim()).filter(x => x && !/^\d+$/.test(x)).slice(-2, -1).map(x => x.replace(/\d+/g, '').trim())[0] || '';
+function markLookup(item) {
+  const l = item.json;
+  // a name made only of trade words ("salle de sport") would match some other business: never search it
+  if (!tokens(l.name).length) return item;
+  const hit = l.placeId && cache.lookups[l.placeId];
+  if (hit && Date.now() - hit.t < 30 * DAY) {
+    return { json: { ...l, cached: true, foundWebsite: !l.website && hit.website ? hit.website : null,
+      website: l.website || hit.website || null, fetchUrl: l.fetchUrl || safeUrl(hit.website),
+      foundSocial: hit.social || [], foundPhone: hit.phone || null, lookedUp: true } };
+  }
+  const needs = !l.website || (!l.phone && !l.osmEmail);
+  if (!needs || lookupsLeft <= 0) return item;
+  lookupsLeft--;
+  return { json: { ...l, lookup: true, lookupQuery: [l.name, areaOf(l.address) || l.city].filter(Boolean).join(' ').slice(0, 200) } };
+}
+
 const body = $('Webhook').first().json.body || {};
 const seen = new Set();
 const feats = [];
@@ -80,11 +103,56 @@ return feats.map(f => {
     niche: body.niche, city: body.city,
     service: body.service, sender: body.sender
   }};
+}).map(markLookup);
+`.trim();
+
+const matchLookupCode = SAFE_URL + '\n' + NAME_MATCH + '\n' + DIRECTORY_HOSTS + '\n' + String.raw`
+// Keeps only search results that clearly belong to the business: name tokens, trade words or its phone.
+const cache = $getWorkflowStaticData('global');
+cache.lookups = cache.lookups || {};
+const leads = $('Prepare').all();
+const results = $input.all();
+const out = leads.map((item, i) => {
+  const l = { ...item.json };
+  if (l._empty || !l.lookup) return { json: l };
+  const r = (results[i] && results[i].json) || {};
+  const organic = Array.isArray(r.organic) ? r.organic : [];
+  const kind = nicheRe(l.niche);
+  const phoneDigits = String(l.phone || '').replace(/\D/g, '').slice(-8);
+  let website = null;
+  const social = [];
+  for (const it of organic) {
+    const p = parseUrl(it.link);
+    if (!p) continue;
+    const host = p.hostname.replace(/^www\./, '');
+    const pathText = decodeURIComponent((p.rest || '').split(/[?#]/)[0].replace(/[-_.\/]+/g, ' '));
+    const hay = (it.title || '') + ' ' + (it.snippet || '') + ' ' + pathText;
+    if (/(^|\.)(facebook|instagram)\.com$/i.test(host)) {
+      const sHay = (it.title || '') + ' ' + (it.snippet || '');
+      const sameKind = (kind && kind.test(norm(sHay + ' ' + host + ' ' + pathText))) || (phoneDigits.length >= 6 && sHay.replace(/\D/g, '').includes(phoneDigits));
+      if (social.length < 2 && sameKind && ratio(l.name, (it.title || '') + ' ' + pathText) >= 0.6) social.push(it.link);
+      continue;
+    }
+    if (DIRECTORY.test(host + '.')) continue;
+    if (!website && !l.website && ratio(l.name, hay + ' ' + host) >= 0.6) website = safeUrl(it.link);
+  }
+  const kg = r.knowledgeGraph || null;
+  if (!website && !l.website && kg && kg.website && ratio(l.name, kg.title || '') >= 0.6) website = safeUrl(kg.website);
+  const kgPhone = kg && kg.phoneNumber && ratio(l.name, kg.title || '') >= 0.6 ? String(kg.phoneNumber) : null;
+  const searched = organic.length > 0 || !!kg;
+  if (searched && l.placeId) {
+    cache.lookups[l.placeId] = { t: Date.now(), website, social, phone: kgPhone };
+    const keys = Object.keys(cache.lookups);
+    if (keys.length > 5000) for (const k of keys.slice(0, keys.length - 5000)) delete cache.lookups[k];
+  }
+  return { json: { ...l, lookup: false, lookedUp: searched, foundWebsite: website, website: l.website || website,
+    fetchUrl: l.fetchUrl || website, foundSocial: social, foundPhone: kgPhone } };
 });
+return out;
 `.trim();
 
 const findContactCode = SAFE_URL + '\n' + CONTACT_LINK + '\n' + String.raw`
-const leads = $('Prepare').all();
+const leads = $('Match Lookup').all();
 return $input.all().map((item, i) => {
   const lead = leads[i].json;
   const base = lead._empty ? null : lead.fetchUrl;
@@ -95,18 +163,28 @@ return $input.all().map((item, i) => {
 });
 `.trim();
 
-const extractCode = SCRAPE + '\n' + AUDIT + '\n' + String.raw`
-const leads = $('Prepare').all();
+const extractCode = SCRAPE + '\n' + AUDIT + '\n' + NAME_MATCH + '\n' + String.raw`
+const leads = $('Match Lookup').all();
 const home = $('Fetch Website').all();
 return $input.all().map((contact, i) => {
-  const lead = leads[i].json;
+  const lead = { ...leads[i].json };
   if (lead._empty) return { json: { _empty: true } };
-  const a = scrape(home[i] && home[i].json ? home[i].json.data : '');
-  const b = scrape(contact.json ? contact.json.data : '');
+  let homeHtml = home[i] && home[i].json && typeof home[i].json.data === 'string' ? home[i].json.data : '';
+  let contactHtml = contact.json && typeof contact.json.data === 'string' ? contact.json.data : '';
+  if (lead.foundWebsite) {
+    // found by web search: trust it only if the page names the business (or shows its phone) and talks about its trade
+    const text = plainText(homeHtml), kind = nicheRe(lead.niche);
+    const phoneKey = String(lead.phone || '').replace(/\D/g, '').slice(-8);
+    const ok = homeHtml && ((phoneKey.length >= 6 && homeHtml.replace(/\D/g, '').includes(phoneKey)) || (ratio(lead.name, text) >= 0.6 && !!kind && kind.test(norm(text))));
+    if (!ok) { lead.website = null; homeHtml = ''; contactHtml = ''; }
+  }
+  const a = scrape(homeHtml);
+  const b = scrape(contactHtml);
   const emails = [...new Set([lead.osmEmail ? lead.osmEmail.toLowerCase() : null, ...a.emails, ...b.emails].filter(Boolean))];
-  const social = [...new Set([...a.social, ...b.social])].slice(0, 6);
-  const phone = lead.phone || a.phones[0] || b.phones[0] || null;
-  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0, audit: audit(home[i] && home[i].json ? home[i].json.data : '') };
+  const social = [...new Set([...(lead.foundSocial || []), ...a.social, ...b.social])].slice(0, 6);
+  const phone = lead.phone || a.phones[0] || b.phones[0] || lead.foundPhone || null;
+  const out = { ...lead, phone, emails: emails.slice(0, 8), social, hasBooking: a.hasBooking || b.hasBooking, siteChecked: a.length > 0, audit: audit(homeHtml) };
+  for (const k of ['foundWebsite', 'foundSocial', 'foundPhone', 'lookup', 'lookupQuery', 'cached']) delete out[k];
   delete out.osmEmail; delete out.fetchUrl;
   return { json: out };
 });
@@ -179,7 +257,7 @@ const formatCode = String.raw`
 const jobId = $('Webhook').first().json.body.jobId;
 const out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {
   const r = { ...l, subject: '', emailBody: '' };
-  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl', 'audit']) delete r[k];
+  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl', 'audit', 'lookedUp']) delete r[k];
   return r;
 });
 out.sort((a, b) => {
@@ -287,6 +365,23 @@ const workflow = {
       id: 'n3', name: 'Prepare', type: 'n8n-nodes-base.code', typeVersion: 2, position: [880, 0]
     },
     {
+      parameters: {
+        method: 'POST',
+        url: "={{ $json.lookup ? 'https://google.serper.dev/search' : 'http://invalid.invalid/' }}",
+        authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
+        sendBody: true, specifyBody: 'json',
+        jsonBody: '={{ JSON.stringify({ q: $json.lookupQuery || "", num: 10 }) }}',
+        options: { timeout: 10000, batching: { batch: { batchSize: 8, batchInterval: 0 } } }
+      },
+      id: 'n17', name: 'Web Search', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [990, 160],
+      credentials: { httpHeaderAuth: { id: 'cU0NuC0Q0GMMLVkw', name: 'Header Auth account 7' } },
+      onError: 'continueRegularOutput'
+    },
+    {
+      parameters: { jsCode: matchLookupCode },
+      id: 'n18', name: 'Match Lookup', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1100, 160]
+    },
+    {
       parameters: { url: "={{ $json.fetchUrl || 'http://invalid.invalid/' }}", options: pageFetchOptions },
       id: 'n4', name: 'Fetch Website', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1100, 0],
       onError: 'continueRegularOutput'
@@ -353,7 +448,9 @@ const workflow = {
     'Geocode City': { main: [[{ node: 'Build Query', type: 'main', index: 0 }]] },
     'Build Query': { main: [[{ node: 'Geoapify Places', type: 'main', index: 0 }]] },
     'Geoapify Places': { main: [[{ node: 'Prepare', type: 'main', index: 0 }]] },
-    'Prepare': { main: [[{ node: 'Fetch Website', type: 'main', index: 0 }]] },
+    'Prepare': { main: [[{ node: 'Web Search', type: 'main', index: 0 }]] },
+    'Web Search': { main: [[{ node: 'Match Lookup', type: 'main', index: 0 }]] },
+    'Match Lookup': { main: [[{ node: 'Fetch Website', type: 'main', index: 0 }]] },
     'Fetch Website': { main: [[{ node: 'Find Contact Link', type: 'main', index: 0 }]] },
     'Find Contact Link': { main: [[{ node: 'Fetch Contact Page', type: 'main', index: 0 }]] },
     'Fetch Contact Page': { main: [[{ node: 'Extract', type: 'main', index: 0 }]] },

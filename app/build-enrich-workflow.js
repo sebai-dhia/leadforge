@@ -4,41 +4,7 @@
 // No AI is used: matching is by name tokens, so it is fast, cheap and explainable.
 // Facts returned (emails, phones, social links) come from pages we fetched or from search results.
 const fs = require('fs');
-const { SAFE_URL, CONTACT_LINK, SCRAPE } = require('./workflow-snippets');
-
-// Shared by Pick Candidates and Collect. Accents are removed, generic words are ignored, and a
-// result only counts when most of the distinctive words of the business name appear in it.
-const NAME_MATCH = String.raw`
-const STOP = new Set(['hotel','hotels','cabinet','dr','dre','docteur','doctor','clinique','clinic','restaurant','cafe','salon','coiffure',
-  'pharmacie','pharmacy','the','and','des','les','chez','tunis','tunisie','tunisia','dentaire','dentiste','avocat','maitre','spa','gym','fitness']);
-const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const tokens = s => norm(s).split(/[^\p{L}\p{N}]+/u).filter(t => t.length >= 3 && !STOP.has(t));
-const ratio = (needle, hay) => {
-  const t = tokens(needle);
-  if (!t.length) return 0;
-  const h = norm(hay);
-  return t.filter(x => h.includes(x)).length / t.length;
-};
-// What a page of this kind of business talks about. A page that shares the name but none of these is
-// probably a different business (a fashion brand called "NafNaf" is not a hair salon).
-const NICHES = [
-  [/dent/i, 'dentist|dentaire|dentiste|dental|orthodon|\u0623\u0633\u0646\u0627\u0646'],
-  [/clinic|doctor|medical|physician|clinique|medecin/i, 'clinique|clinic|medecin|docteur|doctor|patient|consultation|sante|health|\u0637\u0628\u064a\u0628|\u0639\u064a\u0627\u062f\u0629'],
-  [/pharmac/i, 'pharmacie|pharmacy|medicament|ordonnance|\u0635\u064a\u062f\u0644'],
-  [/restaurant/i, 'restaurant|menu|cuisine|plats?\\b|chef|\u0645\u0637\u0639\u0645'],
-  [/caf[e\u00e9]|coffee/i, 'cafe|coffee|boisson|\u0645\u0642\u0647\u0649'],
-  [/hotel|guest ?house|riad/i, 'hotel|chambre|rooms?\\b|suite|sejour|resort|guest|\u0641\u0646\u062f\u0642'],
-  [/gym|fitness/i, 'gym|fitness|musculation|coach|abonnement|\u0646\u0627\u062f\u064a'],
-  [/hair|salon|beauty|barber|spa\b/i, 'coiffure|coiffeu|hair|barber|beaute|beauty|esthetique|manucure|\u062d\u0644\u0627\u0642|\u062a\u062c\u0645\u064a\u0644'],
-  [/lawyer|law firm|attorney|avocat/i, 'avocat|lawyer|law firm|juridique|\u0645\u062d\u0627\u0645'],
-  [/car repair|garage|mechanic/i, 'garage|mecanique|automobile|voiture|vidange|reparation'],
-  [/supermarket|grocery/i, 'supermarche|supermarket|courses|hypermarche|rayon'],
-  [/bakery|pastry|patisserie/i, 'boulangerie|patisserie|bakery|gateau|viennoiserie'],
-  [/school|academy|training/i, 'ecole|school|formation|eleves|enseignement|\u0645\u062f\u0631\u0633\u0629']
-];
-const nicheRe = niche => { const hit = NICHES.find(([re]) => re.test(niche || '')); return hit ? new RegExp(hit[1], 'i') : null; };
-const plainText = html => String(html || '').replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ');
-`.trim();
+const { SAFE_URL, CONTACT_LINK, SCRAPE, NAME_MATCH, DIRECTORY_HOSTS } = require('./workflow-snippets');
 
 const queryCode = String.raw`
 const b = ($input.first().json || {}).body || {};
@@ -46,14 +12,13 @@ const q = [b.leadName, b.city].filter(Boolean).join(' ').trim().slice(0, 200);
 return [{ json: { q } }];
 `.trim();
 
-const pickCode = SAFE_URL + '\n' + NAME_MATCH + '\n' + String.raw`
+const pickCode = SAFE_URL + '\n' + NAME_MATCH + '\n' + DIRECTORY_HOSTS + '\n' + String.raw`
 const b = $('Webhook').first().json.body || {};
 const r = $input.first().json || {};
 const searchFailed = !!r.error && !r.organic;
 const msg = String((r.error && (r.error.message || r.error)) || '');
 const searchProblem = !searchFailed ? '' : /401|403|unauthor|invalid/i.test(msg) ? 'key' : /402|429|credit|quota|limit/i.test(msg) ? 'quota' : 'other';
 
-const DIRECTORY = /(^|\.)(facebook|instagram|linkedin|twitter|tiktok|youtube|pinterest|tripadvisor|booking|yelp|pagesjaunes|foursquare|google|wikipedia|expedia|agoda|kayak|trivago|hotels|airbnb|mapcarta|zomato|opentable|thefork|yellowpages|waze|bing|yahoo|duckduckgo|med|pharmaboardroom|kompass|europages|cylex|hotfrog|opendi|jumia|tayara|annuaire|doctolib|doctoranytime|tabibi|drest|tripadvisor|restaurantguru|cybo|local|infobel|societe|pagesjaunes)\./i;
 const known = safeUrl(b.website);
 const kind = nicheRe(b.niche);
 const phoneDigits = String(b.phone || '').replace(/\D/g, '').slice(-8);
