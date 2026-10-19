@@ -105,7 +105,7 @@ function audit(html) {
     stale: lastYear !== null && lastYear <= year - 4,
     thin: html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, ' ').replace(/\s+/g, ' ').length < 400 || /under construction|coming soon|en construction|site en cours/i.test(html),
     noPreview: !/property=["']og:image["']/i.test(html),
-    outdatedSoftware: Boolean((wp && +wp[1] < 6) || (jq && +jq[1] < 3) || /joomla!?\s*1\./i.test(gen)),
+    outdatedSoftware: Boolean((wp && +wp[1] < 5) || (jq && +jq[1] < 2) || /joomla!?\s*1\./i.test(gen)),
   };
 }
 `.trim();

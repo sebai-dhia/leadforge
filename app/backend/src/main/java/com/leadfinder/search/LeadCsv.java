@@ -22,7 +22,7 @@ final class LeadCsv {
             row(sb,
                     l.getName(), str(l.getScore()), l.getStatus(), l.getPhone(),
                     l.getEmails() == null ? "" : l.getEmails().replace(",", "; "),
-                    l.getWebsite(), l.getAddress(), l.getNiche(), l.getCity(), l.getReason(),
+                    l.getWebsite(), l.getAddress(), l.getNiche(), l.getCity(), l.getReasonText(),
                     str(l.getFirstSeenAt()), str(l.getLastSeenAt()),
                     l.getDraftLanguage(), l.getDraftChannel(), l.getSubject(), l.getEmailBody());
         }

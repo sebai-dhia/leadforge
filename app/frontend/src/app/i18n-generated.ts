@@ -40,15 +40,27 @@ const REASON_PHRASES: [string, string][] = [
   ["no online booking or ordering", "pas de réservation ni de commande en ligne"],
   ["no clear opportunity seen", "aucune opportunité claire repérée"],
   ["active on Google Maps", "active sur Google Maps"],
+  ["part of a chain", "fait partie d'une chaîne"],
+  ["large, well-known business", "grande entreprise connue"],
   ['no website listed', 'pas de site web connu'],
   ['no website', 'pas de site web'],
 ].sort((a, b) => b[0].length - a[0].length) as [string, string][];
 
+/**
+ * The AI check adds " AI: <English sentence> [[fr:<French sentence>]]" to the rule-based reason.
+ * English shows the English sentence; French swaps in the French one.
+ */
+const AI_PART = /\s*AI: (.*?)\s*\[\[fr:(.*?)\]\]\s*$/;
+
 export function translateReason(text: string | null, fr: boolean): string {
-  if (!text || !fr) return text ?? '';
-  let out = text;
+  if (!text) return '';
+  const ai = text.match(AI_PART);
+  const rules = ai ? text.slice(0, ai.index) : text;
+  if (!fr) return ai ? rules + ' AI: ' + ai[1] : rules;
+  let out = rules;
   for (const [en, f] of REASON_PHRASES) out = out.split(en).join(f);
-  return out.replace(/([^\s:]): /g, '$1 : '); // French puts a space before a colon
+  out = out.replace(/([^\s:]): /g, '$1 : '); // French puts a space before a colon
+  return ai ? out + ' IA : ' + ai[2] : out;
 }
 
 const NOTES_FR: Record<string, string> = {

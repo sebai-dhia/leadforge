@@ -66,4 +66,9 @@ public class Lead {
 
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt = Instant.now();
+
+    /** The reason without the French copy of the AI sentence that the web app uses for its French view. */
+    public String getReasonText() {
+        return reason == null ? null : reason.replaceAll("\\s*\\[\\[fr:.*?]]\\s*$", "");
+    }
 }

@@ -114,7 +114,7 @@ public class LeadController {
         payload.put("leadName", lead.getName());
         payload.put("address", lead.getAddress());
         payload.put("website", lead.getWebsite());
-        payload.put("reason", lead.getReason());
+        payload.put("reason", lead.getReasonText());
         payload.put("niche", lead.getNiche());
         payload.put("city", lead.getCity());
         payload.put("offer", user.getOffer());
