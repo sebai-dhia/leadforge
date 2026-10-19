@@ -4,13 +4,18 @@
 # n8n reads published workflows at startup: restart it afterwards, then run one throwaway search.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Git Bash on Windows would rewrite container paths such as /tmp/x into Windows paths
+export MSYS_NO_PATHCONV=1
 
-node build-workflow.js
-node build-enrich-workflow.js
-node build-draft-workflow.js
+# rebuild when Node is available (on your machine); a server uses the JSON files committed with the code
+if command -v node >/dev/null; then
+  node build-workflow.js
+  node build-enrich-workflow.js
+  node build-draft-workflow.js
+fi
 
 FILES=(lead-finder.workflow.json enrich-contact.workflow.json draft-message.workflow.json)
-IDS=$(node -e "for (const f of process.argv.slice(1)) console.log(require('./n8n/' + f).id)" "${FILES[@]}")
+IDS=$(for f in "${FILES[@]}"; do grep -Eo '"id": "[A-Za-z0-9]{16}"' "n8n/$f" | tail -1 | cut -d'"' -f4; done)
 
 if [ -n "$(docker compose ps -q n8n 2>/dev/null)" ]; then
   run() { docker compose exec -T n8n n8n "$@"; }
@@ -18,7 +23,7 @@ if [ -n "$(docker compose ps -q n8n 2>/dev/null)" ]; then
   restart="docker compose restart n8n"
 else
   run() { tools/n8n-local.sh "$@"; }
-  dir="$(pwd)/n8n"
+  dir="$(pwd -W 2>/dev/null || pwd)/n8n"
   restart="stop tools/n8n-local.sh and start it again"
 fi
 

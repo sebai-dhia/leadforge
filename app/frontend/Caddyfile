@@ -1,0 +1,28 @@
+# DOMAIN is the public address (for example leadforge.example.com); Caddy gets and renews its HTTPS certificate.
+# For a local test, DOMAIN=localhost gives a certificate Caddy trusts only on this machine.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+
+	# The API. n8n's callback reaches the backend inside Docker, not through here.
+	handle /api/internal/* {
+		respond 404
+	}
+	handle /api/* {
+		reverse_proxy backend:8081
+	}
+
+	# The web app: unknown paths load index.html so Angular's routes work on refresh.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

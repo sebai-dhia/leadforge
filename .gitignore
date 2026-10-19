@@ -6,3 +6,5 @@ target/
 *.log
 .idea/
 .vscode/
+.env.prod
+n8n-credentials*.json

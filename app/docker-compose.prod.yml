@@ -1,0 +1,117 @@
+# The whole app on one server: web (Caddy, HTTPS) -> backend -> Postgres, and n8n with its own Postgres.
+# Only Caddy is reachable from outside (ports 80 and 443). n8n's editor is not public: reach it with an SSH tunnel
+# (ssh -L 5678:localhost:5678 you@server) — it listens on the server's loopback only.
+#   cp .env.prod.example .env.prod   # fill in every value
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+name: leadforge
+
+services:
+  web:
+    build: ./frontend
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/leadfinder
+      DB_USER: leadfinder
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      CORS_ORIGIN: https://${DOMAIN}
+      # n8n and the backend talk inside Docker
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/find-leads
+      N8N_DRAFT_URL: http://n8n:5678/webhook/draft-message
+      N8N_ENRICH_URL: http://n8n:5678/webhook/enrich-contact
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:?set N8N_WEBHOOK_SECRET}
+      N8N_CALLBACK_SECRET: ${N8N_CALLBACK_SECRET:?set N8N_CALLBACK_SECRET}
+      PUBLIC_BASE_URL: http://backend:8081
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CAP_SEARCHES_PER_DAY: ${CAP_SEARCHES_PER_DAY:-60}
+      CAP_DRAFTS_PER_DAY: ${CAP_DRAFTS_PER_DAY:-300}
+      CAP_ENRICH_PER_DAY: ${CAP_ENRICH_PER_DAY:-100}
+      # the real visitor address comes from Caddy (per-address limits on guests and logins)
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: leadfinder
+      POSTGRES_USER: leadfinder
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadfinder -d leadfinder"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  n8n-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD}
+    volumes:
+      - n8n_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n:2.43.8
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      DB_POSTGRESDB_CONNECTION_TIMEOUT: "60000"
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_SECURE_COOKIE: "false"
+      GENERIC_TIMEZONE: Africa/Tunis
+      TZ: Africa/Tunis
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  n8n_pgdata:
+  n8n_data:
+  caddy_data:
+  caddy_config:
