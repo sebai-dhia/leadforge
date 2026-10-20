@@ -79,7 +79,7 @@ const workflow = {
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
         jsonBody: geminiBody("$json.retryPrompt || ''"),
-        options: { timeout: 25000 }
+        options: { timeout: 15000 }
       },
       id: 'd9', name: 'AI Retry', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1000 + MODELS.length * 200, 0],
       retryOnFail: true, maxTries: 2, waitBetweenTries: 3000,
