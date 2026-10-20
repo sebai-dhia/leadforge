@@ -56,6 +56,13 @@ function tagLevel(flag: string): ReasonTag['level'] {
   return 'info';
 }
 
+/** An AI note that reuses a word of the rule checks says the same thing twice, so it is not shown. */
+function repeatsChecks(note: string, rules: string): boolean {
+  const words = (t: string) => t.toLowerCase().match(/[a-zà-ÿ]{4,}/g) ?? [];
+  const known = new Set(words(rules));
+  return words(note).some(w => known.has(w));
+}
+
 /** The reason line split for display: the kind of business, one tag per fact, and the AI sentence apart. */
 export function splitReason(text: string | null, fr: boolean): ReasonParts {
   if (!text) return { kind: '', tags: [], ai: '' };
@@ -69,7 +76,7 @@ export function splitReason(text: string | null, fr: boolean): ReasonParts {
   return {
     kind: kind ? translateReason(kind, fr) : '',
     tags: flags.map(f => ({ text: cap(translateReason(f, fr)), level: tagLevel(f) })),
-    ai: ai ? (fr ? ai[2] : ai[1]) : '',
+    ai: ai && !repeatsChecks(ai[1], rules) ? (fr ? ai[2] : ai[1]) : '',
   };
 }
 
