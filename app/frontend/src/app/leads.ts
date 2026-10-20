@@ -67,7 +67,7 @@ type StatusFilter = LeadStatus | 'ALL';
         }
         @for (g of signalGroups; track g) {
           <button type="button" class="chip" [class.on]="signal() === g" [attr.aria-pressed]="signal() === g" [title]="t('leads.signalHint')"
-            (click)="setSignal(g)">{{ t('leads.signal.' + g) }}</button>
+            (click)="setSignal(g)">{{ t(signalKey[g]) }}</button>
         }
         <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
@@ -116,6 +116,7 @@ export class LeadsPage {
   protected readonly status = signal<StatusFilter>('ALL');
   protected readonly reachable = signal(false);
   protected readonly signalGroups = ['gap', 'pain', 'neglect', 'momentum'] as const;
+  protected readonly signalKey = { gap: 'leads.signal.gap', pain: 'leads.signal.pain', neglect: 'leads.signal.neglect', momentum: 'leads.signal.momentum' } as const;
   protected readonly signal = signal<'' | 'gap' | 'pain' | 'neglect' | 'momentum'>('');
   /** Showing the hidden leads instead of the others. */
   protected readonly hidden = signal(false);
