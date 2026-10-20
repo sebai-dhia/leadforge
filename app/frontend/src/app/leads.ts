@@ -74,7 +74,6 @@ type StatusFilter = LeadStatus | 'ALL';
             } @else {
               <button type="button" class="danger-btn small" (click)="bulk('hide')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg> {{ t('leads.bulkHideN', { n: selectedCount() }) }}</button>
             }
-            <button type="button" class="ghost quiet small" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
           }
         </span>
         @if (hiddenCount() > 0 || hidden()) {
@@ -214,7 +213,8 @@ export class LeadsPage {
   protected isSelected(id: number) { return this.selected().has(id); }
   protected clearSelection() { this.selected.set(new Set()); this.lastPicked = -1; }
   protected toggleAll() {
-    this.selected.set(this.allSelected() ? new Set() : new Set(this.items().map(l => l.id)));
+    // like Gmail: with anything selected the box clears the selection, with nothing selected it selects all
+    this.selected.set(this.selectedCount() > 0 ? new Set() : new Set(this.items().map(l => l.id)));
     this.lastPicked = -1;
   }
   /** A click toggles one lead; shift-click selects everything between this one and the last one picked. */
