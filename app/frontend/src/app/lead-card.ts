@@ -21,7 +21,7 @@ export function whatsappDigits(phone: string | null): string | null {
   imports: [AreaPipe, FormsModule, NgTemplateOutlet],
   host: { '(document:click)': 'menuOpen.set(false)' },
   template: `
-    <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED' || current().hidden" [class.compact]="collapsible()">
+    <article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED' || current().hidden" [class.compact]="collapsible()" [class.open]="showBody()">
       @if (collapsible()) {
         <div class="lead-row">
           <button type="button" class="lead-main" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">

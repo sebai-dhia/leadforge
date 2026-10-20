@@ -139,7 +139,8 @@ select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .lead.compact { padding: 0; }
 .lead.compact > :not(.lead-row) { margin-left: 18px; margin-right: 18px; }
 .lead.compact > p:first-of-type { margin-top: 2px; }
-.lead.compact > :last-child:not(.lead-row) { margin-bottom: 18px; }
+/* the opened card keeps room under its last block, whatever that block is */
+.lead.compact.open { padding-bottom: 18px; }
 .lead-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 6px 12px 6px 6px; }
 .lead-main { flex: 1 1 260px; min-width: 0; display: flex; justify-content: flex-start; align-items: center; gap: 14px; text-align: left; padding: 8px 10px; min-height: 60px; background: transparent; color: var(--ink); border: 0; border-radius: 12px; font-weight: 400; }
 .lead-main:hover { background: var(--accent-soft); }
