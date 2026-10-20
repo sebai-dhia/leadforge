@@ -182,25 +182,13 @@ export function whatsappDigits(phone: string | null): string | null {
 
       @if (open()) {
         <div class="composer">
-          <div class="composer-controls">
-            <div class="ctl">
-              <span class="ctl-label">{{ t('card.langAria') }}</span>
-              <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
-                @for (l of languages; track l.value) {
-                  <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
-                    [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
-                }
-              </div>
-            </div>
-            <div class="ctl">
-              <span class="ctl-label">{{ t('card.channelAria') }}</span>
-              <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
-                <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
-                  [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
-                <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
-                  [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
-              </div>
-            </div>
+          <div class="brief-bar">
+            <button type="button" class="brief-toggle" (click)="toggleSettings()" [attr.aria-expanded]="showSettings()">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>
+              <span class="brief-title">{{ t('card.settings') }}</span>
+              <span class="brief-sum">{{ summary() }}</span>
+              <svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
             <button type="button" class="write-btn" [class.ghost]="!!current().emailBody" [class.quiet]="!!current().emailBody" (click)="generate()" [disabled]="generating()" [attr.aria-busy]="generating()">
               @if (generating()) {
                 <svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>
@@ -213,18 +201,48 @@ export function whatsappDigits(phone: string | null): string | null {
             </button>
           </div>
 
-          <div class="ctl approach">
-            <span class="ctl-label">{{ t('card.approach') }}</span>
-            <div class="chips" role="group" [attr.aria-label]="t('card.approach')">
-              @for (a of approaches; track a) {
-                <button type="button" class="chip" [class.on]="approach() === a" [attr.aria-pressed]="approach() === a" (click)="approach.set(a)">{{ t(approachKey[a]) }}</button>
-              }
+          @if (showSettings()) {
+            <div class="brief-panel">
+              <div class="brief-row">
+                <div class="ctl">
+                  <span class="ctl-label">{{ t('card.langAria') }}</span>
+                  <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
+                    @for (l of languages; track l.value) {
+                      <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
+                        [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
+                    }
+                  </div>
+                </div>
+                <div class="ctl">
+                  <span class="ctl-label">{{ t('card.channelAria') }}</span>
+                  <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
+                    <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
+                      [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
+                    <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
+                      [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ctl">
+                <span class="ctl-label">{{ t('card.approach') }}</span>
+                <div class="approach-grid" role="radiogroup" [attr.aria-label]="t('card.approach')">
+                  @for (o of approaches; track o) {
+                    <button type="button" class="approach-opt" role="radio" [attr.aria-checked]="approach() === o" (click)="approach.set(o)">
+                      <strong>{{ t(approachKey[o]) }}</strong>
+                      <span>{{ t(approachHint[o]) }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <label class="ctl note-field">
+                <span class="ctl-label">{{ t('card.noteLabel') }}</span>
+                <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
+                <span class="note-meta"><span>{{ t('card.noteHelp') }}</span><span class="num">{{ note().length }}/200</span></span>
+              </label>
             </div>
-          </div>
-          <label class="ctl note-field">
-            <span class="ctl-label">{{ t('card.noteLabel') }}</span>
-            <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
-          </label>
+          }
 
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
 
@@ -354,6 +372,16 @@ export class LeadCard {
   protected readonly approaches: Approach[] = ['auto', 'missing', 'success', 'fresh', 'timing', 'tip', 'curiosity'];
   protected readonly approachKey = { auto: 'card.approach.auto', missing: 'card.approach.missing', success: 'card.approach.success', fresh: 'card.approach.fresh', timing: 'card.approach.timing', tip: 'card.approach.tip', curiosity: 'card.approach.curiosity' } as const;
   protected readonly approach = signal<Approach>('auto');
+  protected readonly approachHint = { auto: 'card.approachHint.auto', missing: 'card.approachHint.missing', success: 'card.approachHint.success', fresh: 'card.approachHint.fresh', timing: 'card.approachHint.timing', tip: 'card.approachHint.tip', curiosity: 'card.approachHint.curiosity' } as const;
+  /** Open while there is no message yet; after that it folds away until the person asks for it. */
+  private readonly settingsToggled = signal<boolean | null>(null);
+  protected readonly showSettings = computed(() => this.settingsToggled() ?? !this.current().emailBody);
+  protected toggleSettings() { this.settingsToggled.set(!this.showSettings()); }
+  protected readonly summary = computed(() => {
+    const lang = this.languages.find(l => l.value === this.language())?.short ?? '';
+    const ch = this.t(this.channel() === 'email' ? 'channel.email' : 'channel.whatsapp');
+    return [lang, ch, this.t(this.approachKey[this.approach()]), this.note().trim() ? '+' : ''].filter(Boolean).join(' · ');
+  });
   protected readonly note = signal('');
   protected readonly language = linkedSignal<Lang>(() =>
     this.current().draftLanguage ?? (this.auth.isGuest() ? this.i18n.lang() : this.defaultLanguage()));
