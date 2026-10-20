@@ -112,10 +112,25 @@ if (hasArabic && hasLatin) {
     if (latinPart.length >= 2) fullName = latinPart;
   }
 } else if (hasArabic && lang !== 'ar') arabicOnlyName = true;
-const SEPARATOR = /\s+[-–—|:]\s+/;
-const businessName = arabicOnlyName ? '' : fullName.split(SEPARATOR)[0].length >= 6 ? fullName.split(SEPARATOR)[0] : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
+const SEPARATOR = /\s+[-–—|:\/]\s+/;
+// words that tell French from English in a business name (accents ignored by the second pass)
+const FR_NAME = /\b(cabinet|clinique|dentaire|dentiste|avocats?|pharmacie|agence|immobili[eè]re?|boulangerie|p[aâ]tisserie|institut|[ée]cole|ma[iî]tre|docteur|fleuriste|magasin|soci[ée]t[ée]|salle|coiffure|assurances?|opticien)\b/gi;
+const EN_NAME = /\b(clinic|dental|dentist|law|firm|lawyers?|pharmacy|agency|real|estate|bakery|school|center|store|florist|hairdresser|doctor|optician|travel|insurance|studio|office)\b/gi;
+const nameLanguage = s => { const f = (s.match(FR_NAME) || []).length, e = (s.match(EN_NAME) || []).length; return f > e ? 'fr' : e > f ? 'en' : ''; };
+// "Pharmacie Centrale / Central Pharmacy": the same name twice. Keep the version in the message language, never both.
+const nameParts = fullName.split(SEPARATOR).map(s => s.trim()).filter(Boolean);
+const firstPart = nameParts[0] || fullName;
+// The first part is the brand. It is replaced only when it is in the other language and a later part, in the message language,
+// is nearly as long: then it is the same name written again, not a tagline ("... Law Firm - Avocat Tunisie").
+const sameNameAgain = lang === 'ar' ? undefined : nameParts.slice(1).find(s => nameLanguage(s) === lang && s.length >= firstPart.length * 0.6);
+const shortName = nameLanguage(firstPart) && nameLanguage(firstPart) !== lang && sameNameAgain ? sameNameAgain : firstPart;
+// a tagline after a dash or a bar is dropped; a very short first part keeps the whole name
+const businessName = arabicOnlyName ? '' : shortName.length >= 6 ? shortName : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
+// a name that still mixes the two languages (no separator to cut at) is flagged so the message writes one version only
+const nameBilingual = lang !== 'ar' && !arabicOnlyName && (businessName.match(FR_NAME) || []).length > 0 && (businessName.match(EN_NAME) || []).length > 0;
 const business = [
   arabicOnlyName ? F.business.nameArabicOnly : line(F.business.name, businessName),
+  nameBilingual ? F.business.nameBilingual : null,
   b.niche ? line(F.business.type, clean(b.niche, L.type)) : null,
   b.address ? line(F.business.address, clean(b.address, L.address)) : null,
   line(F.business.reputation, reputation),
@@ -141,5 +156,5 @@ const prompt = render(PROMPTS.templates.user, {
 
 return [{ json: {
   system, prompt, knowledgeNew, linksHash: b.linksHash || '', lang, channel, limits, senderName,
-  businessName, hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
+  businessName, nameBilingual, hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
 } }];

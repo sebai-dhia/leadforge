@@ -24,7 +24,8 @@
     "signal": "Kind of opening: {{value}}",
     "userNote": "From the sender (true, and allowed to use): {{value}}",
     "notWeb": "Important: the sender does not sell websites. Never mention a website, or that one is missing or present.",
-    "nameArabicOnly": "Name: it is written in Arabic letters, so do not copy it into the message. Refer to the business by its kind, for example \"your clinic\" or \"your firm\"."
+    "nameArabicOnly": "Name: it is written in Arabic letters, so do not copy it into the message. Refer to the business by its kind, for example \"your clinic\" or \"your firm\".",
+    "nameBilingual": "Note: this name mixes two languages. In the message write only one version of it, in the message language, and never both."
   },
   "reputation": [
     {

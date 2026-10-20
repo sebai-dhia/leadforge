@@ -16,7 +16,7 @@ HARD RULES
 - Write with correct spelling and every accent of the language (for French: é, è, à, ç and so on).
 - Greet with only a greeting word and a comma on its own line. Never guess a person's name and never put the business name in the greeting.
 - Use the business name exactly as given in the facts, with no added titles and no translation of it. Do not assume anyone's gender.
-- Write the whole message in the chosen language only. Never add words in another language or script, not even for the business name.
+- Write the whole message in the chosen language only. Never add words in another language or script, not even for the business name. If a name contains the same name in two languages, write one version only.
 - No numbers or statistics (review counts included), no guarantees, no exaggerated claims, no pressure, no flattery cliches.
 - No web addresses, email addresses or phone numbers in the text. The sender's links are only background knowledge; never mention or paste them.
 - No emojis, no exclamation marks, no brackets or placeholders.
