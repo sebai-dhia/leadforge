@@ -174,7 +174,7 @@ export const EN_APP = {
   'card.errMsgLimit': "The daily message limit is reached, yours or the demo's. It frees up gradually over 24 hours.",
   'card.errMsgAi': 'The AI could not write this message. Try again in a moment.',
   'card.errMsgBusy': "Many messages are being written right now. Try again in a minute.",
-  'card.writingSlow': "Still writing. When many requests arrive at once, this can take up to a minute.",
+  'card.writingSlow': "Still writing. The AI service is slow right now, this can take up to two minutes.",
   'card.errOther': 'Something went wrong. Try again.',
   'card.errLookLimit': "The daily contact lookup limit is reached, yours or the demo's. It frees up gradually over 24 hours.",
   'card.errLookRun': 'The lookup could not run. Check that n8n is running and try again.',

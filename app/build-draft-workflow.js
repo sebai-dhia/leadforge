@@ -53,11 +53,11 @@ const workflow = {
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
         jsonBody: geminiBody('$json.prompt'),
-        options: { timeout: 30000 }
+        options: { timeout: 15000 }
       },
       id: 'd3', name: 'AI Write Message', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [800, 0],
-      // the free AI tier answers 429 when asked too fast: wait and ask again (n8n allows up to 5 tries and 5 s between them)
-      retryOnFail: true, maxTries: 4, waitBetweenTries: 5000,
+      // the free AI tier answers 429 when asked too fast: wait and ask again (n8n allows up to 5 tries). A call that has not answered after 15 s is given up and asked again: a normal answer takes 1 to 3 s
+      retryOnFail: true, maxTries: 4, waitBetweenTries: 4000,
       onError: 'continueRegularOutput'
     },
     {
@@ -71,10 +71,10 @@ const workflow = {
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
         jsonBody: geminiBody("$json.retryPrompt || ''"),
-        options: { timeout: 30000 }
+        options: { timeout: 15000 }
       },
       id: 'd9', name: 'AI Retry', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1200, 0],
-      retryOnFail: true, maxTries: 3, waitBetweenTries: 5000,
+      retryOnFail: true, maxTries: 3, waitBetweenTries: 4000,
       onError: 'continueRegularOutput'
     },
     {
