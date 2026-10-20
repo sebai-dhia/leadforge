@@ -1,7 +1,7 @@
 {
   "name": "draft",
   "description": "First-contact message from a freelancer to a local business (WhatsApp or email, English, French or Arabic).",
-  "model": "gemini-flash-lite-latest",
+  "model": "gemini-3.5-flash-lite",
   "temperature": 0.7,
   "maxOutputTokens": 900,
   "delimiters": { "open": "<<<", "close": ">>>" },
