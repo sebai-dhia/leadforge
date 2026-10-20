@@ -357,3 +357,9 @@ button.quiet:hover:not(:disabled) { color: var(--ink); }
 .msg-toggle.primary:hover { background: var(--accent); filter: brightness(1.08); }
 .msg-toggle.primary .ic { color: inherit; }
 .msg-toggle.primary .chev { border-color: var(--on-accent); }
+
+/* grips on the drawn search area */
+.bbox-handle { width: 14px; height: 14px; border-radius: 4px; background: #fff; border: 2px solid #3ddc97; box-shadow: 0 1px 4px rgb(0 0 0 / .45); }
+.bbox-handle::after { content: ""; position: absolute; inset: -10px; }
+.bbox-handle.nwse { cursor: nwse-resize; } .bbox-handle.nesw { cursor: nesw-resize; }
+.bbox-handle.ns { cursor: ns-resize; } .bbox-handle.ew { cursor: ew-resize; }

@@ -44,7 +44,7 @@ import { I18n } from './i18n';
       font-size: 13px;
     }
     .leaflet-container-view {
-      height: 260px;
+      height: clamp(320px, 46vh, 460px);
       width: 100%;
       z-index: 1;
     }
@@ -85,6 +85,14 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   private map: L.Map | null = null;
   private rect: L.Rectangle | null = null;
   private start: L.LatLng | null = null;
+  private bounds: L.LatLngBounds | null = null;
+  private handles: L.Marker[] = [];
+
+  /** Which sides each handle moves: corners first, then the middle of each edge (clockwise from the north-west). */
+  private static readonly SIDES: { n?: 1; s?: 1; e?: 1; w?: 1 }[] = [
+    { n: 1, w: 1 }, { n: 1 }, { n: 1, e: 1 }, { e: 1 }, { s: 1, e: 1 }, { s: 1 }, { s: 1, w: 1 }, { w: 1 },
+  ];
+  private static readonly CURSORS = ['nwse', 'ns', 'nesw', 'ew', 'nwse', 'ns', 'nesw', 'ew'];
 
   ngAfterViewInit() {
     const el = this.mapContainer()?.nativeElement;
@@ -118,6 +126,7 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   }
 
   protected clearDrawn() {
+    this.clearHandles();
     this.rect?.remove();
     this.rect = null;
     this.drawn.set(false);
@@ -133,6 +142,7 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
       if (!this.drawing() || !this.map) return;
       el.setPointerCapture(e.pointerId);
       this.start = at(e);
+      this.clearHandles();
       this.rect?.remove();
       this.rect = L.rectangle(L.latLngBounds(this.start, this.start), { color: '#3ddc97', weight: 2, fillOpacity: .15 }).addTo(this.map);
     });
@@ -146,6 +156,7 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
       const tiny = this.map!.latLngToContainerPoint(b.getNorthEast()).distanceTo(this.map!.latLngToContainerPoint(b.getSouthWest())) < 12;
       if (tiny) { this.rect.remove(); this.rect = null; return; }
       this.rect.setBounds(b);
+      this.showHandles(b);
       this.drawn.set(true);
       this.drawing.set(false);
       this.map!.dragging.enable();
@@ -153,6 +164,45 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
     };
     el.addEventListener('pointerup', finish);
     el.addEventListener('pointercancel', finish);
+  }
+
+  /** Eight grips on the drawn area (corners and edges), so a missed street is fixed by dragging, not by drawing again. */
+  private showHandles(b: L.LatLngBounds) {
+    this.clearHandles();
+    this.bounds = b;
+    this.handles = AreaMapSelector.SIDES.map((sides, i) => {
+      const m = L.marker(this.handlePoint(b, i), {
+        draggable: true,
+        keyboard: false,
+        icon: L.divIcon({ className: 'bbox-handle ' + AreaMapSelector.CURSORS[i], iconSize: [14, 14], iconAnchor: [7, 7] }),
+      }).addTo(this.map!);
+      m.on('drag', () => {
+        const p = m.getLatLng();
+        const cur = this.bounds!;
+        const north = sides.n ? p.lat : cur.getNorth();
+        const south = sides.s ? p.lat : cur.getSouth();
+        const east = sides.e ? p.lng : cur.getEast();
+        const west = sides.w ? p.lng : cur.getWest();
+        const next = L.latLngBounds([south, west], [north, east]);
+        this.bounds = next;
+        this.rect?.setBounds(next);
+        this.handles.forEach((h, j) => h.setLatLng(this.handlePoint(next, j)));
+        this.emit(next);
+      });
+      return m;
+    });
+  }
+
+  private handlePoint(b: L.LatLngBounds, i: number): L.LatLng {
+    const c = b.getCenter();
+    const lat = [b.getNorth(), b.getNorth(), b.getNorth(), c.lat, b.getSouth(), b.getSouth(), b.getSouth(), c.lat][i];
+    const lng = [b.getWest(), c.lng, b.getEast(), b.getEast(), b.getEast(), c.lng, b.getWest(), b.getWest()][i];
+    return L.latLng(lat, lng);
+  }
+
+  private clearHandles() {
+    this.handles.forEach(h => h.remove());
+    this.handles = [];
   }
 
   private updateBounds() {
@@ -173,6 +223,7 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.clearHandles();
     if (this.map) {
       this.map.remove();
       this.map = null;

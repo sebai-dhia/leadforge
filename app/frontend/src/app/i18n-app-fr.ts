@@ -208,7 +208,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'map.positioning': 'Positionnement de la carte…',
   'map.draw': 'Dessiner une zone',
   'map.drawHint': 'Faites glisser sur la carte pour dessiner la zone à rechercher.',
-  'map.drawnHint': 'Zone dessinée. Dessinez-en une autre pour la changer.',
+  'map.drawnHint': 'Zone dessinée. Faites glisser les carrés pour l\'ajuster, ou redessinez-la.',
   'map.clearDraw': 'Utiliser la carte visible',
   'map.big': 'La zone est grande. Les petites zones donnent des résultats plus utiles par recherche.',
 
