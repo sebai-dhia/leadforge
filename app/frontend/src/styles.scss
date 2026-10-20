@@ -373,7 +373,7 @@ button.quiet:hover:not(:disabled) { color: var(--ink); }
 .check input[type="checkbox"], .ack input[type="checkbox"] { display: inline-block; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; box-shadow: none; accent-color: var(--accent); cursor: pointer; }
 .check input[type="checkbox"]:focus-visible, .ack input[type="checkbox"]:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 @media (pointer: coarse) { .check { width: 44px; height: 44px; } }
-.chips .all-check { margin-right: 2px; }
+.chips .all-check { margin-right: 2px; align-self: center; }
 .lead-row { display: flex; align-items: flex-start; gap: 10px; }
 .lead-row > app-lead-card { flex: 1; min-width: 0; }
 .lead-row .pick { margin-top: 26px; }
