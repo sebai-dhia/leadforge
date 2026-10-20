@@ -29,7 +29,7 @@ export function whatsappDigits(phone: string | null): string | null {
               [title]="t(fit().key) + ' · ' + t('card.scoreTitle', { s: current().score ?? 0 })"><span class="num">{{ current().score }}</span></span>
             <span class="lead-title">
               <bdi class="lead-name">{{ current().name }}</bdi>
-              @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}</span> }
+              @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}@if (current().firstSeenAt) { · <span [title]="i18n.date(current().firstSeenAt, 'long')">{{ t('card.foundAgo', { when: i18n.ago(current().firstSeenAt) }) }}</span> }</span> }
             </span>
           </button>
           <div class="lead-actions">
@@ -81,6 +81,7 @@ export function whatsappDigits(phone: string | null): string | null {
       <p class="mute meta">
         <bdi>{{ current().address }}</bdi>
         @if (current().rating) { · {{ t('card.rated', { r: current().rating ?? 0, n: current().reviews ?? 0 }) }} }
+        @if (current().firstSeenAt) { · <span [title]="i18n.date(current().firstSeenAt, 'long')">{{ t('card.foundAgo', { when: i18n.ago(current().firstSeenAt) }) }}</span> }
       </p>
 
       @if (why(); as w) {

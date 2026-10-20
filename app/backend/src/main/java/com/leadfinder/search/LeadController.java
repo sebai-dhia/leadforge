@@ -290,8 +290,8 @@ public class LeadController {
 
     private static Sort sortFor(String sort) {
         return switch (sort) {
-            case "recent" -> Sort.by(Sort.Order.desc("lastSeenAt"), Sort.Order.asc("name"));
-            case "oldest" -> Sort.by(Sort.Order.asc("lastSeenAt"), Sort.Order.asc("name"));
+            case "recent" -> Sort.by(Sort.Order.desc("firstSeenAt"), Sort.Order.asc("name"));
+            case "oldest" -> Sort.by(Sort.Order.asc("firstSeenAt"), Sort.Order.asc("name"));
             case "name" -> Sort.by(Sort.Order.asc("name"));
             default -> Sort.by(Sort.Order.desc("score").nullsLast(), Sort.Order.asc("name"));
         };
