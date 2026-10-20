@@ -244,7 +244,8 @@ export const EN_APP = {
   'map.drawHint': 'Drag on the map to draw the area to search.',
   'map.drawnHint': 'Area drawn. Drag the squares to adjust it, or draw again.',
   'map.clearDraw': 'Use the visible map',
-  'map.big': 'That is a large area. Smaller areas give more useful results per search.',
+    'map.bigDrawn': 'Your drawn area is about {w} × {h} km, which is large. Drag the squares to shrink it: smaller areas give more useful results per search.',
+  'map.bigView': 'The visible map is about {w} × {h} km, which is large. Zoom in or draw a smaller area: smaller areas give more useful results per search.',
 
   // profile
   'profile.loadingAria': 'Loading profile',

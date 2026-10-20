@@ -19,7 +19,7 @@ import { I18n } from './i18n';
         </span>
       </div>
       <div #mapContainer class="leaflet-container-view" [class.drawing]="drawing()" [attr.aria-label]="t('map.aria')"></div>
-      @if (tooBig()) { <p class="big" role="status">{{ t('map.big') }}</p> }
+      @if (tooBig()) { <p class="big" role="status">{{ t(drawn() ? 'map.bigDrawn' : 'map.bigView', { w: sizeKm().w, h: sizeKm().h }) }}</p> }
       <div class="bbox-readout">
         <span class="label">{{ t('map.coords') }}</span>
         <code>{{ currentBbox() || t('map.positioning') }}</code>
@@ -82,6 +82,8 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   protected readonly drawing = signal(false);
   protected readonly drawn = signal(false);
   protected readonly tooBig = signal(false);
+  /** Width and height in kilometres of the area that counts: the drawn rectangle, or the visible map when nothing is drawn. */
+  protected readonly sizeKm = signal({ w: 0, h: 0 });
   private map: L.Map | null = null;
   private rect: L.Rectangle | null = null;
   private start: L.LatLng | null = null;
@@ -212,6 +214,11 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
 
   private emit(b: L.LatLngBounds) {
     this.tooBig.set(b.getEast() - b.getWest() > 0.35 || b.getNorth() - b.getSouth() > 0.35);
+    const midLat = (b.getNorth() + b.getSouth()) / 2;
+    this.sizeKm.set({
+      w: Math.round((b.getEast() - b.getWest()) * 111.32 * Math.cos(midLat * Math.PI / 180)),
+      h: Math.round((b.getNorth() - b.getSouth()) * 110.57),
+    });
     // Geoapify rect format: minLon,minLat,maxLon,maxLat
     const minLon = b.getWest().toFixed(4);
     const minLat = b.getSouth().toFixed(4);

@@ -238,7 +238,8 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'map.drawHint': 'Faites glisser sur la carte pour dessiner la zone à rechercher.',
   'map.drawnHint': 'Zone dessinée. Faites glisser les carrés pour l\'ajuster, ou redessinez-la.',
   'map.clearDraw': 'Utiliser la carte visible',
-  'map.big': 'La zone est grande. Les petites zones donnent des résultats plus utiles par recherche.',
+    'map.bigDrawn': 'La zone dessinée fait environ {w} × {h} km, ce qui est grand. Faites glisser les carrés pour la réduire : les petites zones donnent des résultats plus utiles par recherche.',
+  'map.bigView': 'La carte visible fait environ {w} × {h} km, ce qui est grand. Zoomez ou dessinez une zone plus petite : les petites zones donnent des résultats plus utiles par recherche.',
 
   'profile.loadingAria': 'Chargement du profil',
   'profile.yourName': 'Votre nom',
