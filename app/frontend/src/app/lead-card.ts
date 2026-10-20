@@ -222,6 +222,11 @@ export function whatsappDigits(phone: string | null): string | null {
                       [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
                   </div>
                 </div>
+                <label class="ctl note-field">
+                <span class="ctl-label">{{ t('card.noteLabel') }}</span>
+                <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
+                <span class="note-meta"><span>{{ t('card.noteHelp') }}</span><span class="num">{{ note().length }}/200</span></span>
+                </label>
               </div>
 
               <div class="ctl">
@@ -235,12 +240,6 @@ export function whatsappDigits(phone: string | null): string | null {
                   }
                 </div>
               </div>
-
-              <label class="ctl note-field">
-                <span class="ctl-label">{{ t('card.noteLabel') }}</span>
-                <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
-                <span class="note-meta"><span>{{ t('card.noteHelp') }}</span><span class="num">{{ note().length }}/200</span></span>
-              </label>
             </div>
           }
 
