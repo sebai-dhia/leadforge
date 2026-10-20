@@ -76,7 +76,7 @@ export function splitReason(text: string | null, fr: boolean): ReasonParts {
  * The AI check adds " AI: <English sentence> [[fr:<French sentence>]]" to the rule-based reason.
  * English shows the English sentence; French swaps in the French one.
  */
-const AI_PART = /\s*AI: (.*?)\s*\[\[fr:(.*?)\]\]\s*$/;
+const AI_PART = /\s*AI: (.*?)\s*\[\[fr:(.*?)\]\](?:\s*\[\[sig:\w+\]\])?\s*$/;
 
 export function translateReason(text: string | null, fr: boolean): string {
   if (!text) return '';

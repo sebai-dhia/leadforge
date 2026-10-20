@@ -79,7 +79,9 @@ const reviews = Number(b.reviews) || 0;
 const tier = F.reputation.find(t => reviews >= t.minReviews && rating >= t.minRating);
 const reputation = tier ? tier.text : F.reputationNone;
 const socialNames = [...new Set((Array.isArray(b.social) ? b.social : []).map(u => /instagram/i.test(u) ? 'Instagram' : /facebook/i.test(u) ? 'Facebook' : null).filter(Boolean))];
-const reason = clean(b.reason, L.reason);
+const sigMatch = String(b.reason || '').match(/\[\[sig:(gap|pain|neglect|momentum)\]\]/);
+const signalText = sigMatch ? F.signals[sigMatch[1]] : '';
+const reason = clean(String(b.reason || '').replace(/\s*\[\[fr:.*?\]\]/g, '').replace(/\s*\[\[sig:\w+\]\]/g, ''), L.reason);
 const aiAt = reason.indexOf(' AI: ');
 const checks = (aiAt >= 0 ? reason.slice(0, aiAt) : reason).replace(/^[^:]*:\s*/, '');
 const aiNote = aiAt >= 0 ? reason.slice(aiAt + 5) : '';
@@ -93,6 +95,7 @@ const business = [
   businessSays ? line(F.business.says, businessSays) : null,
   checks ? line(F.business.checks, checks) : null,
   aiNote ? line(F.business.aiNote, aiNote) : null,
+  signalText ? line(F.business.signal, signalText) : null,
 ].filter(Boolean).join('\n');
 
 const system = render(PROMPTS.templates.system, { open: D.open, close: D.close });

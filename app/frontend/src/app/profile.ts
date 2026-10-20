@@ -125,13 +125,13 @@ import { Toasts } from './toast';
                       <input class="url" inputmode="url" autocapitalize="off" spellcheck="false" [attr.aria-label]="t('profile.linkAddr', { n: $index + 1 })" maxlength="300" [placeholder]="t('profile.linkUrlPh')"
                         [ngModel]="l.url" (ngModelChange)="setLink($index, 'url', $event)" (blur)="tidyLink($index)" [ngModelOptions]="{ standalone: true }">
                     </div>
-                    <button type="button" class="drop" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">
+                    <button type="button" class="drop" [class.hide]="linkDraft().length === 1 && !l.label && !l.url" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
                     </button>
                     @if (linkErrors()[$index]; as e) { <p class="err row-err" role="alert">{{ t(e) }}</p> }
                   </div>
                 }
-                @if (linkDraft().length < MAX_LINKS) {
+                @if (linkDraft().length < MAX_LINKS && linkDraft()[linkDraft().length - 1].url.trim()) {
                   <button type="button" class="add-row" (click)="addLink()">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                     {{ t('profile.addLink') }}<span class="count num">{{ t('profile.linksCount', { n: linkDraft().length }) }}</span>
@@ -199,6 +199,8 @@ import { Toasts } from './toast';
   `,
   styles: `
     :host { display: block; }
+    /* the save row is set apart from the fields above it, so the language choice does not read as part of it */
+    form:not(.link-form) > .actions { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
     .identity { background: var(--card); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; margin-bottom: 24px; }
     .banner { height: 96px; background: linear-gradient(120deg, var(--accent-soft), var(--bg) 70%); }
     .id-body { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 0 32px 28px; margin-top: -44px; }
@@ -249,6 +251,8 @@ import { Toasts } from './toast';
     .row-err { grid-column: 1 / -1; margin: 0; font-size: 13px; }
     .drop { min-height: 40px; width: 40px; padding: 0; border-radius: 50%; background: transparent; border: 0; color: var(--mute); }
     .drop:hover { background: var(--accent-soft); color: var(--warn); filter: none; }
+    .drop.hide { visibility: hidden; }
+    .link-form .actions { margin-top: 6px; display: flex; gap: 10px; }
     .drop svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
     .add-row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px; background: transparent; color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); font-weight: 500; }
     .add-row:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); filter: none; }

@@ -64,6 +64,7 @@ public class LeadController {
                          @RequestParam(defaultValue = "") String status,
                          @RequestParam(defaultValue = "false") boolean reachable,
                          @RequestParam(defaultValue = "false") boolean hidden,
+                         @RequestParam(defaultValue = "") String signal,
                          @RequestParam(defaultValue = "") String q,
                          @RequestParam(defaultValue = "0") long searchId,
                          @RequestParam(defaultValue = "score") String sort,
@@ -73,12 +74,12 @@ public class LeadController {
         String st = validStatus(status);
         String pattern = likePattern(q);
         int pageSize = Math.max(1, Math.min(size, 100));
-        Page<Lead> result = leads.search(uid, hidden, st, reachable, pattern, searchId,
+        Page<Lead> result = leads.search(uid, hidden, st, reachable, signalPattern(signal), pattern, searchId,
                 PageRequest.of(Math.max(0, page), pageSize, sortFor(sort)));
 
         Map<String, Long> counts = new LinkedHashMap<>();
         STATUSES.stream().sorted().forEach(s -> counts.put(s, 0L));
-        for (Object[] row : leads.statusCounts(uid, hidden, reachable, pattern, searchId)) {
+        for (Object[] row : leads.statusCounts(uid, hidden, reachable, signalPattern(signal), pattern, searchId)) {
             counts.put((String) row[0], (Long) row[1]);
         }
         return new LeadPage(result.getContent().stream().map(LeadDto::of).toList(),
@@ -91,10 +92,11 @@ public class LeadController {
     public ResponseEntity<byte[]> export(@AuthenticationPrincipal Jwt jwt,
                                          @RequestParam(defaultValue = "") String status,
                                          @RequestParam(defaultValue = "false") boolean reachable,
+                                         @RequestParam(defaultValue = "") String signal,
                                          @RequestParam(defaultValue = "") String q,
                                          @RequestParam(defaultValue = "0") long searchId,
                                          @RequestParam(defaultValue = "score") String sort) {
-        List<Lead> rows = leads.search(userId(jwt), false, validStatus(status), reachable, likePattern(q), searchId,
+        List<Lead> rows = leads.search(userId(jwt), false, validStatus(status), reachable, signalPattern(signal), likePattern(q), searchId,
                 PageRequest.of(0, MAX_EXPORT, sortFor(sort))).getContent();
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
@@ -240,6 +242,13 @@ public class LeadController {
 
     private Long userId(Jwt jwt) {
         return Long.valueOf(jwt.getSubject());
+    }
+
+    private static final java.util.Set<String> SIGNALS = java.util.Set.of("gap", "pain", "neglect", "momentum");
+
+    /** The AI marks each checked lead with [[sig:group]] in its reason; an unknown group means no filter. */
+    private static String signalPattern(String signal) {
+        return signal != null && SIGNALS.contains(signal) ? "%[[sig:" + signal + "]]%" : "";
     }
 
     /** A lead is only reachable by the user who owns it. */

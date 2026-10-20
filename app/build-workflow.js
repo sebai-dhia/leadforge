@@ -370,7 +370,8 @@ for (const res of results) {
   if (!l || !(fit >= 1 && fit <= 10)) continue;
   l.score = Math.max(1, Math.min(10, Math.round(0.5 * l.score + 0.5 * fit)));
   const en = tidy(res.why_en), fr = tidy(res.why_fr);
-  if (en) l.reason = l.reason + ' AI: ' + en + (fr ? ' [[fr:' + fr + ']]' : '');
+  const sig = ['gap', 'pain', 'neglect', 'momentum'].includes(res.signal) ? res.signal : '';
+  if (en) l.reason = l.reason + ' AI: ' + en + (fr ? ' [[fr:' + fr + ']]' : '') + (sig ? ' [[sig:' + sig + ']]' : '');
 }
 return leads.map(json => ({ json }));
 

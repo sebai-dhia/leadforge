@@ -20,12 +20,31 @@
     "social": "Also online on: {{value}}",
     "says": "What the business says about itself (copied text): {{open}}{{value}}{{close}}",
     "checks": "Our own checks (internal notes, never quote them): {{value}}",
-    "aiNote": "Our AI note (internal, never quote it): {{value}}"
+    "aiNote": "Our AI note (internal, never quote it): {{value}}",
+    "signal": "Kind of opening: {{value}}"
   },
   "reputation": [
-    { "minReviews": 100, "minRating": 4.2, "text": "very well reviewed by customers" },
-    { "minReviews": 30, "minRating": 4, "text": "well reviewed by customers" },
-    { "minReviews": 5, "minRating": 0, "text": "has some customer reviews" }
+    {
+      "minReviews": 100,
+      "minRating": 4.2,
+      "text": "very well reviewed by customers"
+    },
+    {
+      "minReviews": 30,
+      "minRating": 4,
+      "text": "well reviewed by customers"
+    },
+    {
+      "minReviews": 5,
+      "minRating": 0,
+      "text": "has some customer reviews"
+    }
   ],
-  "reputationNone": "few or no reviews online"
+  "reputationNone": "few or no reviews online",
+  "signals": {
+    "gap": "something the sender's service provides seems to be missing. Say it gently in the business's own terms, then ask whether they already have it covered.",
+    "pain": "customers seem to struggle with this. Show you understand the problem, with no blame, then ask a small question about it.",
+    "neglect": "it exists but looks dated or little used. Frame the benefit of a fresh start without criticising what they have.",
+    "momentum": "the business looks active and growing. Congratulate the growth briefly and ask whether they are planning the next step."
+  }
 }

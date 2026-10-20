@@ -46,6 +46,7 @@ export interface NewSearch {
 export interface LeadFilters {
   status: LeadStatus | 'ALL';
   reachable: boolean;
+  signal: '' | 'gap' | 'pain' | 'neglect' | 'momentum';
   hidden: boolean;
   q: string;
   searchId: number;
@@ -115,6 +116,7 @@ export class ApiService {
     return new HttpParams()
       .set('status', f.status === 'ALL' ? '' : f.status)
       .set('reachable', f.reachable)
+      .set('signal', f.signal)
       .set('hidden', f.hidden)
       .set('q', f.q.trim())
       .set('searchId', f.searchId)
