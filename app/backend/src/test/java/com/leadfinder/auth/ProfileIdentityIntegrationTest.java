@@ -122,15 +122,4 @@ class ProfileIdentityIntegrationTest extends IntegrationTestBase {
         assertEquals("lawyers", out.get(1));
         assertTrue(out.size() <= 8);
     }
-
-    @Test
-    void draftsEndWithTheFirstTwoLinks() {
-        AppUser u = user();
-        u.setLinks("[{\"label\":\"Portfolio\",\"url\":\"https://sam.example\"},{\"label\":\"LinkedIn\",\"url\":\"https://linkedin.com/in/sam\"},{\"label\":\"X\",\"url\":\"https://x.com/sam\"}]");
-        String body = com.leadfinder.search.LeadController.withLinks("Hello,\nI can help.", u);
-        assertEquals("Hello,\nI can help.\n\nPortfolio: https://sam.example\nLinkedIn: https://linkedin.com/in/sam", body);
-        // a link the AI already wrote is not repeated
-        assertEquals("See https://sam.example\n\nLinkedIn: https://linkedin.com/in/sam\nX: https://x.com/sam",
-                com.leadfinder.search.LeadController.withLinks("See https://sam.example", u));
-    }
 }

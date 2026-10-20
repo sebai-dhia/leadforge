@@ -192,7 +192,7 @@ public class LeadController {
             users.save(user);
         }
         lead.setSubject(draft.subject() == null ? "" : draft.subject());
-        lead.setEmailBody(withLinks(draft.body(), user));
+        lead.setEmailBody(draft.body());
         lead.setDraftLanguage(req.language());
         lead.setDraftPromptVersion(draft.promptVersion() == null || draft.promptVersion().isBlank() ? null : draft.promptVersion());
         lead.setDraftChannel(req.channel());
@@ -203,20 +203,6 @@ public class LeadController {
     private static String senderName(AppUser user) {
         String name = user.getDisplayName() == null ? "" : user.getDisplayName().strip();
         return "GUEST".equals(user.getRole()) || name.equalsIgnoreCase("guest") ? "" : name;
-    }
-
-    /** Adds the person's first two links under the message, unless the AI already wrote them. */
-    public static String withLinks(String body, AppUser user) {
-        var links = com.leadfinder.auth.ProfileController.ProfileDto.of(user).links();
-        StringBuilder sb = new StringBuilder(body.stripTrailing());
-        int added = 0;
-        for (var l : links) {
-            if (added == 2) break;
-            if (body.contains(l.url())) continue;
-            sb.append(added == 0 ? "\n\n" : "\n").append(l.label()).append(": ").append(l.url());
-            added++;
-        }
-        return sb.toString();
     }
 
     /**
