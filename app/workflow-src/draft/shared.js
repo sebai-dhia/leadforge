@@ -24,6 +24,9 @@ function lint(o, ctx) {
   for (const name of [ctx.businessName, ctx.senderName]) {
     if (name && name.length >= 2) plain = plain.split(name).join(' ');
   }
+  // a number that belongs to a name ("Hotel Best Night 2") is fine even when the AI shortens or respells the rest of the name
+  const nameNumbers = [...new Set([ctx.businessName, ctx.senderName].join(' ').match(/\d+/g) || [])];
+  if (nameNumbers.length) plain = plain.replace(new RegExp('(?<!\\d)(' + nameNumbers.join('|') + ')(?!\\d)', 'g'), ' ');
 
   const max = Math.round(ctx.limits.words * 1.1);
   if (words(body) > max) problems.push('it is too long (' + words(body) + ' words, at most ' + ctx.limits.words + ')');

@@ -28,7 +28,7 @@ public class N8nClient {
     public N8nClient(AppProperties props) {
         this.props = props;
         this.trigger = client(Duration.ofSeconds(15));
-        this.draft = client(Duration.ofSeconds(60)); // the AI writes the message while we wait
+        this.draft = client(Duration.ofSeconds(120)); // the AI writes the message while we wait; a second try after a rate limit can take over a minute
     }
 
     private static RestClient client(Duration readTimeout) {
