@@ -61,6 +61,9 @@ function lint(o, ctx) {
   if (words(firstLine) > 4) problems.push('the greeting must be a single short line, such as "Bonjour,"');
   if (ctx.businessName && ctx.businessName.length >= 3 && norm(firstLine).includes(norm(ctx.businessName))) problems.push('the greeting contains the business name');
   const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
-  if (ctx.senderName && !norm(lines[lines.length - 1]).includes(norm(ctx.senderName))) problems.push('it must end with the sender name on its own line');
+  // in Arabic the name is written in Arabic letters, so only the shape is checked there: a short last line
+  const last = lines[lines.length - 1] || '';
+  const signed = ctx.lang === 'ar' ? words(last) <= 4 : norm(last).includes(norm(ctx.senderName));
+  if (ctx.senderName && !signed) problems.push('it must end with the sender name on its own line');
   return problems;
 }

@@ -157,3 +157,11 @@ test('our internal notes are not repeated to the business', () => {
   const r = check("Bonjour,\n\nVotre salle est très active sur Google Maps. Avez-vous un outil de réservation ?\n\nDhia Eddin");
   assert.ok(r.problems.some(p => /internal note/.test(p)));
 });
+
+test('an Arabic message signed with the name in Arabic letters is fine; a long last line is not a signature', () => {
+  const arCtx = { ...ctx, lang: 'ar', senderName: 'Dhia Eddin', businessName: 'Cesart hair-style' };
+  const signed = 'مرحباً،\n\nأنا ضياء الدين، مطور ويب في تونس. أبني مواقع بسيطة وأدوات حجز.\n\nلم أجد موقعاً إلكترونياً لـ Cesart hair-style. هل تفكرون في إنشاء موقع؟\n\nضياء الدين';
+  assert.deepEqual(check(signed, arCtx).problems, []);
+  const unsigned = signed.replace('\n\nضياء الدين', '\n\nأتمنى أن تردوا علي في أقرب وقت ممكن لنتحدث عن الموضوع');
+  assert.ok(check(unsigned, arCtx).problems.some(p => /end with the sender name/.test(p)));
+});
