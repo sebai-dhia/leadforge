@@ -16,7 +16,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class N8nCallbackController {
 
-    public record Results(Long jobId, List<IncomingLead> leads) {}
+    /** areaName: for a drawn rectangle, the town most of the results are in (optional). */
+    public record Results(Long jobId, List<IncomingLead> leads, String areaName) {}
 
     private final SearchJobRepository jobs;
     private final LeadService leadService;
@@ -36,10 +37,19 @@ public class N8nCallbackController {
         if (job.getStatus() == SearchJob.Status.DONE) {
             return; // idempotent: ignore duplicate callbacks
         }
+        nameDrawnArea(job, body.areaName());
         LeadService.IngestResult result = leadService.ingest(job, body.leads() == null ? List.of() : body.leads());
         job.setFoundCount(result.found());
         job.setNewCount(result.created());
         job.setStatus(SearchJob.Status.DONE);
         jobs.save(job);
+    }
+
+    /** "Map Area [bbox]" becomes "Map Area: Tunis [bbox]", so the search and its leads can say where they are. */
+    static void nameDrawnArea(SearchJob job, String areaName) {
+        if (job.getBbox() == null || areaName == null) return;
+        String name = areaName.replaceAll("[\\[\\]:|]", "").strip();
+        if (name.isEmpty() || name.length() > 60) return;
+        job.setCity("Map Area: " + name + " [" + job.getBbox() + "]");
     }
 }

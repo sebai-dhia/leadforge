@@ -15,6 +15,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'spec.my': 'Ma spécialisation',
   'spec.errSave': 'Impossible de changer votre spécialisation. Réessayez.',
   'area.drawn': 'Zone dessinée sur la carte',
+  'area.drawnNear': '{name} (zone dessinée)',
   'status.all': 'Tous',
   'status.new': 'Nouveau',
   'status.contacted': 'Contacté',

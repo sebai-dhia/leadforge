@@ -16,6 +16,7 @@ export const EN_APP = {
 
   // shared
   'area.drawn': 'Drawn map area',
+  'area.drawnNear': '{name} (drawn area)',
   'status.all': 'All',
   'status.new': 'New',
   'status.contacted': 'Contacted',

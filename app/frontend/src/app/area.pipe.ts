@@ -8,7 +8,9 @@ export class AreaPipe implements PipeTransform {
 
   transform(value: string | null | undefined): string {
     if (!value) return '';
-    if (/^map area/i.test(value)) return this.t('area.drawn');
+    // "Map Area [bbox]" or, once the results named it, "Map Area: Tunis [bbox]"
+    const drawn = value.match(/^map area(?::\s*([^[]+?))?\s*(\[|$)/i);
+    if (drawn) return drawn[1] ? this.t('area.drawnNear', { name: drawn[1] }) : this.t('area.drawn');
     return value.replace(/\s*\|\s*/g, ', ');
   }
 }
