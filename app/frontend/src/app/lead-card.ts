@@ -225,7 +225,7 @@ export function whatsappDigits(phone: string | null): string | null {
               <textarea [id]="'b' + current().id" dir="auto" [attr.rows]="rows()" [ngModel]="body()" (ngModelChange)="body.set($event); onEdit()" (blur)="saveNow()"></textarea>
             </label>
             <div class="msg-foot">
-              <p class="ai-note"><span class="ai-badge">{{ t('card.aiBadge') }}</span> {{ t('card.aiNote') }}</p>
+              <p class="ai-note"><svg class="ic ai-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ t('card.aiNote') }}</p>
               <span class="save-state" role="status" [attr.data-state]="saveState()">
                 @switch (saveState()) {
                   @case ('saving') { {{ t('card.saving') }} }
