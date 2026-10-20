@@ -313,11 +313,7 @@ export class Landing implements OnInit {
   protected readonly choosing = signal(false);
   readonly error = signal<I18nKey | null>(null);
   readonly full = signal(false);
-  private readonly seats = signal<{ n: number; max: number; full: boolean } | null>(null);
-  protected readonly seatsLabel = () => {
-    const s = this.seats();
-    return !s ? this.t('landing.seatsDefault') : this.t(s.full ? 'landing.seatsFull' : 'landing.seatsOpen', { n: s.n, max: s.max });
-  };
+  protected readonly seatsLabel = () => this.t(this.full() ? 'landing.seatsFull' : 'landing.seatsDefault');
 
   /** The headline rises word by word once, when the page opens. A language change afterwards does not replay it. */
   protected readonly booting = signal(true);
@@ -349,9 +345,8 @@ export class Landing implements OnInit {
     this.api.demoStatus().subscribe({
       next: s => {
         this.full.set(s.demoFull);
-        this.seats.set({ n: s.activeSessions, max: s.maxSessions, full: s.demoFull });
       },
-      error: () => { /* the page still works without the live count */ },
+      error: () => { /* the page still works without it */ },
     });
   }
 

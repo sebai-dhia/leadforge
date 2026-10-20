@@ -143,10 +143,7 @@ function emailOf(credential: string): string {
 
             @if (!linkCredential()) {
               <section class="guest" [attr.aria-label]="t('login.newHere')">
-                <div class="guest-head">
-                  <strong>{{ t('login.newHere') }}</strong>
-                  <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ t('login.seats', { n: activeCount(), max: maxCount() }) }}</span>
-                </div>
+                <strong class="guest-title">{{ t('login.newHere') }}</strong>
                 <p>{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
                 <button type="button" class="btn ghost guest-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(true)">
                   {{ t('login.guest') }}
@@ -222,11 +219,7 @@ function emailOf(credential: string): string {
     .quiet-link { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 0; background: transparent; border: 0; color: var(--mute); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: transparent; transition: color .2s ease, text-decoration-color .2s ease; }
     .quiet-link:hover:not(:disabled) { color: var(--ink); text-decoration-color: currentColor; filter: none; }
     .guest { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .025); }
-    .guest-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .guest-head strong { font-family: var(--font-display); font-size: 17px; letter-spacing: -.01em; }
-    .seats { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .03em; color: var(--mute); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-    .dot.full { background: var(--warn); }
+    .guest-title { font-family: var(--font-display); font-size: 17px; letter-spacing: -.01em; }
     .guest p { color: var(--mute); font-size: 13px; line-height: 1.4; margin: 6px 0 10px; }
     .guest p.problem { margin: 10px 0 0; }
     .guest-btn { width: 100%; min-height: 44px; border-radius: 12px; }
@@ -256,8 +249,6 @@ export class Login implements OnInit {
   readonly busy = signal(false);
   protected readonly choosing = signal(false);
   readonly error = signal<I18nKey | null>(null);
-  readonly activeCount = signal(0);
-  readonly maxCount = signal(5);
   readonly idleMinutes = signal(15);
   readonly demoFull = signal(false);
   readonly googleUnavailable = signal(false);
@@ -280,8 +271,6 @@ export class Login implements OnInit {
   refreshStatus() {
     this.api.demoStatus().subscribe({
       next: s => {
-        this.activeCount.set(s.activeSessions);
-        this.maxCount.set(s.maxSessions);
         this.idleMinutes.set(s.idleMinutes);
         this.demoFull.set(s.demoFull);
       },
