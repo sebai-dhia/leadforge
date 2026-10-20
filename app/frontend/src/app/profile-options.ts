@@ -1,7 +1,7 @@
 /** The chips offered in onboarding and on the profile page. Target labels must match the backend's industry map. */
 export const SERVICE_OPTIONS = [
   'Web development', 'UI/UX design', 'Mobile apps', 'Branding and logos', 'SEO', 'Automation',
-  'Copywriting', 'Video and motion', 'Photography', 'Social media', 'E-commerce', 'Online ads', 'Graphic design', 'Translation',
+  'Copywriting', 'Video and motion', 'Photography', 'Social media', 'Online ads', 'Graphic design', 'Translation', 'Illustration', 'Voice-over',
 ];
 
 export const TARGET_OPTIONS = [
@@ -24,8 +24,9 @@ export const SERVICE_TARGETS: Record<string, string[]> = {
   'Video and motion': ['Restaurants and cafés', 'Hotels and guesthouses', 'Gyms and fitness', 'Beauty salons', 'Schools and training'],
   'Photography': ['Restaurants and cafés', 'Hotels and guesthouses', 'Beauty salons', 'Hair salons', 'Bakeries', 'Dentists and clinics'],
   'Social media': ['Restaurants and cafés', 'Beauty salons', 'Hair salons', 'Gyms and fitness', 'Bakeries', 'Hotels and guesthouses'],
-  'E-commerce': ['Bakeries', 'Beauty salons', 'Pharmacies', 'Restaurants and cafés', 'Car repair'],
   'Online ads': ['Restaurants and cafés', 'Beauty salons', 'Hair salons', 'Gyms and fitness', 'Dentists and clinics', 'Car repair'],
   'Graphic design': ['Restaurants and cafés', 'Bakeries', 'Beauty salons', 'Hair salons', 'Schools and training', 'Gyms and fitness'],
   'Translation': ['Hotels and guesthouses', 'Law firms', 'Schools and training', 'Doctors and clinics', 'Dentists and clinics'],
+  'Illustration': ['Restaurants and cafés', 'Bakeries', 'Beauty salons', 'Schools and training', 'Hotels and guesthouses'],
+  'Voice-over': ['Hotels and guesthouses', 'Schools and training', 'Restaurants and cafés', 'Gyms and fitness', 'Car repair'],
 };
