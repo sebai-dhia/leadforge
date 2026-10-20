@@ -390,3 +390,4 @@ button.danger-btn { background: var(--warn); border-color: var(--warn); color: #
 .chips .sel-inline .sel-count { font-weight: 600; white-space: nowrap; margin-right: 4px; }
 .chips .sel-inline button { min-height: 34px; padding: 4px 14px; font-size: 13.5px; }
 @media (max-width: 560px) { .chips .sp.sel-inline { display: flex; flex: 1 1 100%; padding-left: 0; } }
+.chips .sel-inline .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
