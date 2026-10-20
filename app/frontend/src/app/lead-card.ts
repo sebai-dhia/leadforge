@@ -88,10 +88,13 @@ export function whatsappDigits(phone: string | null): string | null {
           @if (w.kind) { <span class="why-kind">{{ w.kind }}</span> }
           <div class="rtags">
             @for (tag of w.tags; track tag.text) { <span class="rtag" [attr.data-level]="tag.level">{{ tag.text }}</span> }
+            @if (w.ai) {
+              <span class="rtag ai-tag" [title]="t('card.aiNote')">
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+                <span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ w.ai }}
+              </span>
+            }
           </div>
-          @if (w.ai) {
-            <p class="ai"><span class="ai-badge">{{ t('card.aiBadge') }}</span><span>{{ w.ai }}</span></p>
-          }
         </section>
       }
 

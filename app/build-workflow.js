@@ -362,7 +362,7 @@ try {
   const o = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   results = Array.isArray(o.results) ? o.results : [];
 } catch (e) { results = []; }
-const tidy = t => String(t || '').replace(/\[\[|\]\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200);
+const tidy = t => String(t || '').replace(/\[\[|\]\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 90);
 for (const res of results) {
   const i = idx[(Number(res.k) || 0) - 1];
   const l = i === undefined ? null : leads[i];
