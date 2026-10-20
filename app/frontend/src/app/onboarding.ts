@@ -5,7 +5,7 @@ import { ApiService, Lang, ProfileUpdate } from './api.service';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
 import { I18n, I18nKey } from './i18n';
-import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPTIONS, closestServices } from './profile-options';
+import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPTIONS, closestServices, hintedTargets } from './profile-options';
 
 /** First-run picker, also reused to change the chips later (?edit=1&step=1|2|3). */
 @Component({
@@ -47,6 +47,7 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPT
                 <button type="submit" class="ghost" [disabled]="!other.trim() || services().length >= maxServices">{{ t('ob.add') }}</button>
               </form>
               <p class="count-note" role="status">{{ t('ob.selected', { n: services().length, max: maxServices }) }}</p>
+              @for (r of readings(); track r.service) { <p class="reading">{{ r.text }}</p> }
             }
             @case (2) {
               <h1>{{ t('ob.s2Title') }}</h1>
@@ -147,6 +148,7 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPT
     .count-note { margin: 20px 0 0; font-size: 14px; color: var(--mute); }
     .more-kinds { margin-top: 14px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: transparent; color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); font-weight: 500; }
     .more-kinds:hover { background: var(--accent-soft); filter: none; }
+    .reading { margin: 8px 0 0; font-size: 14px; color: var(--mute); }
     .group-label { margin: 22px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
     .group-label:first-of-type { margin-top: 0; }
     .preview { margin: 0 0 24px; padding: 16px 18px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
@@ -192,6 +194,8 @@ export class Onboarding {
     for (const service of this.services()) {
       // a service the person typed is read as the standard services it is closest to
       const known = SERVICE_TARGETS[service] ? [service] : closestServices(service);
+      // a typed service that names its clients puts those business types ahead of everything else
+      if (!SERVICE_TARGETS[service]) for (const t of hintedTargets(service)) score.set(t, (score.get(t) ?? 0) + 30);
       for (const key of known) {
         const fits = SERVICE_TARGETS[key] ?? [];
         fits.forEach((t, i) => score.set(t, (score.get(t) ?? 0) + (fits.length - i)));
@@ -223,6 +227,15 @@ export class Onboarding {
     const all = this.otherTargets();
     return this.showAllOthers() ? all : all.filter((t, i) => i < this.OTHERS_SHOWN || this.targets().includes(t));
   });
+  /** How each typed service was understood, shown in step 1 so a wrong guess is visible. */
+  protected readonly readings = computed(() => this.services().filter(s => !SERVICE_TARGETS[s]).map(service => {
+    const as = closestServices(service).map(s => this.i18n.chip(s));
+    const suits = hintedTargets(service).map(t => this.i18n.chip(t));
+    const text = !as.length && !suits.length
+      ? this.t('ob.readNone', { service })
+      : [as.length ? this.t('ob.readAs', { service, as: as.join(', ') }) : '', suits.length ? this.t('ob.readSuits', { targets: suits.join(', ') }) : ''].filter(Boolean).join(' ');
+    return { service, text };
+  }));
   protected readonly otherTargets = computed(() => this.rankedTargets().filter(t => !this.suggestedTargets().includes(t)));
 
   /** "photography, copywriting and SEO" in the interface language, for use in the middle of a sentence. */
