@@ -50,6 +50,7 @@ type StatusFilter = LeadStatus | 'ALL';
           <select id="sort" [ngModel]="sort()" (ngModelChange)="setSort($event)">
             <option value="score">{{ t('leads.sortScore') }}</option>
             <option value="recent">{{ t('leads.sortRecent') }}</option>
+            <option value="oldest">{{ t('leads.sortOldest') }}</option>
             <option value="name">{{ t('leads.sortName') }}</option>
           </select>
         </label>

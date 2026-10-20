@@ -43,6 +43,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'leads.sortBy': 'Trier par',
   'leads.sortScore': 'Meilleur score',
   'leads.sortRecent': 'Trouvés récemment',
+  'leads.sortOldest': "Trouvés il y a longtemps",
   'leads.sortName': 'Nom',
   'leads.reachable': 'Joignable',
   'leads.selectAll': "Tout sélectionner",

@@ -7,7 +7,7 @@ export type Lang = 'en' | 'fr' | 'ar';
 export type Channel = 'email' | 'whatsapp';
 export type Approach = 'auto' | 'missing' | 'success' | 'fresh' | 'timing' | 'tip' | 'curiosity';
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'REPLIED' | 'NOT_INTERESTED';
-export type LeadSort = 'score' | 'recent' | 'name';
+export type LeadSort = 'score' | 'recent' | 'oldest' | 'name';
 
 export interface Job {
   id: number; niche: string; city: string; bbox?: string; status: JobStatus; createdAt: string;

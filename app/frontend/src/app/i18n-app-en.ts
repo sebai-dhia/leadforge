@@ -45,6 +45,7 @@ export const EN_APP = {
   'leads.sortBy': 'Sort by',
   'leads.sortScore': 'Best fit',
   'leads.sortRecent': 'Recently found',
+  'leads.sortOldest': "Oldest found",
   'leads.sortName': 'Name',
   'leads.reachable': 'Has a way to contact',
   'leads.selectAll': "Select all",
