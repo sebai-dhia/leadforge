@@ -23,6 +23,8 @@ public class AuthController {
 
     public record GoogleLogin(@NotBlank @Size(max = 4096) String credential) {}
 
+    public record GoogleLink(@NotBlank @Size(max = 4096) String credential, @NotBlank @Size(max = 100) String password) {}
+
     public record TokenResponse(String token, String email, String role, boolean isDemo, boolean onboarded) {}
 
     private final UserRepository users;
@@ -61,11 +63,14 @@ public class AuthController {
         String ip = request.getRemoteAddr();
         String email = c.email().trim().toLowerCase();
         throttle.checkLogin(ip, email);
-        AppUser u = users.findByEmail(email)
-                .filter(x -> x.getPasswordHash() != null && encoder.matches(c.password(), x.getPasswordHash()))
-                .orElse(null);
+        AppUser found = users.findByEmail(email).orElse(null);
+        AppUser u = found != null && found.getPasswordHash() != null && encoder.matches(c.password(), found.getPasswordHash()) ? found : null;
         if (u == null) {
             throttle.recordLoginFailure(ip, email);
+            // an account made with Google has no password: say how to get in instead of "invalid credentials"
+            if (found != null && found.getPasswordHash() == null && found.getGoogleSub() != null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account uses Google sign-in");
+            }
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         requireFreeSeat(u);
@@ -110,6 +115,46 @@ public class AuthController {
         } else {
             requireFreeSeat(u);
         }
+        return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
+    }
+
+    /**
+     * Connects a Google identity to an existing password account. Both proofs are needed: a valid Google token whose
+     * verified email is the account's email, and the account's password. Anyone who only registered the address
+     * (without owning it) cannot pass the Google check, and anyone with only the Google login cannot pass the password check.
+     */
+    @PostMapping("/google/link")
+    public TokenResponse linkGoogle(@Valid @RequestBody GoogleLink body, HttpServletRequest request) {
+        if (props.google() == null || props.google().clientId() == null || props.google().clientId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Google sign-in is not enabled");
+        }
+        GoogleTokenVerifier.GoogleIdentity id;
+        try {
+            id = googleVerifier.verify(body.credential());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google sign-in could not be verified");
+        }
+        if (!id.emailVerified()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Your Google email address is not verified");
+        }
+        String ip = request.getRemoteAddr();
+        String email = id.email().trim().toLowerCase();
+        throttle.checkLogin(ip, email);
+        AppUser u = users.findByEmail(email)
+                .filter(x -> x.getPasswordHash() != null && encoder.matches(body.password(), x.getPasswordHash()))
+                .orElse(null);
+        if (u == null) {
+            throttle.recordLoginFailure(ip, email);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+        AppUser other = users.findByGoogleSub(id.sub()).orElse(null);
+        if ((other != null && !other.getId().equals(u.getId())) || (u.getGoogleSub() != null && !u.getGoogleSub().equals(id.sub()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This account is connected to another Google account");
+        }
+        requireFreeSeat(u);
+        u.setGoogleSub(id.sub());
+        users.save(u);
+        throttle.clearLogin(ip, email);
         return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
     }
 

@@ -14,6 +14,14 @@ import { SpecializationKey } from './specialization-picker';
  * Sign-in. Returning people sign in (Google first, then email); newcomers get the guest option below.
  * Same night-map look as the landing page, drawn for the dark theme only.
  */
+/** For display only: the server reads the email from the verified token itself. */
+function emailOf(credential: string): string {
+  try {
+    const payload = JSON.parse(atob(credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.email === 'string' ? payload.email : '';
+  } catch { return ''; }
+}
+
 @Component({
   selector: 'app-login',
   imports: [FormsModule, RouterLink, Logo, GoogleSignIn, LangSwitch, SpecializationDialog],
@@ -71,37 +79,67 @@ import { SpecializationKey } from './specialization-picker';
             <h1>{{ t('login.title') }}</h1>
             <p class="lede">{{ t('login.lede') }}</p>
 
-            <app-google-sign-in (credential)="google($event)" (failed)="googleUnavailable.set(true)" />
-            @if (googleUnavailable()) { <p class="note">{{ t('login.googleUnavailable') }}</p> }
-            @if (googleError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
-
-            <div class="or"><span></span>{{ t('login.orEmail') }}<span></span></div>
-
-            <form (ngSubmit)="submit()" [attr.aria-label]="t('login.formLabel')">
-              <label>{{ t('login.email') }}
-                <input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" [(ngModel)]="email">
-              </label>
-              <label>{{ t('login.password') }}
-                <span class="pw">
-                  <input name="password" [type]="showPw() ? 'text' : 'password'" required minlength="8" autocomplete="current-password"
-                    [placeholder]="t('login.passwordHint')" [(ngModel)]="password">
-                  <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
-                    @if (showPw()) {
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.1 10.1 0 0 1 12 20c-6.5 0-10-8-10-8a18.5 18.5 0 0 1 5.1-5.9"/><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="m2 2 20 20"/></svg>
-                    } @else {
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8-10-8-10-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    }
-                  </button>
-                </span>
-              </label>
-              @if (error(); as e) {
-                <p class="problem" role="alert">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                  {{ t(e) }}
-                </p>
-              }
-              <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.signingIn') : t('login.signin') }}</button>
-            </form>
+            @if (linkCredential()) {
+              <section class="link" [attr.aria-label]="t('login.linkTitle')">
+                <div class="link-head">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <div>
+                    <strong>{{ t('login.linkTitle') }}</strong>
+                    @if (linkEmail()) { <span class="who">{{ linkEmail() }}</span> }
+                  </div>
+                </div>
+                <p class="link-text">{{ t('login.linkText') }}</p>
+                <form (ngSubmit)="link()" [attr.aria-label]="t('login.linkTitle')">
+                  <label>{{ t('login.password') }}
+                    <span class="pw">
+                      <input name="linkpw" [type]="showPw() ? 'text' : 'password'" required minlength="8" autocomplete="current-password" [placeholder]="t('login.passwordHint')" [(ngModel)]="linkPassword">
+                      <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
+                        @if (showPw()) {
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                        } @else {
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                      </button>
+                    </span>
+                  </label>
+                  @if (linkError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+                  <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.linkBusy') : t('login.linkBtn') }}</button>
+                  <button type="button" class="btn ghost cancel" (click)="cancelLink()" [disabled]="busy()">{{ t('login.linkCancel') }}</button>
+                </form>
+              </section>
+            } @else {
+              <app-google-sign-in (credential)="google($event)" (failed)="googleUnavailable.set(true)" />
+              @if (googleUnavailable()) { <p class="note">{{ t('login.googleUnavailable') }}</p> }
+              @if (googleError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+  
+              <div class="or"><span></span>{{ t('login.orEmail') }}<span></span></div>
+  
+              <form (ngSubmit)="submit()" [attr.aria-label]="t('login.formLabel')">
+                <label>{{ t('login.email') }}
+                  <input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" [(ngModel)]="email">
+                </label>
+                <label>{{ t('login.password') }}
+                  <span class="pw">
+                    <input name="password" [type]="showPw() ? 'text' : 'password'" required minlength="8" autocomplete="current-password"
+                      [placeholder]="t('login.passwordHint')" [(ngModel)]="password">
+                    <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
+                      @if (showPw()) {
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.1 10.1 0 0 1 12 20c-6.5 0-10-8-10-8a18.5 18.5 0 0 1 5.1-5.9"/><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="m2 2 20 20"/></svg>
+                      } @else {
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8-10-8-10-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                      }
+                    </button>
+                  </span>
+                </label>
+                @if (error(); as e) {
+                  <p class="problem" role="alert">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    {{ t(e) }}
+                  </p>
+                }
+                <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.signingIn') : t('login.signin') }}</button>
+              </form>
+            }
 
             <section class="guest" [attr.aria-label]="t('login.newHere')">
               <div class="guest-head">
@@ -173,6 +211,13 @@ import { SpecializationKey } from './specialization-picker';
     .eye:hover { color: var(--ink); background: var(--accent-soft); filter: none; }
     .submit { width: 100%; min-height: 48px; border-radius: 12px; font-size: 16px; margin-top: 2px; }
 
+    .link { padding: 16px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--accent); }
+    .link-head { display: flex; align-items: center; gap: 12px; }
+    .link-head svg { flex: none; color: var(--accent); }
+    .link-head strong { display: block; font-size: 16px; }
+    .link-head .who { display: block; margin-top: 2px; font: 500 13px/1.4 var(--font-mono); color: var(--mute); overflow-wrap: anywhere; }
+    .link-text { margin: 12px 0 14px; font-size: 14px; line-height: 1.5; color: var(--mute); }
+    .link .cancel { width: 100%; min-height: 44px; margin-top: 8px; }
     .guest { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .025); }
     .guest-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .guest-head strong { font-family: var(--font-display); font-size: 17px; letter-spacing: -.01em; }
@@ -214,6 +259,11 @@ export class Login implements OnInit {
   readonly demoFull = signal(false);
   readonly googleUnavailable = signal(false);
   readonly googleError = signal<I18nKey | null>(null);
+  /** The Google token waiting to be connected to an existing password account, and what to show about it. */
+  protected readonly linkCredential = signal<string | null>(null);
+  protected readonly linkEmail = signal('');
+  protected readonly linkError = signal<I18nKey | null>(null);
+  protected linkPassword = '';
 
   protected readonly dots: [number, number, boolean][] = [[150, 96, true], [255, 56, false], [340, 122, true], [205, 140, false], [430, 150, true], [300, 86, false], [95, 150, false]];
   protected readonly points: [I18nKey, I18nKey][] = [
@@ -263,12 +313,45 @@ export class Login implements OnInit {
         this.busy.set(false);
         this.googleError.set(
           e.status === 429 ? 'login.full'
-          : e.status === 409 ? 'login.errExists'
           : e.status === 401 ? 'login.errGoogle'
           : 'login.errServer');
         if (e.status === 429) this.refreshStatus();
+        if (e.status === 409) {
+          // the email already has a password account: ask for its password once, to connect Google to it
+          this.googleError.set(null);
+          this.linkCredential.set(credential);
+          this.linkEmail.set(emailOf(credential));
+          this.linkPassword = '';
+          this.linkError.set(null);
+        }
       },
     });
+  }
+
+  link() {
+    const credential = this.linkCredential();
+    if (!credential || this.busy()) return;
+    this.busy.set(true);
+    this.linkError.set(null);
+    this.auth.googleLink(credential, this.linkPassword).subscribe({
+      next: () => this.router.navigateByUrl(this.auth.home()),
+      error: e => {
+        this.busy.set(false);
+        this.linkError.set(
+          e.status === 401 ? 'login.errLinkWrong'
+          : e.status === 409 ? 'login.errLinkOther'
+          : e.status === 429 ? 'login.errLinkLater'
+          : e.status === 400 ? 'login.errLinkExpired'
+          : 'login.errServer');
+        if (e.status === 400) { this.linkCredential.set(null); this.googleError.set('login.errLinkExpired'); }
+      },
+    });
+  }
+
+  cancelLink() {
+    this.linkCredential.set(null);
+    this.linkPassword = '';
+    this.linkError.set(null);
   }
 
   private fail(e: { status: number }) {
@@ -280,6 +363,10 @@ export class Login implements OnInit {
     }
     if (e.status === 401) {
       this.error.set('login.errWrong');
+      return;
+    }
+    if (e.status === 403) {
+      this.error.set('login.errGoogleOnly');
       return;
     }
     this.error.set('login.errServer');

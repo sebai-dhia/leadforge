@@ -47,6 +47,11 @@ export class AuthService {
     return this.http.post<TokenResponse>(`${API}/auth/google`, { credential })
       .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
+  /** Connects Google to an existing password account: needs the Google token and the account's password. */
+  googleLink(credential: string, password: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/google/link`, { credential, password })
+      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
+  }
   /** One click: a private temporary account that is deleted after a short idle time. */
   guest(specialization?: string) {
     return this.http.post<TokenResponse>(`${API}/auth/guest`, specialization ? { specialization } : {})
