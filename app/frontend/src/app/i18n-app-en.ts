@@ -281,7 +281,7 @@ export const EN_APP = {
   'profile.noLinks': 'No links yet.',
   'profile.linksEdit': "Edit",
   'profile.linksHint': "Shown under your messages. Leadforge also reads them to write better messages.",
-  'profile.linksEmptyTitle': "Add your portfolio, GitHub or LinkedIn",
+  'profile.linksEmptyTitle': "Add your portfolio, Behance, GitHub or LinkedIn",
   'profile.linksEmptyText': "They appear under your messages, and Leadforge reads them to write messages that sound like you.",
   'profile.linkLabelPh': "Name (Portfolio)",
   'profile.linkUrlPh': "example.com",

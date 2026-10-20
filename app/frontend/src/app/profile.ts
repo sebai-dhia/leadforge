@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
 import { Toasts } from './toast';
+import { linkSite, suggestedLabel } from './link-icons';
 
 @Component({
   selector: 'app-profile',
@@ -148,13 +149,11 @@ import { Toasts } from './toast';
               <div class="links">
                 @for (l of p.links; track l.url) {
                   <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="t('profile.openLink', { label: l.label })">
-                    <span class="badge-ic" [attr.data-kind]="linkKind(l.url)">
-                      @switch (linkKind(l.url)) {
-                        @case ('github') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg> }
-                        @case ('linkedin') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg> }
-                        @case ('instagram') { <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg> }
-                        @case ('facebook') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> }
-                        @default { <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> }
+                    <span class="badge-ic">
+                      @if (siteOf(l.url); as site) {
+                        <svg class="brand" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="site.path"/></svg>
+                      } @else {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                       }
                     </span>
                     <span class="text"><strong>{{ l.label }}</strong><span class="host">{{ linkHost(l.url) }}</span></span>
@@ -235,6 +234,7 @@ import { Toasts } from './toast';
     .link:hover { box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
     .link:hover .out { color: var(--accent); transform: translate(2px, -2px); }
     .badge-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--accent); }
+    .badge-ic svg.brand { fill: currentColor; stroke: none; }
     .badge-ic svg, .out { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -373,10 +373,7 @@ export class ProfilePage {
 
   // ---- links
   protected linkHost(url: string) { return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, ''); }
-  protected linkKind(url: string): 'github' | 'linkedin' | 'instagram' | 'facebook' | 'web' {
-    const h = url.toLowerCase();
-    return /github\.com/.test(h) ? 'github' : /linkedin\.com/.test(h) ? 'linkedin' : /instagram\.com/.test(h) ? 'instagram' : /facebook\.com|fb\.com/.test(h) ? 'facebook' : 'web';
-  }
+  protected siteOf(url: string) { return linkSite(url); }
 
   protected startLinks() {
     const p = this.profile();
@@ -400,6 +397,8 @@ export class ProfilePage {
   protected tidyLink(i: number) {
     const url = this.linkDraft()[i]?.url.trim();
     if (url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) this.setLink(i, 'url', 'https://' + url);
+    // an empty name is filled from the address: "Behance", "GitHub", or the site's own address
+    if (url && !this.linkDraft()[i].label.trim()) this.setLink(i, 'label', suggestedLabel(url));
   }
 
   protected saveLinks() {

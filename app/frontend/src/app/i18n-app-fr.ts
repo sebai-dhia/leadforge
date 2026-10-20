@@ -274,7 +274,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'profile.noLinks': 'Aucun lien pour le moment.',
   'profile.linksEdit': "Modifier",
   'profile.linksHint': "Affichés sous vos messages. Leadforge les lit aussi pour mieux rédiger vos messages.",
-  'profile.linksEmptyTitle': "Ajoutez votre portfolio, GitHub ou LinkedIn",
+  'profile.linksEmptyTitle': "Ajoutez votre portfolio, Behance, GitHub ou LinkedIn",
   'profile.linksEmptyText': "Ils apparaissent sous vos messages, et Leadforge les lit pour écrire des messages qui vous ressemblent.",
   'profile.linkLabelPh': "Nom (Portfolio)",
   'profile.linkUrlPh': "exemple.com",
