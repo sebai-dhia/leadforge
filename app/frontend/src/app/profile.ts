@@ -5,6 +5,7 @@ import { ApiService, Lang, Profile, ProfileLink, ProfileStats, UsageMap } from '
 import { AuthService } from './auth.service';
 import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
+import { Toasts } from './toast';
 
 @Component({
   selector: 'app-profile',
@@ -70,19 +71,6 @@ import { I18n, I18nKey } from './i18n';
               }
             </div>
           </fieldset>
-          <fieldset>
-            <legend>{{ t('profile.linksLegend') }}</legend>
-            @for (l of links(); track $index) {
-              <div class="link-row">
-                <input [attr.aria-label]="t('profile.linkName', { n: $index + 1 })" maxlength="30" placeholder="Portfolio" [ngModel]="l.label"
-                  (ngModelChange)="setLink($index, 'label', $event)" [ngModelOptions]="{ standalone: true }">
-                <input [attr.aria-label]="t('profile.linkAddr', { n: $index + 1 })" maxlength="300" placeholder="https://" [ngModel]="l.url"
-                  (ngModelChange)="setLink($index, 'url', $event)" [ngModelOptions]="{ standalone: true }">
-                <button type="button" class="ghost icon" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">✕</button>
-              </div>
-            }
-            @if (links().length < 5) { <button type="button" class="ghost" (click)="addLink()">{{ t('profile.addLink') }}</button> }
-          </fieldset>
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
           <div class="actions">
             <button type="submit" [disabled]="saving()">{{ saving() ? t('profile.saving') : t('profile.save') }}</button>
@@ -121,15 +109,66 @@ import { I18n, I18nKey } from './i18n';
 
         <div class="col side-col">
           @if (!auth.isGuest() || p.links.length) {
-          <section class="card block">
-            <h2>{{ t('profile.myLinks') }}</h2>
-            <p class="mute note">{{ t('profile.linksNote') }}</p>
-            <div class="links">
-              @for (l of p.links; track l.url) {
-                <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer"><strong>{{ l.label }}</strong><span>{{ l.url }}</span></a>
-              } @empty { <p class="mute">{{ t('profile.noLinks') }}</p> }
-              @if (!auth.isGuest()) { <button type="button" class="link add" (click)="startEdit(true)">{{ t('profile.addLinkBtn') }}</button> }
+          <section class="card block links-card">
+            <div class="block-head">
+              <h2>{{ t('profile.myLinks') }}</h2>
+              @if (!auth.isGuest() && !editingLinks() && p.links.length) { <button type="button" class="btn ghost small" (click)="startLinks()">{{ t('profile.linksEdit') }}</button> }
             </div>
+
+            @if (editingLinks()) {
+              <form class="link-form" (ngSubmit)="saveLinks()" novalidate>
+                @for (l of linkDraft(); track $index) {
+                  <div class="link-edit" [class.bad]="linkErrors()[$index]">
+                    <div class="fields">
+                      <input class="label" [attr.aria-label]="t('profile.linkName', { n: $index + 1 })" maxlength="30" [placeholder]="t('profile.linkLabelPh')"
+                        [ngModel]="l.label" (ngModelChange)="setLink($index, 'label', $event)" [ngModelOptions]="{ standalone: true }">
+                      <input class="url" inputmode="url" autocapitalize="off" spellcheck="false" [attr.aria-label]="t('profile.linkAddr', { n: $index + 1 })" maxlength="300" [placeholder]="t('profile.linkUrlPh')"
+                        [ngModel]="l.url" (ngModelChange)="setLink($index, 'url', $event)" (blur)="tidyLink($index)" [ngModelOptions]="{ standalone: true }">
+                    </div>
+                    <button type="button" class="drop" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    </button>
+                    @if (linkErrors()[$index]; as e) { <p class="err row-err" role="alert">{{ t(e) }}</p> }
+                  </div>
+                }
+                @if (linkDraft().length < MAX_LINKS) {
+                  <button type="button" class="add-row" (click)="addLink()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    {{ t('profile.addLink') }}<span class="count num">{{ t('profile.linksCount', { n: linkDraft().length }) }}</span>
+                  </button>
+                }
+                @if (linksError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+                <div class="actions">
+                  <button type="submit" [disabled]="linksSaving()">{{ linksSaving() ? t('profile.saving') : t('profile.linksSave') }}</button>
+                  <button type="button" class="ghost" (click)="cancelLinks()" [disabled]="linksSaving()">{{ t('profile.cancel') }}</button>
+                </div>
+              </form>
+            } @else if (p.links.length) {
+              <p class="mute note">{{ t('profile.linksHint') }}</p>
+              <div class="links">
+                @for (l of p.links; track l.url) {
+                  <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="t('profile.openLink', { label: l.label })">
+                    <span class="badge-ic" [attr.data-kind]="linkKind(l.url)">
+                      @switch (linkKind(l.url)) {
+                        @case ('github') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg> }
+                        @case ('linkedin') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg> }
+                        @case ('instagram') { <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg> }
+                        @case ('facebook') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> }
+                        @default { <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> }
+                      }
+                    </span>
+                    <span class="text"><strong>{{ l.label }}</strong><span class="host">{{ linkHost(l.url) }}</span></span>
+                    <svg class="out" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                  </a>
+                }
+              </div>
+            } @else {
+              <div class="links-empty">
+                <p><strong>{{ t('profile.linksEmptyTitle') }}</strong></p>
+                <p class="mute">{{ t('profile.linksEmptyText') }}</p>
+                @if (!auth.isGuest()) { <button type="button" (click)="startLinks()">{{ t('profile.addLink') }}</button> }
+              </div>
+            }
           </section>
           }
 
@@ -175,10 +214,6 @@ import { I18n, I18nKey } from './i18n';
     .edit h2 { margin-top: 0; }
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 600px) { .two { grid-template-columns: 1fr; } }
-    .link-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .link-row input { margin: 0; }
-    .icon { min-width: 44px; padding: 0; }
-    @media (max-width: 600px) { .link-row { grid-template-columns: 1fr auto; } .link-row input:nth-child(2) { grid-column: 1 / -1; grid-row: 2; } }
     .cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
     .main-col { flex: 2 1 540px; } .side-col { flex: 1 1 300px; }
     .col { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
@@ -192,11 +227,34 @@ import { I18n, I18nKey } from './i18n';
     .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
     .note { font-size: 14px; margin: 12px 0 0; } .block h2 + .note { margin: -8px 0 14px; }
     .about { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; font-size: 15.5px; white-space: pre-line; }
-    .links { display: flex; flex-direction: column; gap: 10px; }
-    .link { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); text-decoration: none; color: var(--ink); font: inherit; min-height: 44px; text-align: left; transition: border-color .2s ease; }
-    .link:hover { border-color: var(--line-strong); filter: none; }
-    .link span { color: var(--mute); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .link.add { border-style: dashed; color: var(--mute); cursor: pointer; flex-direction: row; align-items: center; }
+    /* the links card: rows that read as a premium list, and an editor that lives in the same card */
+    .links { display: flex; flex-direction: column; gap: 8px; }
+    .link { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); text-decoration: none; color: var(--ink); min-height: 56px; transition: box-shadow .2s ease, background-color .2s ease; }
+    .link:hover { box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+    .link:hover .out { color: var(--accent); transform: translate(2px, -2px); }
+    .badge-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--accent); }
+    .badge-ic svg, .out { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .host { color: var(--mute); font: 500 12.5px/1.4 var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .out { flex: none; color: var(--mute); transition: transform .2s ease, color .2s ease; }
+    .links-empty { text-align: center; padding: 22px 16px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); }
+    .links-empty p { margin: 0 0 6px; } .links-empty button { margin-top: 10px; }
+    .link-form { display: grid; gap: 10px; }
+    .link-edit { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; padding: 10px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+    .link-edit.bad { box-shadow: inset 0 0 0 1px var(--warn); }
+    .link-edit .fields { display: grid; gap: 8px; }
+    .link-edit input { margin: 0; min-height: 42px; background: var(--card); }
+    .link-edit input.url { font-family: var(--font-mono); font-size: 13.5px; }
+    .row-err { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+    .drop { min-height: 40px; width: 40px; padding: 0; border-radius: 50%; background: transparent; border: 0; color: var(--mute); }
+    .drop:hover { background: var(--accent-soft); color: var(--warn); filter: none; }
+    .drop svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .add-row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px; background: transparent; color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); font-weight: 500; }
+    .add-row:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); filter: none; }
+    .add-row svg { width: 18px; height: 18px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+    .add-row .count { margin-left: auto; color: var(--mute); font-size: 12.5px; }
+    @media (prefers-reduced-motion: reduce) { .link, .out { transition: none; } .link:hover .out { transform: none; } }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .stat { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
     .big { font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.1; color: var(--accent); }
@@ -232,7 +290,14 @@ export class ProfilePage {
   protected city = '';
   protected about = '';
   protected readonly language = signal<Lang>('en');
-  protected readonly links = signal<ProfileLink[]>([]);
+  /** The links card edits on its own: it saves only the links. */
+  protected readonly MAX_LINKS = 5;
+  protected readonly editingLinks = signal(false);
+  protected readonly linkDraft = signal<ProfileLink[]>([]);
+  protected readonly linkErrors = signal<(I18nKey | null)[]>([]);
+  protected readonly linksSaving = signal(false);
+  protected readonly linksError = signal<I18nKey | null>(null);
+  private readonly toasts = inject(Toasts);
 
   protected readonly initials = computed(() => {
     const p = this.profile();
@@ -290,7 +355,7 @@ export class ProfilePage {
     this.router.navigateByUrl('/login');
   }
 
-  protected startEdit(addLink = false) {
+  protected startEdit() {
     const p = this.profile();
     if (!p) return;
     this.displayName = p.displayName;
@@ -298,16 +363,61 @@ export class ProfilePage {
     this.city = p.city;
     this.about = p.about;
     this.language.set(p.language);
-    this.links.set(p.links.map(l => ({ ...l })));
-    if (addLink && this.links().length < 5) this.addLink();
     this.error.set(null);
     this.editing.set(true);
   }
 
-  protected addLink() { this.links.set([...this.links(), { label: '', url: '' }]); }
-  protected removeLink(i: number) { this.links.set(this.links().filter((_, j) => j !== i)); }
+  // ---- links
+  protected linkHost(url: string) { return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, ''); }
+  protected linkKind(url: string): 'github' | 'linkedin' | 'instagram' | 'facebook' | 'web' {
+    const h = url.toLowerCase();
+    return /github\.com/.test(h) ? 'github' : /linkedin\.com/.test(h) ? 'linkedin' : /instagram\.com/.test(h) ? 'instagram' : /facebook\.com|fb\.com/.test(h) ? 'facebook' : 'web';
+  }
+
+  protected startLinks() {
+    const p = this.profile();
+    if (!p) return;
+    this.linkDraft.set(p.links.length ? p.links.map(l => ({ ...l })) : [{ label: '', url: '' }]);
+    this.linkErrors.set([]);
+    this.linksError.set(null);
+    this.editingLinks.set(true);
+  }
+  protected cancelLinks() { this.editingLinks.set(false); }
+  protected addLink() { this.linkDraft.set([...this.linkDraft(), { label: '', url: '' }]); }
+  protected removeLink(i: number) {
+    this.linkDraft.set(this.linkDraft().filter((_, j) => j !== i));
+    this.linkErrors.set([]);
+  }
   protected setLink(i: number, key: 'label' | 'url', value: string) {
-    this.links.set(this.links().map((l, j) => (j === i ? { ...l, [key]: value } : l)));
+    this.linkDraft.set(this.linkDraft().map((l, j) => (j === i ? { ...l, [key]: value } : l)));
+    if (this.linkErrors()[i]) this.linkErrors.set(this.linkErrors().map((e, j) => (j === i ? null : e)));
+  }
+  /** Forgiving input: "example.com" becomes "https://example.com" when the person leaves the field. */
+  protected tidyLink(i: number) {
+    const url = this.linkDraft()[i]?.url.trim();
+    if (url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) this.setLink(i, 'url', 'https://' + url);
+  }
+
+  protected saveLinks() {
+    const rows = this.linkDraft().map(l => ({ label: l.label.trim(), url: /^[a-z][a-z0-9+.-]*:/i.test(l.url.trim()) || !l.url.trim() ? l.url.trim() : 'https://' + l.url.trim() }));
+    const errors = rows.map((l): I18nKey | null => {
+      if (!l.label && !l.url) return null;
+      if (!l.label || !l.url) return 'profile.errLinkNeedsBoth';
+      return /^https?:\/\/[^\s/.]+\.[^\s]{2,}$/i.test(l.url) ? null : 'profile.errLinkAddress';
+    });
+    this.linkErrors.set(errors);
+    if (errors.some(Boolean)) return;
+    this.linksSaving.set(true);
+    this.linksError.set(null);
+    this.api.saveProfile({ links: rows.filter(l => l.label && l.url) }).subscribe({
+      next: p => {
+        this.profile.set(p);
+        this.linksSaving.set(false);
+        this.editingLinks.set(false);
+        this.toasts.show(this.t('profile.linksSaved'));
+      },
+      error: () => { this.linksSaving.set(false); this.linksError.set('profile.errLinksSave'); },
+    });
   }
 
   protected save() {
@@ -315,7 +425,7 @@ export class ProfilePage {
     this.error.set(null);
     this.api.saveProfile({
       displayName: this.displayName, headline: this.headline, city: this.city, about: this.about,
-      language: this.language(), links: this.links().filter(l => l.label.trim() || l.url.trim()),
+      language: this.language(),
     }).subscribe({
       next: p => { this.profile.set(p); this.saving.set(false); this.editing.set(false); },
       error: e => {
