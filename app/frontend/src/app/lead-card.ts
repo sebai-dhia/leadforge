@@ -252,6 +252,7 @@ export function whatsappDigits(phone: string | null): string | null {
 
           @if (generating()) {
             <div class="skeleton-card" aria-busy="true" [attr.aria-label]="t('card.writingAria')"><span></span><span></span><span></span></div>
+            @if (slowWrite()) { <p class="mute slow-hint" role="status">{{ t('card.writingSlow') }}</p> }
           } @else if (current().emailBody) {
             <p class="to">
               <span class="to-label">{{ t('card.to') }}</span>
@@ -515,16 +516,24 @@ export class LeadCard {
     });
   }
 
+  /** After a few seconds the person is told why it takes a while, instead of staring at a skeleton. */
+  protected readonly slowWrite = signal(false);
+  private slowTimer?: ReturnType<typeof setTimeout>;
+
   protected generate() {
+    this.slowWrite.set(false);
+    clearTimeout(this.slowTimer);
+    this.slowTimer = setTimeout(() => this.slowWrite.set(true), 12000);
     this.generating.set(true);
     this.error.set(null);
     clearTimeout(this.saveTimer);
     this.saveTimer = undefined;
     this.api.draft(this.current().id, this.language(), this.channel(), this.approach(), this.note()).subscribe({
-      next: l => { this.current.set(l); this.generating.set(false); this.saveState.set('idle'); this.changed.emit(l); },
+      next: l => { clearTimeout(this.slowTimer); this.slowWrite.set(false); this.current.set(l); this.generating.set(false); this.saveState.set('idle'); this.changed.emit(l); },
       error: e => {
         this.generating.set(false);
-        this.error.set(e.status === 429 ? 'card.errMsgLimit' : e.status === 502 ? 'card.errMsgAi' : 'card.errOther');
+        clearTimeout(this.slowTimer); this.slowWrite.set(false);
+        this.error.set(e.status === 429 ? 'card.errMsgLimit' : e.status === 503 ? 'card.errMsgBusy' : e.status === 502 ? 'card.errMsgAi' : 'card.errOther');
       },
     });
   }

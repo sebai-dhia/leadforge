@@ -170,6 +170,8 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'card.errStatus': "Impossible d'enregistrer le statut. Réessayez.",
   'card.errMsgLimit': "La limite de messages du jour est atteinte, la vôtre ou celle de la démo. Elle se libère progressivement sur 24 heures.",
   'card.errMsgAi': "L'IA n'a pas pu écrire ce message. Réessayez dans un instant.",
+  'card.errMsgBusy': "Beaucoup de messages sont en cours de rédaction. Réessayez dans une minute.",
+  'card.writingSlow': "Rédaction en cours. Quand beaucoup de demandes arrivent en même temps, cela peut prendre jusqu'à une minute.",
   'card.errOther': "Un problème est survenu. Réessayez.",
   'card.errLookLimit': "La limite de recherches de contact du jour est atteinte, la vôtre ou celle de la démo. Elle se libère progressivement sur 24 heures.",
   'card.errLookRun': "La recherche n'a pas pu s'exécuter. Vérifiez que n8n fonctionne et réessayez.",

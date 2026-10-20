@@ -64,6 +64,7 @@ public class LeadController {
     private final N8nClient n8n;
     private final UsageService usage;
     private final LeadService leadService;
+    private final AiGate aiGate;
 
     /** Every lead of the caller across all searches, with optional filters. */
     @GetMapping
@@ -196,7 +197,10 @@ public class LeadController {
         Long usageId = usage.consume(userId(jwt), UsageService.Kind.DRAFT);
         N8nClient.Draft draft;
         try {
-            draft = n8n.draft(payload);
+            draft = aiGate.run(() -> n8n.draft(payload));
+        } catch (AiGate.BusyException e) {
+            usage.refund(usageId);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Many messages are being written right now");
         } catch (RuntimeException e) {
             log.error("Draft request failed for lead {}", id, e);
             usage.refund(usageId);
