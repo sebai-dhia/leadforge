@@ -44,7 +44,7 @@ import { I18n } from './i18n';
       font-size: 13px;
     }
     .leaflet-container-view {
-      height: clamp(320px, 46vh, 460px);
+      height: clamp(400px, 58vh, 580px);
       width: 100%;
       z-index: 1;
     }
