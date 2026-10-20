@@ -315,18 +315,15 @@ button.quiet:hover:not(:disabled) { color: var(--ink); }
 .brief-toggle .ic { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--mute); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .brief-sum { margin-left: auto; color: var(--mute); font: 500 12.5px/1.4 var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .write-btn { min-height: 44px; }
-.brief-panel { display: grid; gap: 20px; padding: 18px; margin-bottom: 14px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
-.brief-row { display: flex; flex-wrap: wrap; gap: 16px 28px; }
+.brief-panel { display: grid; gap: 16px; padding: 16px; margin-bottom: 14px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+.brief-row { display: flex; flex-wrap: wrap; gap: 14px 28px; }
 .brief-panel .ctl { display: grid; gap: 8px; }
 .brief-panel .ctl-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
-.approach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
-.approach-opt { display: grid; grid-template-columns: 1fr; gap: 2px; align-content: start; justify-content: stretch; justify-items: start; text-align: left; padding: 10px 12px; min-height: 60px; border-radius: 12px; background: var(--bg); color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line); font-weight: 400; cursor: pointer; transition: box-shadow .2s ease, background-color .2s ease; }
-.approach-opt strong { font-size: 14px; font-weight: 600; }
-.approach-opt span { font-size: 12.5px; line-height: 1.4; color: var(--mute); }
-.approach-opt:hover { box-shadow: inset 0 0 0 1px var(--line-strong); filter: none; }
-.approach-opt[aria-checked="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.approach-opt[aria-checked="true"] strong { color: var(--accent); }
 .note-field input { min-height: 44px; background: var(--bg); }
 .note-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--mute); }
 @media (max-width: 560px) { .write-btn { width: 100%; justify-content: center; } .brief-sum { display: none; } }
-@media (prefers-reduced-motion: reduce) { .brief-toggle, .approach-opt { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .brief-toggle { transition: none; } }
+.approach-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.approach-chips .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.approach-explain { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); font-size: 13.5px; line-height: 1.5; color: var(--mute); }
+.approach-explain strong { color: var(--ink); font-weight: 600; margin-right: 4px; }
