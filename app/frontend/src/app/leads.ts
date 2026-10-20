@@ -61,6 +61,7 @@ type StatusFilter = LeadStatus | 'ALL';
             <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
           </label>
         }
+        @if (selectedCount() === 0) {
         @for (f of statusFilters; track f.value) {
           <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
             (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
@@ -72,17 +73,7 @@ type StatusFilter = LeadStatus | 'ALL';
         }
         <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
-      </div>
-
-      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }} <button type="button" class="ghost" (click)="reload()">{{ t('leads.tryAgain') }}</button></p> }
-
-      <p class="mute" role="status">
-        @if (loading()) { {{ t('leads.updating') }} }
-        @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
-      </p>
-
-      @if (selectedCount() > 0) {
-        <div class="select-bar active">
+        } @else {
           <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
           <span class="sp"></span>
           @if (hidden()) {
@@ -92,8 +83,15 @@ type StatusFilter = LeadStatus | 'ALL';
             <button type="button" class="ghost" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
           }
           <button type="button" class="ghost quiet" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
-        </div>
-      }
+        }
+      </div>
+
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }} <button type="button" class="ghost" (click)="reload()">{{ t('leads.tryAgain') }}</button></p> }
+
+      <p class="mute" role="status">
+        @if (loading()) { {{ t('leads.updating') }} }
+        @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
+      </p>
 
       @for (l of items(); track l.id; let i = $index) {
         <div class="lead-row">
