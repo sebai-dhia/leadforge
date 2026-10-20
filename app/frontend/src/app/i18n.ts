@@ -1,7 +1,7 @@
 import { ApplicationRef, Injectable, inject, signal } from '@angular/core';
 import { EN_APP } from './i18n-app-en';
 import { FR_APP } from './i18n-app-fr';
-import { translateChip, translateFound, translateNiche, translateNote, translateReason } from './i18n-generated';
+import { splitReason, translateChip, translateFound, translateNiche, translateNote, translateReason } from './i18n-generated';
 
 export type AppLang = 'en' | 'fr';
 
@@ -260,6 +260,7 @@ export class I18n {
 
   /** The reason line under a lead, the lookup note, business types and chips: fixed English phrases, shown in French. */
   readonly reason = (text: string | null) => translateReason(text, this.fr());
+  readonly reasonParts = (text: string | null) => splitReason(text, this.fr());
   readonly note = (text: string | null) => translateNote(text, this.fr());
   readonly found = (word: string) => translateFound(word, this.fr());
   readonly niche = (text: string | null) => translateNiche(text, this.fr());

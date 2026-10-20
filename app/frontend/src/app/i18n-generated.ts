@@ -46,6 +46,32 @@ const REASON_PHRASES: [string, string][] = [
   ['no website', 'pas de site web'],
 ].sort((a, b) => b[0].length - a[0].length) as [string, string][];
 
+export interface ReasonTag { text: string; level: 'opportunity' | 'info' | 'warn' }
+export interface ReasonParts { kind: string; tags: ReasonTag[]; ai: string }
+
+/** What the person should take away: an opportunity, a plain fact, or something to be careful about. */
+function tagLevel(flag: string): ReasonTag['level'] {
+  if (/unreachable|could not be (checked|loaded)|chain|large|well-known/i.test(flag)) return 'warn';
+  if (/^no website|no online booking|outdated|not mobile|dated|thin|no social|weak online|no clear/i.test(flag)) return 'opportunity';
+  return 'info';
+}
+
+/** The reason line split for display: the kind of business, one tag per fact, and the AI sentence apart. */
+export function splitReason(text: string | null, fr: boolean): ReasonParts {
+  if (!text) return { kind: '', tags: [], ai: '' };
+  const ai = text.match(AI_PART);
+  const rules = (ai ? text.slice(0, ai.index) : text).trim();
+  const colon = rules.indexOf(': ');
+  const kind = colon > 0 ? rules.slice(0, colon) : '';
+  const flags = (colon > 0 ? rules.slice(colon + 2) : rules).replace(/\.$/, '').split(', ').map(f => f.trim()).filter(Boolean);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  return {
+    kind: kind ? translateReason(kind, fr) : '',
+    tags: flags.map(f => ({ text: cap(translateReason(f, fr)), level: tagLevel(f) })),
+    ai: ai ? (fr ? ai[2] : ai[1]) : '',
+  };
+}
+
 /**
  * The AI check adds " AI: <English sentence> [[fr:<French sentence>]]" to the rule-based reason.
  * English shows the English sentence; French swaps in the French one.

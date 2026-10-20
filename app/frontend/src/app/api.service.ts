@@ -18,7 +18,7 @@ export interface Lead {
   website: string | null; emails: string[]; social: string[]; score: number; reason: string; subject: string | null;
   emailBody: string | null; status: LeadStatus; draftLanguage: Lang | null; draftChannel: Channel | null;
   niche: string | null; city: string | null; firstSeenAt: string | null; lastSeenAt: string | null;
-  contactCheckedAt: string | null;
+  contactCheckedAt: string | null; hidden: boolean;
 }
 
 export interface EnrichResult { lead: Lead; found: string[]; note: string; sources: string[]; }
@@ -46,13 +46,14 @@ export interface NewSearch {
 export interface LeadFilters {
   status: LeadStatus | 'ALL';
   reachable: boolean;
+  hidden: boolean;
   q: string;
   searchId: number;
   sort: LeadSort;
 }
 
 export interface LeadPage {
-  items: Lead[]; total: number; page: number; size: number;
+  items: Lead[]; total: number; page: number; size: number; hiddenCount: number;
   counts: Record<LeadStatus, number>;
 }
 
@@ -95,6 +96,17 @@ export class ApiService {
   setStatus(leadId: number, status: LeadStatus) {
     return this.http.patch<Lead>(`${API}/leads/${leadId}/status`, { status });
   }
+  /** Hides a lead from the lists (it stays known, so a new search does not offer it as new), or brings it back. */
+  setHidden(leadId: number, hidden: boolean) {
+    return this.http.patch<Lead>(`${API}/leads/${leadId}/hidden`, { hidden });
+  }
+  /** Saves the person's own edits of the written message. */
+  saveMessage(leadId: number, subject: string, body: string) {
+    return this.http.patch<Lead>(`${API}/leads/${leadId}/message`, { subject, body });
+  }
+  clearMessage(leadId: number) {
+    return this.http.delete<Lead>(`${API}/leads/${leadId}/message`);
+  }
   draft(leadId: number, language: Lang, channel: Channel) {
     return this.http.post<Lead>(`${API}/leads/${leadId}/draft`, { language, channel });
   }
@@ -103,6 +115,7 @@ export class ApiService {
     return new HttpParams()
       .set('status', f.status === 'ALL' ? '' : f.status)
       .set('reachable', f.reachable)
+      .set('hidden', f.hidden)
       .set('q', f.q.trim())
       .set('searchId', f.searchId)
       .set('sort', f.sort);

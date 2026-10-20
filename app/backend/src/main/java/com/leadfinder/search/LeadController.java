@@ -37,14 +37,20 @@ public class LeadController {
 
     public record StatusUpdate(@Pattern(regexp = "NEW|CONTACTED|REPLIED|NOT_INTERESTED") String status) {}
 
+    public record HiddenUpdate(boolean hidden) {}
+
+    /** The person's own edits of a written message. */
+    public record MessageUpdate(@jakarta.validation.constraints.Size(max = 500) String subject,
+                                @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 5000) String body) {}
+
     public record DraftRequest(@Pattern(regexp = "en|fr|ar") String language,
                                @Pattern(regexp = "email|whatsapp") String channel) {}
 
     /** What a contact lookup added, so the UI can say it plainly. */
     public record EnrichResponse(LeadDto lead, List<String> found, String note, List<String> sources) {}
 
-    /** counts: leads per status for the current filters, ignoring the status filter itself. */
-    public record LeadPage(List<LeadDto> items, long total, int page, int size, Map<String, Long> counts) {}
+    /** counts: leads per status for the current filters, ignoring the status filter itself. hiddenCount: hidden leads of the user. */
+    public record LeadPage(List<LeadDto> items, long total, int page, int size, Map<String, Long> counts, long hiddenCount) {}
 
     private final LeadRepository leads;
     private final UserRepository users;
@@ -57,6 +63,7 @@ public class LeadController {
     public LeadPage list(@AuthenticationPrincipal Jwt jwt,
                          @RequestParam(defaultValue = "") String status,
                          @RequestParam(defaultValue = "false") boolean reachable,
+                         @RequestParam(defaultValue = "false") boolean hidden,
                          @RequestParam(defaultValue = "") String q,
                          @RequestParam(defaultValue = "0") long searchId,
                          @RequestParam(defaultValue = "score") String sort,
@@ -66,16 +73,17 @@ public class LeadController {
         String st = validStatus(status);
         String pattern = likePattern(q);
         int pageSize = Math.max(1, Math.min(size, 100));
-        Page<Lead> result = leads.search(uid, st, reachable, pattern, searchId,
+        Page<Lead> result = leads.search(uid, hidden, st, reachable, pattern, searchId,
                 PageRequest.of(Math.max(0, page), pageSize, sortFor(sort)));
 
         Map<String, Long> counts = new LinkedHashMap<>();
         STATUSES.stream().sorted().forEach(s -> counts.put(s, 0L));
-        for (Object[] row : leads.statusCounts(uid, reachable, pattern, searchId)) {
+        for (Object[] row : leads.statusCounts(uid, hidden, reachable, pattern, searchId)) {
             counts.put((String) row[0], (Long) row[1]);
         }
         return new LeadPage(result.getContent().stream().map(LeadDto::of).toList(),
-                result.getTotalElements(), result.getNumber(), result.getSize(), counts);
+                result.getTotalElements(), result.getNumber(), result.getSize(), counts,
+                leads.countByUserIdAndHiddenAtIsNotNull(uid));
     }
 
     /** Same filters as the list, as a spreadsheet file. */
@@ -86,13 +94,43 @@ public class LeadController {
                                          @RequestParam(defaultValue = "") String q,
                                          @RequestParam(defaultValue = "0") long searchId,
                                          @RequestParam(defaultValue = "score") String sort) {
-        List<Lead> rows = leads.search(userId(jwt), validStatus(status), reachable, likePattern(q), searchId,
+        List<Lead> rows = leads.search(userId(jwt), false, validStatus(status), reachable, likePattern(q), searchId,
                 PageRequest.of(0, MAX_EXPORT, sortFor(sort))).getContent();
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename("leads.csv").build().toString())
                 .body(LeadCsv.build(rows));
+    }
+
+    /** Hides a lead from the lists, or brings it back. A hidden lead stays known, so a new search does not offer it as new. */
+    @PatchMapping("/{id}/hidden")
+    public LeadDto setHidden(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                             @RequestBody HiddenUpdate req) {
+        Lead lead = ownedLead(jwt, id);
+        lead.setHiddenAt(req.hidden() ? java.time.Instant.now() : null);
+        return LeadDto.of(leads.save(lead));
+    }
+
+    /** Saves the person's own edits of the message, so they are still there next time. */
+    @PatchMapping("/{id}/message")
+    public LeadDto saveMessage(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                               @Valid @RequestBody MessageUpdate req) {
+        Lead lead = ownedLead(jwt, id);
+        lead.setSubject(req.subject() == null ? "" : req.subject());
+        lead.setEmailBody(req.body());
+        return LeadDto.of(leads.save(lead));
+    }
+
+    /** Removes the written message (the lead itself stays). */
+    @DeleteMapping("/{id}/message")
+    public LeadDto clearMessage(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        Lead lead = ownedLead(jwt, id);
+        lead.setSubject(null);
+        lead.setEmailBody(null);
+        lead.setDraftLanguage(null);
+        lead.setDraftChannel(null);
+        return LeadDto.of(leads.save(lead));
     }
 
     @PatchMapping("/{id}/status")

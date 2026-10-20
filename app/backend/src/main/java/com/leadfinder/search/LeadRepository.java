@@ -17,6 +17,7 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
      * pattern with backslash as the escape character.
      */
     String FILTERS = " l.userId = :uid"
+            + " and ((:hidden = true and l.hiddenAt is not null) or (:hidden = false and l.hiddenAt is null))"
             + " and (:reachable = false or l.phoneKey is not null or (l.emails is not null and l.emails <> '') or (l.social is not null and l.social <> ''))"
             + " and (:q = '' or lower(l.name) like :q escape '\\' or lower(l.address) like :q escape '\\')"
             + " and (:searchId = 0L or l.id in (select sl.leadId from SearchLead sl where sl.jobId = :searchId))";
@@ -28,6 +29,8 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     Optional<Lead> findByIdAndUserId(Long id, Long userId);
 
     long countByUserId(Long userId);
+
+    long countByUserIdAndHiddenAtIsNotNull(Long userId);
 
     long countByUserIdAndStatus(Long userId, String status);
 
@@ -48,12 +51,12 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     @Query(value = "select l from Lead l where" + FILTERS + " and (:status = '' or l.status = :status)",
             countQuery = "select count(l) from Lead l where" + FILTERS + " and (:status = '' or l.status = :status)")
-    Page<Lead> search(@Param("uid") Long uid, @Param("status") String status,
+    Page<Lead> search(@Param("uid") Long uid, @Param("hidden") boolean hidden, @Param("status") String status,
                       @Param("reachable") boolean reachable, @Param("q") String q,
                       @Param("searchId") long searchId, Pageable pageable);
 
     /** Counts per status with every filter except the status itself, for the filter chips. */
     @Query("select l.status, count(l) from Lead l where" + FILTERS + " group by l.status")
-    List<Object[]> statusCounts(@Param("uid") Long uid, @Param("reachable") boolean reachable,
+    List<Object[]> statusCounts(@Param("uid") Long uid, @Param("hidden") boolean hidden, @Param("reachable") boolean reachable,
                                 @Param("q") String q, @Param("searchId") long searchId);
 }

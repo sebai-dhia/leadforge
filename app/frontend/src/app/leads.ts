@@ -4,6 +4,7 @@ import { I18n } from './i18n';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadFilters, LeadSort, LeadStatus } from './api.service';
+import { Toasts } from './toast';
 import { I18nKey } from './i18n';
 import { LeadCard } from './lead-card';
 
@@ -23,7 +24,7 @@ type StatusFilter = LeadStatus | 'ALL';
     @if (!loaded()) {
       <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('leads.loadingAria')"><span></span><span></span><span></span></div>
       <div class="card skeleton-card"><span></span><span></span><span></span></div>
-    } @else if (everything() === 0 && !error()) {
+    } @else if (everything() === 0 && hiddenCount() === 0 && !error()) {
       <div class="empty">
         <p><strong>{{ t('leads.emptyTitle') }}</strong></p>
         <p>{{ t('leads.emptyText') }}</p>
@@ -60,6 +61,10 @@ type StatusFilter = LeadStatus | 'ALL';
             (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
         }
         <span class="sp"></span>
+        @if (hiddenCount() > 0 || hidden()) {
+          <button type="button" class="chip hidden-chip" [class.on]="hidden()" [attr.aria-pressed]="hidden()"
+            (click)="toggleHidden()">{{ t('leads.hiddenChip') }} <span class="num">{{ hiddenCount() }}</span></button>
+        }
         <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
       </div>
@@ -94,6 +99,7 @@ type StatusFilter = LeadStatus | 'ALL';
 })
 export class LeadsPage {
   private readonly api = inject(ApiService);
+  private readonly toasts = inject(Toasts);
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
 
@@ -105,6 +111,9 @@ export class LeadsPage {
 
   protected readonly status = signal<StatusFilter>('ALL');
   protected readonly reachable = signal(false);
+  /** Showing the hidden leads instead of the others. */
+  protected readonly hidden = signal(false);
+  protected readonly hiddenCount = signal(0);
   protected readonly q = signal('');
   protected readonly searchId = signal(0);
   protected readonly sort = signal<LeadSort>('score');
@@ -149,17 +158,30 @@ export class LeadsPage {
   protected setSearch(id: number) { this.searchId.set(id); this.fetch(true); }
   protected setSort(s: LeadSort) { this.sort.set(s); this.fetch(true); }
   protected toggleReachable() { this.reachable.update(v => !v); this.fetch(true); }
+  protected toggleHidden() { this.hidden.update(v => !v); this.status.set('ALL'); this.fetch(true); }
   protected reload() { this.fetch(true); }
   protected loadMore() { this.fetch(false); }
 
   protected clearFilters() {
-    this.status.set('ALL'); this.reachable.set(false); this.q.set(''); this.searchId.set(0);
+    this.status.set('ALL'); this.reachable.set(false); this.hidden.set(false); this.q.set(''); this.searchId.set(0);
     this.fetch(true);
   }
 
-  /** A status change keeps the card where it is, so only the chip counts move. */
+  /**
+   * A status change keeps the card where it is, so only the chip counts move.
+   * Hiding or restoring takes the card out of this list, with a way to undo it.
+   */
   protected onChanged(updated: Lead) {
     const before = this.items().find(l => l.id === updated.id);
+    if (before && before.hidden !== updated.hidden) {
+      this.items.update(list => list.filter(l => l.id !== updated.id));
+      this.total.update(n => Math.max(0, n - 1));
+      this.counts.update(c => ({ ...c, [updated.status]: Math.max(0, c[updated.status] - 1) }));
+      this.hiddenCount.update(n => Math.max(0, n + (updated.hidden ? 1 : -1)));
+      this.toasts.show(this.t(updated.hidden ? 'leads.hiddenToast' : 'leads.restoredToast'),
+        { label: this.t('toast.undo'), run: () => this.api.setHidden(updated.id, !updated.hidden).subscribe({ next: () => this.fetch(true) }) });
+      return;
+    }
     this.items.update(list => list.map(l => (l.id === updated.id ? updated : l)));
     if (before && before.status !== updated.status) {
       this.counts.update(c => ({ ...c, [before.status]: Math.max(0, c[before.status] - 1), [updated.status]: c[updated.status] + 1 }));
@@ -183,7 +205,7 @@ export class LeadsPage {
   }
 
   private filters(): LeadFilters {
-    return { status: this.status(), reachable: this.reachable(), q: this.q(), searchId: this.searchId(), sort: this.sort() };
+    return { status: this.status(), reachable: this.reachable(), hidden: this.hidden(), q: this.q(), searchId: this.searchId(), sort: this.sort() };
   }
 
   /** Loads the first page again (reset) or the next page. A newer request makes older answers irrelevant. */
@@ -199,6 +221,7 @@ export class LeadsPage {
         this.items.update(list => (reset ? r.items : [...list, ...r.items]));
         this.total.set(r.total);
         this.counts.set(r.counts);
+        this.hiddenCount.set(r.hiddenCount);
         if (!this.loaded() || this.isUnfiltered()) {
           this.everything.set(r.counts.NEW + r.counts.CONTACTED + r.counts.REPLIED + r.counts.NOT_INTERESTED);
         }
@@ -217,6 +240,6 @@ export class LeadsPage {
   }
 
   private isUnfiltered() {
-    return !this.reachable() && !this.q().trim() && this.searchId() === 0;
+    return !this.reachable() && !this.hidden() && !this.q().trim() && this.searchId() === 0;
   }
 }

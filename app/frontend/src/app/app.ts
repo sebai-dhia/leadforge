@@ -5,11 +5,12 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { AuthService } from './auth.service';
 import { I18n } from './i18n';
 import { Logo } from './logo';
+import { ToastHost } from './toast';
 import { UserMenu } from './user-menu';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Logo, UserMenu],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Logo, UserMenu, ToastHost],
   template: `
     @if (showChrome()) {
       <header class="app-bar">
@@ -34,6 +35,7 @@ import { UserMenu } from './user-menu';
       }
     }
     <main [class.app-main]="showChrome()"><router-outlet /></main>
+    <app-toasts />
     @if (showChrome()) {
       <footer class="app-footer">{{ t('footer.placeData') }} <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> {{ t('footer.and') }}</footer>
     }
