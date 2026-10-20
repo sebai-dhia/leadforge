@@ -73,17 +73,29 @@ import { I18n } from './i18n';
     .c svg { color: var(--accent); }
     .compact .contacts { display: none; }
     .compact .reasons { margin-top: 14px; }
-    @container (min-width: 440px) {
-      .compact { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); column-gap: 22px; align-items: center; padding: 20px 22px; }
-      .compact .tag { position: absolute; top: 12px; right: 14px; }
+    @container (min-width: 520px) {
+      .compact { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); column-gap: 16px; align-items: center; padding: 18px 20px; }
+      .compact .tag { position: absolute; top: 10px; right: 12px; padding: 2px 8px; font-size: 10px; }
+      .compact header { gap: 12px; }
+      .compact .gauge { width: 48px; height: 48px; }
+      .compact .gauge b { font-size: 18px; }
       .compact .id h3 { font-size: 17px; }
+      .compact .id p { font-size: 13px; }
       .compact .reasons { gap: 6px; margin-top: 12px; }
       .compact .reasons li { font-size: 12.5px; padding: 4px 9px 4px 8px; }
       .compact .bubble { font-size: 14px; padding: 11px 13px; }
       .compact header, .compact .reasons, .compact .contacts { grid-column: 1; }
-      .compact .contacts { display: flex; gap: 6px; margin-top: 12px; }
-      .compact .c { font-size: 12.5px; padding: 6px 10px; }
-      .compact .draft { grid-column: 2; grid-row: 1 / span 3; margin: 0; padding: 0 0 0 20px; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .09); }
+      /* the card says a phone and a social page were found, so those are the two ways shown; both fit on one line */
+      .compact .contacts { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 12px; }
+      .compact .c { font-size: 12.5px; padding: 6px 10px; white-space: nowrap; }
+      .compact .c:nth-child(2) { display: none; }
+      .compact .draft { grid-column: 2; grid-row: 1 / span 3; margin: 0; padding: 10px 0 0 16px; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .09); }
+      .compact .label { font-size: 10px; letter-spacing: .04em; white-space: nowrap; }
+    }
+    /* a little narrower card: the left column gets more room and the name a little less size, so it stays on one line */
+    @container (min-width: 520px) and (max-width: 559px) {
+      .compact { grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr); }
+      .compact .id h3 { font-size: 16px; }
     }
     .draft { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .09); }
     .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--mute); margin-bottom: 9px; }

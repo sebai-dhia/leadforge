@@ -182,7 +182,7 @@ import { SpecializationKey } from './specialization-picker';
     @media (max-width: 480px) { .top nav .signin { display: none; } .top { padding-left: 16px; padding-right: 16px; } }
 
     /* ---------- hero ---------- */
-    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 56px; align-items: center; min-height: calc(100svh - 152px); padding-top: 8px; padding-bottom: 24px; }
+    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 40px; align-items: center; min-height: calc(100svh - 152px); padding-top: 8px; padding-bottom: 24px; }
     .hero::before { content: ''; position: absolute; z-index: -1; inset: -120px -20vw auto auto; width: 70vw; max-width: 900px; aspect-ratio: 1; pointer-events: none;
       background: radial-gradient(closest-side, rgba(61, 220, 151, .16), transparent); }
     .hero::after { content: ''; position: absolute; z-index: -1; inset: -80px -40vw 0; pointer-events: none; opacity: .5; mix-blend-mode: overlay;

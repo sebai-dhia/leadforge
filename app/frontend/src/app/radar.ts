@@ -99,7 +99,7 @@ import { I18n } from './i18n';
     .count { right: 18px; top: 16px; color: var(--accent); }
 
     /* layers above the map move faster than the map: depth */
-    .stack { position: absolute; left: 0; bottom: 0; width: min(100%, 560px); z-index: 2; will-change: transform;
+    .stack { position: absolute; left: 0; bottom: 0; width: min(100%, 580px); z-index: 2; will-change: transform;
       transform: translate3d(0, calc(var(--p, 0) * -74px), 0); animation: float-in .9s .9s cubic-bezier(.2, .8, .2, 1) backwards; }
     .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 12px; }
     .chip { font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 999px; white-space: nowrap; will-change: transform;
