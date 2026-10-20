@@ -56,6 +56,11 @@ type StatusFilter = LeadStatus | 'ALL';
       </div>
 
       <div class="chips" role="group" [attr.aria-label]="t('status.filterAria')">
+        @if (items().length) {
+          <label class="check all-check" [title]="t('leads.selectAll')">
+            <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
+          </label>
+        }
         @for (f of statusFilters; track f.value) {
           <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
             (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
@@ -76,24 +81,17 @@ type StatusFilter = LeadStatus | 'ALL';
         @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
       </p>
 
-      @if (items().length) {
-        <div class="select-bar" [class.active]="selectedCount() > 0">
-          <label class="check">
-            <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
-          </label>
-          @if (selectedCount() === 0) {
-            <span class="mute">{{ t('leads.selectAll') }}</span>
+      @if (selectedCount() > 0) {
+        <div class="select-bar active">
+          <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
+          <span class="sp"></span>
+          @if (hidden()) {
+            <button type="button" class="ghost" (click)="bulk('restore')" [disabled]="working()">{{ t('leads.bulkRestore') }}</button>
+            <button type="button" class="danger-btn" (click)="askDelete()" [disabled]="working()">{{ t('leads.bulkDelete') }}</button>
           } @else {
-            <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
-            <span class="sp"></span>
-            @if (hidden()) {
-              <button type="button" class="ghost" (click)="bulk('restore')" [disabled]="working()">{{ t('leads.bulkRestore') }}</button>
-              <button type="button" class="danger-btn" (click)="askDelete()" [disabled]="working()">{{ t('leads.bulkDelete') }}</button>
-            } @else {
-              <button type="button" class="ghost" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
-            }
-            <button type="button" class="ghost quiet" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
+            <button type="button" class="ghost" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
           }
+          <button type="button" class="ghost quiet" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
         </div>
       }
 
