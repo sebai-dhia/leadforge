@@ -187,7 +187,7 @@ export function whatsappDigits(phone: string | null): string | null {
               <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>
               <span class="brief-title">{{ t('card.settings') }}</span>
               <span class="brief-sum">{{ summary() }}</span>
-              <svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="chev" [class.open]="showSettings()" aria-hidden="true"></span>
             </button>
             <button type="button" class="write-btn" [class.ghost]="!!current().emailBody" [class.quiet]="!!current().emailBody" (click)="generate()" [disabled]="generating()" [attr.aria-busy]="generating()">
               @if (generating()) {
