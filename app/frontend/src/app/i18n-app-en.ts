@@ -252,7 +252,7 @@ export const EN_APP = {
   'profile.loadingAria': 'Loading profile',
   'profile.yourName': 'Your name',
   'profile.addHeadline': 'Add a one-line headline',
-  'profile.writesIn': 'Writes in {lang}',
+  'profile.writesIn': 'Messages in {lang}',
   'profile.guestAccount': 'Guest account',
   'profile.edit': 'Edit profile',
   'profile.fieldName': 'Name',

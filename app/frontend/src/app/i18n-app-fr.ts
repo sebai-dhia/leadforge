@@ -245,7 +245,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'profile.loadingAria': 'Chargement du profil',
   'profile.yourName': 'Votre nom',
   'profile.addHeadline': 'Ajoutez une phrase de présentation',
-  'profile.writesIn': 'Écrit en {lang}',
+  'profile.writesIn': 'Messages en {lang}',
   'profile.guestAccount': 'Compte invité',
   'profile.edit': 'Modifier le profil',
   'profile.fieldName': 'Nom',
