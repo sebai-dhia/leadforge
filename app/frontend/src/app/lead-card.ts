@@ -174,20 +174,32 @@ export function whatsappDigits(phone: string | null): string | null {
       @if (open()) {
         <div class="composer">
           <div class="composer-controls">
-            <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
-              @for (l of languages; track l.value) {
-                <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
-                  [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
+            <div class="ctl">
+              <span class="ctl-label">{{ t('card.langAria') }}</span>
+              <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
+                @for (l of languages; track l.value) {
+                  <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
+                    [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
+                }
+              </div>
+            </div>
+            <div class="ctl">
+              <span class="ctl-label">{{ t('card.channelAria') }}</span>
+              <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
+                <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
+                  [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
+                <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
+                  [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
+              </div>
+            </div>
+            <button type="button" class="write-btn" [class.ghost]="!!current().emailBody" [class.quiet]="!!current().emailBody" (click)="generate()" [disabled]="generating()" [attr.aria-busy]="generating()">
+              @if (generating()) {
+                <svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>
+              } @else if (current().emailBody) {
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+              } @else {
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
               }
-            </div>
-            <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
-              <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
-                [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
-              <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
-                [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
-            </div>
-            <button type="button" [class.ghost]="!!current().emailBody" [class.quiet]="!!current().emailBody" (click)="generate()" [disabled]="generating()">
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
               {{ generating() ? t('card.writing') : (current().emailBody ? t('card.writeAgain') : t('card.writeBtn')) }}
             </button>
           </div>

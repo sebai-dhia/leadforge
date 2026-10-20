@@ -91,7 +91,14 @@ form > button + button { margin-left: 8px; }
 .fit .num { opacity: .8; margin-left: 4px; font-weight: 500; }
 .contacts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
 .composer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
-.composer-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.composer-controls { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: flex-end; margin-bottom: 12px; }
+.composer-controls .ctl { display: grid; gap: 6px; }
+.composer-controls .ctl-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+.composer-controls .write-btn { margin-left: auto; min-height: 44px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } }
+@media (max-width: 560px) { .composer-controls .write-btn { margin-left: 0; width: 100%; justify-content: center; } }
 
 /* Segmented control and filter chips */
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
