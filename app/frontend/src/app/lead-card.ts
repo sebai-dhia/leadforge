@@ -226,12 +226,14 @@ export function whatsappDigits(phone: string | null): string | null {
 
               <div class="ctl">
                 <span class="ctl-label">{{ t('card.approach') }}</span>
-                <div class="approach-chips" role="radiogroup" [attr.aria-label]="t('card.approach')">
+                <div class="approach-grid" role="radiogroup" [attr.aria-label]="t('card.approach')">
                   @for (o of approaches; track o) {
-                    <button type="button" class="chip" role="radio" [class.on]="approach() === o" [attr.aria-checked]="approach() === o" (click)="approach.set(o)">{{ t(approachKey[o]) }}</button>
+                    <button type="button" class="approach-opt" role="radio" [attr.aria-checked]="approach() === o" (click)="approach.set(o)">
+                      <strong>{{ t(approachKey[o]) }}</strong>
+                      <span>{{ t(approachHint[o]) }}</span>
+                    </button>
                   }
                 </div>
-                <p class="approach-explain" aria-live="polite"><strong>{{ t(approachKey[approach()]) }}</strong> {{ t(approachHint[approach()]) }}</p>
               </div>
 
               <label class="ctl note-field">
