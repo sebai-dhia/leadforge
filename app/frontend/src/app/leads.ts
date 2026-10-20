@@ -93,9 +93,9 @@ type StatusFilter = LeadStatus | 'ALL';
       </p>
 
       @for (l of items(); track l.id; let i = $index) {
-        <div class="lead-row">
+        <div class="pick-row">
           <label class="check pick">
-            <input type="checkbox" [checked]="isSelected(l.id)" (click)="shift = $event.shiftKey" (change)="toggle(l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
+            <input type="checkbox" [checked]="isSelected(l.id)" (click)="shift = $event.shiftKey" (change)="pick($event, l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
           </label>
           <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
         </div>
@@ -217,14 +217,14 @@ export class LeadsPage {
     this.selected.set(this.selectedCount() > 0 ? new Set() : new Set(this.items().map(l => l.id)));
     this.lastPicked = -1;
   }
-  /** A click toggles one lead; shift-click selects everything between this one and the last one picked. */
-  protected toggle(id: number, index: number) {
+  /** The box decides: ticked adds the lead, unticked removes it. Shift-click applies the same to everything since the last click. */
+  protected pick(event: Event, id: number, index: number) {
+    const on = (event.target as HTMLInputElement).checked;
     const next = new Set(this.selected());
-    if (this.shift && this.lastPicked >= 0) {
-      const [a, b] = [Math.min(this.lastPicked, index), Math.max(this.lastPicked, index)];
-      const on = !next.has(id);
-      this.items().slice(a, b + 1).forEach(l => (on ? next.add(l.id) : next.delete(l.id)));
-    } else if (next.has(id)) next.delete(id); else next.add(id);
+    const range = this.shift && this.lastPicked >= 0
+      ? this.items().slice(Math.min(this.lastPicked, index), Math.max(this.lastPicked, index) + 1)
+      : this.items().slice(index, index + 1);
+    range.forEach(l => (on ? next.add(l.id) : next.delete(l.id)));
     this.selected.set(next);
     this.lastPicked = index;
   }
