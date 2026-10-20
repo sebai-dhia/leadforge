@@ -54,6 +54,8 @@ function lint(o, ctx) {
   if (/\d/.test(plain)) problems.push('it contains numbers; use none');
   if (/(https?:\/\/|www\.|\S+@\S+\.\S+)/i.test(body)) problems.push('it contains a web or email address');
   if (/[\[\]{}<>]/.test(body)) problems.push('it contains brackets or placeholders');
+  // a dash or an underscore used as punctuation reads as machine-written; hyphens inside words (and in names) are fine
+  if (/[—–_]|(^|\s)-(\s|$)/m.test(plain) || /[—–_]|(^|\s)-(\s|$)/.test(o.subject || '')) problems.push('it uses a dash or an underscore as punctuation: use commas and full stops');
   if (ctx.webOffer === false && /\b(websites?|web ?sites?|sites? (web|internet)|web pages?)\b|موقع/i.test(body)) problems.push('the sender does not sell websites: do not mention a website');
   if (/!/.test(body)) problems.push('it contains an exclamation mark');
   if (/\p{Extended_Pictographic}/u.test(body)) problems.push('it contains an emoji');

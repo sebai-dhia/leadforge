@@ -13,9 +13,11 @@ if (check.retryPrompt) {
 }
 if (!chosen) return [{ json: { error: true, message: 'The AI did not return a usable message' } }];
 
+// the last guard: dashes used as punctuation become commas, underscores become spaces
+const plainText = t => String(t || '').replace(/\s+[—–-]\s+/g, ', ').replace(/[—–]/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',');
 const out = {
-  subject: ctx.channel === 'whatsapp' ? '' : chosen.subject,
-  body: chosen.body,
+  subject: ctx.channel === 'whatsapp' ? '' : plainText(chosen.subject),
+  body: plainText(chosen.body),
   // what was read on the sender's own links this time, for the backend to keep (null when nothing was read)
   linksKnowledge: ctx.knowledgeNew,
   linksHash: ctx.linksHash,

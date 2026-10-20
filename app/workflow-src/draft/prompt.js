@@ -91,8 +91,12 @@ const reason = clean(String(b.reason || '').replace(/\s*\[\[fr:.*?\]\]/g, '').re
 const aiAt = reason.indexOf(' AI: ');
 const checks = (aiAt >= 0 ? reason.slice(0, aiAt) : reason).replace(/^[^:]*:\s*/, '');
 const aiNote = aiAt >= 0 ? reason.slice(aiAt + 5) : '';
+// the name as a person would say it: the part before " - ", " | " or " : " (Maps names often carry a tagline), never an underscore
+const fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ');
+const SEPARATOR = /\s+[-–—|:]\s+/;
+const businessName = fullName.split(SEPARATOR)[0].length >= 6 ? fullName.split(SEPARATOR)[0] : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
 const business = [
-  line(F.business.name, clean(b.leadName, L.leadName)),
+  line(F.business.name, businessName),
   b.niche ? line(F.business.type, clean(b.niche, L.type)) : null,
   b.address ? line(F.business.address, clean(b.address, L.address)) : null,
   line(F.business.reputation, reputation),
@@ -118,5 +122,5 @@ const prompt = render(PROMPTS.templates.user, {
 
 return [{ json: {
   system, prompt, knowledgeNew, linksHash: b.linksHash || '', lang, channel, limits, senderName,
-  businessName: clean(b.leadName, L.leadName), hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
+  businessName, hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
 } }];
