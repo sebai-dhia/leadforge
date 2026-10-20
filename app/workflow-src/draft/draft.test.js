@@ -79,7 +79,7 @@ const ctx = { channel: 'whatsapp', lang: 'fr', limits: { words: 65, subjectWords
 const answer = body => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ angle: 'no site', subject: '', body }) }] } }] });
 const check = (body, c = ctx) => run('Check', { body: {}, outputs: { 'Build Prompt': [{ ...c, prompt: 'P' }] }, input: [answer(body)] })[0].json;
 
-const good = "Bonjour,\n\nJe suis Test Sender, développeur web à Testville. Je crée des sites simples avec réservation pour les cafés.\n\nJe n'ai pas trouvé de site pour Café 24 Exemple. Avez-vous déjà un endroit où vos clients peuvent consulter le menu ?\n\nTest Sender";
+const good = "Bonjour,\n\nJe suis Test Sender, développeur web à Testville. Je crée des sites simples avec réservation pour les cafés.\n\nJe n'ai pas trouvé de site pour Café 24 Exemple. Avez-vous déjà un endroit où vos clients peuvent consulter le menu ?";
 
 test('a good message passes without a second try', () => {
   const r = check(good);
@@ -93,11 +93,12 @@ test('each broken rule is named in the second try', () => {
     ["Bonjour,\n\nVous n'avez pas de site web. Écrivons-nous sur https://portfolio.example.com ?\n\nTest Sender", /web or email address/],
     ["Bonjour,\n\nNous avons 3 offres pour vous !\n\nTest Sender", /numbers/],
     ["Bonjour Café 24 Exemple,\n\nUn site vous intéresse ?\n\nTest Sender", /greeting contains the business name/],
-    ["Bonjour,\n\nUn site vous intéresse ?\n\nMerci", /end with the sender name/],
+    ["Bonjour,\n\nUn site vous intéresse ?\n\nMerci", /end with the sender name/, { channel: 'email', limits: { words: 100, subjectWords: 8 } }],
+    ["Bonjour,\n\nUn site vous intéresse ?\n\nTest Sender", /does not end with a name line/],
     ['Hello,\n\nI could not find your website and I would like to help you with the menu and the booking and the design.\n\nDo you have one?\n\nTest Sender', /not written in French/],
   ];
-  for (const [body, expected] of cases) {
-    const r = check(body);
+  for (const [body, expected, extra] of cases) {
+    const r = check(body, { ...ctx, ...(extra || {}) });
     assert.ok(r.problems.some(p => expected.test(p)), `expected ${expected} in ${JSON.stringify(r.problems)}`);
     assert.match(r.retryPrompt, /It broke these rules/);
   }

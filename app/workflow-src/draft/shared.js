@@ -84,6 +84,9 @@ function lint(o, ctx) {
   // in Arabic the name is written in Arabic letters, so only the shape is checked there: a short last line
   const last = lines[lines.length - 1] || '';
   const signed = ctx.lang === 'ar' ? words(last) <= 4 : norm(last).includes(norm(ctx.senderName));
-  if (ctx.senderName && !signed) problems.push('it must end with the sender name on its own line');
+  if (ctx.senderName && !wa && !signed) problems.push('it must end with the sender name on its own line');
+  // a WhatsApp message ends with its question: a last line that is only a name is a signature block
+  const nameLine = ctx.lang === 'ar' ? words(last) <= 3 && !/[?؟.!]$/.test(last) : norm(last).includes(norm(ctx.senderName)) && words(last) <= 5;
+  if (ctx.senderName && wa && lines.length > 1 && nameLine) problems.push('a WhatsApp message does not end with a name line: end with the question');
   return problems;
 }
