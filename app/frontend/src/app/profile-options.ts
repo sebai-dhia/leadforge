@@ -1,7 +1,7 @@
 /** The chips offered in onboarding and on the profile page. Target labels must match the backend's industry map. */
 export const SERVICE_OPTIONS = [
   'Web development', 'UI/UX design', 'Mobile apps', 'Branding and logos', 'SEO', 'Automation',
-  'Copywriting', 'Video and motion', 'Photography', 'Social media', 'E-commerce',
+  'Copywriting', 'Video and motion', 'Photography', 'Social media', 'E-commerce', 'Online ads', 'Graphic design', 'Translation',
 ];
 
 export const TARGET_OPTIONS = [
@@ -25,4 +25,7 @@ export const SERVICE_TARGETS: Record<string, string[]> = {
   'Photography': ['Restaurants and cafés', 'Hotels and guesthouses', 'Beauty salons', 'Hair salons', 'Bakeries', 'Dentists and clinics'],
   'Social media': ['Restaurants and cafés', 'Beauty salons', 'Hair salons', 'Gyms and fitness', 'Bakeries', 'Hotels and guesthouses'],
   'E-commerce': ['Bakeries', 'Beauty salons', 'Pharmacies', 'Restaurants and cafés', 'Car repair'],
+  'Online ads': ['Restaurants and cafés', 'Beauty salons', 'Hair salons', 'Gyms and fitness', 'Dentists and clinics', 'Car repair'],
+  'Graphic design': ['Restaurants and cafés', 'Bakeries', 'Beauty salons', 'Hair salons', 'Schools and training', 'Gyms and fitness'],
+  'Translation': ['Hotels and guesthouses', 'Law firms', 'Schools and training', 'Doctors and clinics', 'Dentists and clinics'],
 };
