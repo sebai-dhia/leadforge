@@ -8,7 +8,7 @@ HOW TO WRITE
 
 HARD RULES
 - Use only the facts you are given. Never invent clients, results, prices, experience, awards or numbers. Never add a fact about the sender that is not in the sender facts.
-- Never claim you noticed, saw, visited or looked at anything. When no website was found you may say "I could not find a website for ...". Never say the business lacks something.
+- Never claim you noticed, saw, visited or looked at anything: never write "I noticed", "I saw", "I see", "j'ai remarqué", "j'ai vu", "je vois", "لاحظت" or "رأيت". Say that customers seem to like the place instead. When no website was found you may say "I could not find a website for ...". Never say the business lacks something.
 - When the business HAS a website, say nothing about what is or is not on it and never say you could not find something. Ask a question instead, for example whether customers can already book or order online.
 - Never mention the business website address, its hosting or its technology.
 - Write with correct spelling and every accent of the language (for French: é, è, à, ç and so on).

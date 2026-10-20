@@ -50,7 +50,9 @@ const lang = C.languages[b.language] ? b.language : 'en';
 const channel = b.channel === 'whatsapp' ? 'whatsapp' : 'email';
 const wa = channel === 'whatsapp';
 const limits = { words: C.channels[channel].words, subjectWords: C.channels[channel].subjectWords };
-const exampleSource = PROMPTS.data.examples[lang][channel];
+// the example matches the situation: a business without a website, or one that has a website (then only a question)
+const host = String(b.website || '').replace(/^https?:\/\//i, '').split('/')[0];
+const exampleSource = PROMPTS.data.examples[lang][channel][host ? 'website' : 'nosite'];
 const exampleText = render(C.channels[channel].example, { subject: exampleSource.subject, body: exampleSource.body, words: limits.words, subjectWords: limits.subjectWords });
 
 // ---- facts about the sender
@@ -77,7 +79,6 @@ const reviews = Number(b.reviews) || 0;
 const tier = F.reputation.find(t => reviews >= t.minReviews && rating >= t.minRating);
 const reputation = tier ? tier.text : F.reputationNone;
 const socialNames = [...new Set((Array.isArray(b.social) ? b.social : []).map(u => /instagram/i.test(u) ? 'Instagram' : /facebook/i.test(u) ? 'Facebook' : null).filter(Boolean))];
-const host = String(b.website || '').replace(/^https?:\/\//i, '').split('/')[0];
 const reason = clean(b.reason, L.reason);
 const aiAt = reason.indexOf(' AI: ');
 const checks = (aiAt >= 0 ? reason.slice(0, aiAt) : reason).replace(/^[^:]*:\s*/, '');

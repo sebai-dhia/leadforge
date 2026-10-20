@@ -49,7 +49,7 @@ test('a declared variable that no template uses is refused', () => {
 test('a language or channel without an example, and a wrong word limit, are refused', () => {
   const b = broken('draft', d => {
     const ex = JSON.parse(fs.readFileSync(path.join(d, 'examples.json'), 'utf8'));
-    delete ex.ar.email;
+    delete ex.ar.email.nosite;
     fs.writeFileSync(path.join(d, 'examples.json'), JSON.stringify(ex));
     const c = JSON.parse(fs.readFileSync(path.join(d, 'config.json'), 'utf8'));
     c.channels.email.words = 5000;
