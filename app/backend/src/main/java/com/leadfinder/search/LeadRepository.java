@@ -29,6 +29,8 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     Optional<Lead> findByIdAndUserId(Long id, Long userId);
 
+    List<Lead> findByUserIdAndIdIn(Long userId, java.util.Collection<Long> ids);
+
     long countByUserId(Long userId);
 
     long countByUserIdAndHiddenAtIsNotNull(Long userId);

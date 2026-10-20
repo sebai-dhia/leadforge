@@ -39,6 +39,11 @@ public class LeadController {
 
     public record HiddenUpdate(boolean hidden) {}
 
+    public record BulkRequest(@jakarta.validation.constraints.NotNull @Pattern(regexp = "hide|restore|delete") String action,
+                              @jakarta.validation.constraints.NotEmpty @jakarta.validation.constraints.Size(max = 100) List<Long> ids) {}
+
+    public record BulkResult(int count) {}
+
     /** The person's own edits of a written message. */
     public record MessageUpdate(@jakarta.validation.constraints.Size(max = 500) String subject,
                                 @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 5000) String body) {}
@@ -114,6 +119,12 @@ public class LeadController {
         Lead lead = ownedLead(jwt, id);
         lead.setHiddenAt(req.hidden() ? java.time.Instant.now() : null);
         return LeadDto.of(leads.save(lead));
+    }
+
+    /** The same action for several leads at once: hide, restore, or delete (only for hidden leads). */
+    @PostMapping("/bulk")
+    public BulkResult bulk(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BulkRequest req) {
+        return new BulkResult(leadService.bulk(userId(jwt), req.action(), req.ids()));
     }
 
     /** Saves the person's own edits of the message, so they are still there next time. */

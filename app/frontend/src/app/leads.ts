@@ -76,8 +76,34 @@ type StatusFilter = LeadStatus | 'ALL';
         @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
       </p>
 
+      @if (items().length) {
+        <div class="select-bar" [class.active]="selectedCount() > 0">
+          <label class="check">
+            <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
+          </label>
+          @if (selectedCount() === 0) {
+            <span class="mute">{{ t('leads.selectAll') }}</span>
+          } @else {
+            <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
+            <span class="sp"></span>
+            @if (hidden()) {
+              <button type="button" class="ghost" (click)="bulk('restore')" [disabled]="working()">{{ t('leads.bulkRestore') }}</button>
+              <button type="button" class="danger-btn" (click)="askDelete()" [disabled]="working()">{{ t('leads.bulkDelete') }}</button>
+            } @else {
+              <button type="button" class="ghost" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
+            }
+            <button type="button" class="ghost quiet" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
+          }
+        </div>
+      }
+
       @for (l of items(); track l.id; let i = $index) {
-        <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
+        <div class="lead-row">
+          <label class="check pick">
+            <input type="checkbox" [checked]="isSelected(l.id)" (click)="shift = $event.shiftKey" (change)="toggle(l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
+          </label>
+          <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
+        </div>
       } @empty {
         @if (!loading()) {
           <div class="empty">
@@ -85,6 +111,23 @@ type StatusFilter = LeadStatus | 'ALL';
             <button type="button" class="ghost" (click)="clearFilters()">{{ t('leads.clear') }}</button>
           </div>
         }
+      }
+
+      @if (confirming()) {
+        <div class="del-back" (click)="confirming.set(false)">
+          <div class="del-box" role="alertdialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-text" (click)="$event.stopPropagation()" (keydown.escape)="confirming.set(false)">
+            <h2 id="del-title">{{ t(selectedCount() === 1 ? 'leads.delTitleOne' : 'leads.delTitle', { n: selectedCount() }) }}</h2>
+            <p id="del-text">{{ t('leads.delText') }}</p>
+            @if (valuable() > 0) {
+              <p class="warn">{{ t('leads.delValuable', { n: valuable() }) }}</p>
+              <label class="ack"><input type="checkbox" [checked]="ack()" (change)="ack.set(!ack())"> {{ t('leads.delAck') }}</label>
+            }
+            <div class="actions">
+              <button type="button" class="danger-btn" (click)="doDelete()" [disabled]="working() || (valuable() > 0 && !ack())">{{ t(selectedCount() === 1 ? 'leads.delBtnOne' : 'leads.delBtn', { n: selectedCount() }) }}</button>
+              <button type="button" class="ghost" id="del-cancel" (click)="confirming.set(false)">{{ t('leads.cancelSel') }}</button>
+            </div>
+          </div>
+        </div>
       }
 
       @if (items().length < total()) {
@@ -110,6 +153,17 @@ export class LeadsPage {
   private static readonly PAGE = 40;
 
   protected readonly status = signal<StatusFilter>('ALL');
+  /** Selection works on the leads shown on screen only; any new list clears it. */
+  protected readonly selected = signal<ReadonlySet<number>>(new Set());
+  protected readonly selectedCount = computed(() => this.selected().size);
+  protected readonly allSelected = computed(() => this.items().length > 0 && this.items().every(l => this.selected().has(l.id)));
+  protected readonly someSelected = computed(() => this.selectedCount() > 0 && !this.allSelected());
+  protected readonly valuable = computed(() => this.items().filter(l => this.selected().has(l.id) && (l.status === 'CONTACTED' || l.status === 'REPLIED')).length);
+  protected readonly confirming = signal(false);
+  protected readonly ack = signal(false);
+  protected readonly working = signal(false);
+  protected shift = false;
+  private lastPicked = -1;
   protected readonly reachable = signal(false);
   /** Showing the hidden leads instead of the others. */
   protected readonly hidden = signal(false);
@@ -160,6 +214,64 @@ export class LeadsPage {
   protected toggleReachable() { this.reachable.update(v => !v); this.fetch(true); }
   protected toggleHidden() { this.hidden.update(v => !v); this.status.set('ALL'); this.fetch(true); }
   protected reload() { this.fetch(true); }
+
+  protected isSelected(id: number) { return this.selected().has(id); }
+  protected clearSelection() { this.selected.set(new Set()); this.lastPicked = -1; }
+  protected toggleAll() {
+    this.selected.set(this.allSelected() ? new Set() : new Set(this.items().map(l => l.id)));
+    this.lastPicked = -1;
+  }
+  /** A click toggles one lead; shift-click selects everything between this one and the last one picked. */
+  protected toggle(id: number, index: number) {
+    const next = new Set(this.selected());
+    if (this.shift && this.lastPicked >= 0) {
+      const [a, b] = [Math.min(this.lastPicked, index), Math.max(this.lastPicked, index)];
+      const on = !next.has(id);
+      this.items().slice(a, b + 1).forEach(l => (on ? next.add(l.id) : next.delete(l.id)));
+    } else if (next.has(id)) next.delete(id); else next.add(id);
+    this.selected.set(next);
+    this.lastPicked = index;
+  }
+
+  private plural(one: I18nKey, many: I18nKey, n: number) { return this.t(n === 1 ? one : many, { n }); }
+
+  /** Hide or restore the selection, with one Undo that reverses all of it. */
+  protected bulk(action: 'hide' | 'restore') {
+    const ids = [...this.selected()];
+    if (!ids.length || this.working()) return;
+    this.working.set(true);
+    this.api.bulk(action, ids).subscribe({
+      next: r => {
+        this.working.set(false);
+        const hide = action === 'hide';
+        this.toasts.show(hide ? this.plural('leads.bulkHiddenOne', 'leads.bulkHidden', r.count) : this.plural('leads.bulkRestoredOne', 'leads.bulkRestored', r.count),
+          { label: this.t('toast.undo'), run: () => this.api.bulk(hide ? 'restore' : 'hide', ids).subscribe({ next: () => this.fetch(true) }) });
+        this.fetch(true);
+      },
+      error: () => { this.working.set(false); this.error.set('leads.errBulk'); },
+    });
+  }
+
+  protected askDelete() {
+    this.ack.set(false);
+    this.confirming.set(true);
+    setTimeout(() => document.getElementById('del-cancel')?.focus());
+  }
+
+  protected doDelete() {
+    const ids = [...this.selected()];
+    if (!ids.length || this.working()) return;
+    this.working.set(true);
+    this.api.bulk('delete', ids).subscribe({
+      next: r => {
+        this.working.set(false);
+        this.confirming.set(false);
+        this.toasts.show(this.plural('leads.bulkDeletedOne', 'leads.bulkDeleted', r.count));
+        this.fetch(true);
+      },
+      error: () => { this.working.set(false); this.confirming.set(false); this.error.set('leads.errBulk'); },
+    });
+  }
   protected loadMore() { this.fetch(false); }
 
   protected clearFilters() {
@@ -210,6 +322,7 @@ export class LeadsPage {
 
   /** Loads the first page again (reset) or the next page. A newer request makes older answers irrelevant. */
   private fetch(reset: boolean) {
+    if (reset) this.clearSelection();
     const ticket = ++this.ticket;
     const page = reset ? 0 : this.page + 1;
     (reset ? this.loading : this.loadingMore).set(true);

@@ -98,6 +98,10 @@ export class ApiService {
     return this.http.patch<Lead>(`${API}/leads/${leadId}/status`, { status });
   }
   /** Hides a lead from the lists (it stays known, so a new search does not offer it as new), or brings it back. */
+  /** The same action for several leads. Delete only works for hidden leads. */
+  bulk(action: 'hide' | 'restore' | 'delete', ids: number[]) {
+    return this.http.post<{ count: number }>(`${API}/leads/bulk`, { action, ids });
+  }
   setHidden(leadId: number, hidden: boolean) {
     return this.http.patch<Lead>(`${API}/leads/${leadId}/hidden`, { hidden });
   }

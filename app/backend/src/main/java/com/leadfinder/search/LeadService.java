@@ -27,6 +27,7 @@ public class LeadService {
 
     private final LeadRepository leads;
     private final SearchLeadRepository links;
+    private final LeadBlockRepository blocks;
 
     /**
      * Stores the businesses a search found. A business the user already has (same place id, phone,
@@ -41,6 +42,9 @@ public class LeadService {
         int created = 0;
         for (IncomingLead in : incoming) {
             if (in.name() == null || in.name().isBlank()) {
+                continue;
+            }
+            if (isBlocked(job.getUserId(), in)) {
                 continue;
             }
             Optional<Lead> match = find(job.getUserId(), in);
@@ -95,6 +99,43 @@ public class LeadService {
 
         lead.setContactCheckedAt(Instant.now());
         return new EnrichOutcome(added);
+    }
+
+    /** A business the user deleted is not offered again. */
+    private boolean isBlocked(Long userId, IncomingLead in) {
+        String phoneKey = phoneKey(in.phone());
+        String host = websiteHost(in.website());
+        return (notBlank(in.placeId()) && blocks.existsByUserIdAndPlaceId(userId, in.placeId()))
+                || (phoneKey != null && blocks.existsByUserIdAndPhoneKey(userId, phoneKey))
+                || (host != null && blocks.existsByUserIdAndWebsiteHost(userId, host));
+    }
+
+    /**
+     * Hides, restores or permanently deletes the given leads of one user. Leads that are not the user's are ignored.
+     * Only hidden leads can be deleted; what is kept of them is the block record that stops them returning.
+     * Returns how many leads were changed.
+     */
+    @Transactional
+    public int bulk(Long userId, String action, java.util.Collection<Long> ids) {
+        List<Lead> found = leads.findByUserIdAndIdIn(userId, ids);
+        switch (action) {
+            case "hide" -> found.stream().filter(l -> l.getHiddenAt() == null).forEach(l -> l.setHiddenAt(Instant.now()));
+            case "restore" -> found.stream().filter(l -> l.getHiddenAt() != null).forEach(l -> l.setHiddenAt(null));
+            case "delete" -> {
+                found = found.stream().filter(l -> l.getHiddenAt() != null).toList();
+                for (Lead l : found) {
+                    if (l.getPlaceId() != null || l.getPhoneKey() != null || l.getWebsiteHost() != null) {
+                        blocks.save(new LeadBlock(userId, l.getPlaceId(), l.getPhoneKey(), l.getWebsiteHost()));
+                    }
+                }
+                leads.deleteAll(found);
+            }
+            default -> throw new IllegalArgumentException("Unknown action " + action);
+        }
+        if (!"delete".equals(action)) {
+            leads.saveAll(found);
+        }
+        return found.size();
     }
 
     private Optional<Lead> find(Long userId, IncomingLead in) {
