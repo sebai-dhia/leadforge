@@ -67,6 +67,10 @@ public class Lead {
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt = Instant.now();
 
+    /** The version of the prompt files that wrote the message, for example draft-749c61ca. Null when there is no message. */
+    @Column(name = "draft_prompt_version")
+    private String draftPromptVersion;
+
     /** Set when the user hid the lead. Hidden leads are left out of the lists but stay known. */
     @Column(name = "hidden_at")
     private Instant hiddenAt;

@@ -40,16 +40,16 @@ class DraftFactsTest extends IntegrationTestBase {
     private AppUser profiled(String email) {
         AppUser u = newUser(email, true);
         u.setHeadline("Web developer for local businesses");
-        u.setCity("Tunis");
+        u.setCity("Testville");
         u.setAbout("I build simple websites.");
         u.setServices("[\"Web development\",\"Automation\"]");
-        u.setLinks("[{\"label\":\"Portfolio\",\"url\":\"https://dhia.dev\"}]");
+        u.setLinks("[{\"label\":\"Portfolio\",\"url\":\"https://portfolio.example.com\"}]");
         return users.save(u);
     }
 
     private Long leadOf(AppUser u) {
         SearchJob job = newJob(u, "cafes");
-        leadService.ingest(job, List.of(lead("p1", "72 Coffee", "Lac 1, Tunis", "+216 71 111 111", null, List.of(), List.of("https://www.instagram.com/72coffee"), 8)));
+        leadService.ingest(job, List.of(lead("p1", "Café Exemple", "Rue de l'Exemple, Testville", "+000 00 000 001", null, List.of(), List.of("https://www.instagram.com/test_account_example"), 8)));
         Long id = leads.findFirstByUserIdAndPlaceId(u.getId(), "p1").orElseThrow().getId();
         jdbc.update("update leads set rating = 4.2, reviews = 108 where id = ?", id);
         return id;
@@ -71,21 +71,22 @@ class DraftFactsTest extends IntegrationTestBase {
     void theWholeProfileAndTheLeadFactsReachTheWorkflow() throws Exception {
         AppUser u = profiled("d1@x.tn");
         Long id = leadOf(u);
-        doReturn(new N8nClient.Draft("S", "Bonjour", null, null)).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001")).when(n8n).draft(any());
         draft(u, id);
 
         Map<String, Object> p = lastPayload(1);
         assertEquals("Web developer for local businesses", p.get("headline"));
-        assertEquals("Tunis", p.get("senderCity"));
+        assertEquals("Testville", p.get("senderCity"));
         assertEquals("I build simple websites.", p.get("about"));
         assertEquals(List.of("Web development", "Automation"), p.get("services"));
         assertEquals(1, ((List<?>) p.get("links")).size());
         assertEquals(4.2, p.get("rating"));
         assertEquals(108, p.get("reviews"));
-        assertEquals(List.of("https://www.instagram.com/72coffee"), p.get("social"));
-        assertEquals("Dhia", p.get("senderName"));
+        assertEquals(List.of("https://www.instagram.com/test_account_example"), p.get("social"));
+        assertEquals("Test Sender", p.get("senderName"));
         assertNull(p.get("linksKnowledge"), "nothing read yet");
         assertFalse(((String) p.get("linksHash")).isEmpty());
+        assertEquals("draft-test0001", leads.findById(id).orElseThrow().getDraftPromptVersion(), "the prompt version is kept with the message");
     }
 
     @Test
@@ -93,7 +94,7 @@ class DraftFactsTest extends IntegrationTestBase {
         AppUser u = profiled("d2@x.tn");
         Long id = leadOf(u);
         String hash = SenderKnowledge.hashOf(users.findById(u.getId()).orElseThrow());
-        doReturn(new N8nClient.Draft("S", "Bonjour", "Portfolio: websites for cafes", hash)).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", "Portfolio: websites for cafes", hash, "draft-test0001")).when(n8n).draft(any());
         draft(u, id);
         assertEquals("Portfolio: websites for cafes", users.findById(u.getId()).orElseThrow().getLinksKnowledge());
 
@@ -126,7 +127,7 @@ class DraftFactsTest extends IntegrationTestBase {
         u.setDisplayName("Guest");
         users.save(u);
         Long id = leadOf(u);
-        doReturn(new N8nClient.Draft("S", "Bonjour", null, null)).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001")).when(n8n).draft(any());
         draft(u, id);
         assertEquals("", lastPayload(1).get("senderName"));
     }

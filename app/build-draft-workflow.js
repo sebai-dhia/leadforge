@@ -5,19 +5,23 @@
 const fs = require('fs');
 const { SAFE_URL } = require('./workflow-snippets');
 const { withDeployIds } = require('./n8n-deploy-ids');
+const prompts = require('./prompts-lib');
+
+// The prompt text, examples, limits and model settings are data in prompts/draft/. Every change there is a new version.
+const DRAFT = prompts.load('draft');
 
 const src = name => fs.readFileSync(__dirname + '/workflow-src/draft/' + name + '.js', 'utf8').trim();
-const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/' + DRAFT.data.config.model + ':generateContent';
 
 const planCode = SAFE_URL + '\n' + src('plan');
-const promptCode = src('prompt');
+const promptCode = prompts.embed(DRAFT) + '\n' + src('prompt');
 const checkCode = src('shared') + '\n' + src('check');
 const finalizeCode = src('shared') + '\n' + src('finalize');
 
 /** The request body shared by the first try and the second try: fixed instructions apart from the facts. */
 const geminiBody = text => "={{ JSON.stringify({ systemInstruction: { parts: [{ text: $('Build Prompt').first().json.system }] }, "
   + "contents: [{ role: 'user', parts: [{ text: " + text + " }] }], "
-  + "generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 900 } }) }}";
+  + "generationConfig: { responseMimeType: 'application/json', temperature: " + DRAFT.data.config.temperature + ", maxOutputTokens: " + DRAFT.data.config.maxOutputTokens + " } }) }}";
 
 const workflow = {
   name: 'Lead Finder Draft Message',

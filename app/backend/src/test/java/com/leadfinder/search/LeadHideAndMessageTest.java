@@ -84,8 +84,10 @@ class LeadHideAndMessageTest extends IntegrationTestBase {
         mvc.perform(patch("/api/leads/" + id + "/message").with(as(u)).contentType(MediaType.APPLICATION_JSON).content("{\"subject\":\"x\",\"body\":\"  \"}"))
                 .andExpect(status().isBadRequest());
 
+        jdbc.update("update leads set draft_prompt_version = 'draft-test0001' where id = ?", id);
         mvc.perform(delete("/api/leads/" + id + "/message").with(as(u))).andExpect(status().isOk());
         Lead after = leads.findById(id).orElseThrow();
+        assertNull(after.getDraftPromptVersion(), "clearing the message clears its prompt version too");
         assertNull(after.getEmailBody());
         assertNull(after.getDraftChannel());
     }

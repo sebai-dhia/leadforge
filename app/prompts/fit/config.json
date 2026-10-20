@@ -1,0 +1,12 @@
+{
+  "name": "fit",
+  "description": "Second opinion on the best leads of a search: how likely each business needs the freelancer's offer.",
+  "model": "gemini-flash-lite-latest",
+  "temperature": 0.2,
+  "maxOutputTokens": 1800,
+  "limits": { "service": 200, "name": 80, "niche": 40, "checks": 220, "text": 500 },
+  "variables": {
+    "prompt": ["service", "leads"],
+    "lead": ["n", "name", "type", "reviews", "website", "contact", "checks", "siteText", "rating", "value"]
+  }
+}

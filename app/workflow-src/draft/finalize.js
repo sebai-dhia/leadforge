@@ -18,4 +18,6 @@ return [{ json: {
   // what was read on the sender's own links this time, for the backend to keep (null when nothing was read)
   linksKnowledge: ctx.knowledgeNew,
   linksHash: ctx.linksHash,
+  // which version of the prompt files wrote this message
+  promptVersion: ctx.promptVersion,
 } }];

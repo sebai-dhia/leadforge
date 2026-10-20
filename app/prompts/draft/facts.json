@@ -1,0 +1,31 @@
+{
+  "sender": {
+    "name": "Name: {{value}}",
+    "nameUnknown": "Name: unknown. Do not introduce yourself by name and end without a signature.",
+    "headline": "Headline: {{value}}",
+    "city": "Based in: {{value}} (you may say so once, briefly, when the business is in the same city)",
+    "services": "Services: {{value}}",
+    "offer": "What they offer: {{value}}",
+    "about": "In their own words: {{value}}",
+    "targets": "Usually works with: {{value}}",
+    "pages": "From the sender's own pages (copied text): {{open}}{{value}}{{close}}"
+  },
+  "business": {
+    "name": "Name (write it exactly like this): {{value}}",
+    "type": "Type: {{value}}",
+    "address": "Address: {{value}}",
+    "reputation": "Reputation: {{value}}",
+    "website": "Website: {{value}}",
+    "noWebsite": "Website: none was found online",
+    "social": "Also online on: {{value}}",
+    "says": "What the business says about itself (copied text): {{open}}{{value}}{{close}}",
+    "checks": "Our own checks (internal notes, never quote them): {{value}}",
+    "aiNote": "Our AI note (internal, never quote it): {{value}}"
+  },
+  "reputation": [
+    { "minReviews": 100, "minRating": 4.2, "text": "very well reviewed by customers" },
+    { "minReviews": 30, "minRating": 4, "text": "well reviewed by customers" },
+    { "minReviews": 5, "minRating": 0, "text": "has some customer reviews" }
+  ],
+  "reputationNone": "few or no reviews online"
+}

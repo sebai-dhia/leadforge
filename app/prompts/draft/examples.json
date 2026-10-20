@@ -1,0 +1,32 @@
+{
+  "fr": {
+    "whatsapp": {
+      "subject": "",
+      "body": "Bonjour,\n\nJe suis Sami, designer web à Tunis. J'aide les cafés à avoir une page en ligne claire où leurs clients voient le menu et réservent.\n\nJe n'ai pas trouvé de site pour Café Lumière, alors que vos clients semblent vous apprécier. Avez-vous déjà un endroit où ils peuvent consulter votre menu ?\n\nSami"
+    },
+    "email": {
+      "subject": "Un menu en ligne pour Café Lumière ?",
+      "body": "Bonjour,\n\nJe suis Sami, designer web à Tunis. J'aide les cafés à présenter leur menu et leurs horaires sur une page claire, pensée pour le téléphone.\n\nJe n'ai pas trouvé de site pour Café Lumière, alors que vos clients semblent vous apprécier. Avez-vous déjà un endroit où ils peuvent tout retrouver en ligne ?\n\nSami"
+    }
+  },
+  "en": {
+    "whatsapp": {
+      "subject": "",
+      "body": "Hello,\n\nI'm Sami, a web designer in Tunis. I help cafes get a clear page online where customers see the menu and book a table.\n\nI could not find a website for Café Lumière, even though your customers seem to like you. Do you already have a place where they can see your menu?\n\nSami"
+    },
+    "email": {
+      "subject": "An online menu for Café Lumière?",
+      "body": "Hello,\n\nI'm Sami, a web designer in Tunis. I help cafes show their menu and opening hours on one clear page that works well on a phone.\n\nI could not find a website for Café Lumière, even though your customers seem to like you. Is there already a place where they can find everything online?\n\nSami"
+    }
+  },
+  "ar": {
+    "whatsapp": {
+      "subject": "",
+      "body": "مرحباً،\n\nأنا سامي، مصمم مواقع في تونس. أساعد المقاهي على امتلاك صفحة واضحة على الإنترنت يرى فيها الزبائن القائمة ويحجزون طاولتهم.\n\nلم أجد موقعاً إلكترونياً لمقهى لوميار، رغم أن زبائنكم يبدو أنهم يحبونكم. هل لديكم مكان يستطيع الزبائن من خلاله الاطلاع على القائمة؟\n\nسامي"
+    },
+    "email": {
+      "subject": "قائمة إلكترونية لمقهى لوميار؟",
+      "body": "مرحباً،\n\nأنا سامي، مصمم مواقع في تونس. أساعد المقاهي على عرض القائمة وأوقات العمل في صفحة واحدة واضحة تناسب الهاتف.\n\nلم أجد موقعاً إلكترونياً لمقهى لوميار، رغم أن زبائنكم يبدو أنهم يحبونكم. هل لديكم مكان يجدون فيه كل شيء على الإنترنت؟\n\nسامي"
+    }
+  }
+}

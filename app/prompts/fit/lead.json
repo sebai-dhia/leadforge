@@ -1,0 +1,21 @@
+{
+  "separator": " | ",
+  "parts": [
+    "{{n}}. {{name}}",
+    "type: {{type}}",
+    "Google reviews: {{reviews}}",
+    "website: {{website}}",
+    "contact: {{contact}}",
+    "checks: {{checks}}",
+    "site text: {{siteText}}"
+  ],
+  "words": {
+    "ratingSuffix": " (rating {{rating}})",
+    "noWebsite": "none found",
+    "phone": "phone",
+    "email": "email",
+    "social": "social page",
+    "noSiteText": "none",
+    "quoted": "\"{{value}}\""
+  }
+}

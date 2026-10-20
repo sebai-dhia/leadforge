@@ -14,8 +14,8 @@ import java.util.function.Supplier;
 
 @Component
 public class N8nClient {
-    /** linksKnowledge and linksHash: what was read on the sender's own links, to be cached (null when not read this time). */
-    public record Draft(String subject, String body, String linksKnowledge, String linksHash) {}
+    /** promptVersion: the version of the prompt files that wrote the message. linksKnowledge and linksHash: what was read on the sender's own links, to be cached (null when not read this time). */
+    public record Draft(String subject, String body, String linksKnowledge, String linksHash, String promptVersion) {}
 
     /** Contact details found for one business by the on-demand lookup. */
     public record Enrichment(String website, List<String> emails, List<String> phones, List<String> social,

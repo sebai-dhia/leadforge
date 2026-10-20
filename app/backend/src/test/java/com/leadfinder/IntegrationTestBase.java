@@ -58,7 +58,7 @@ public abstract class IntegrationTestBase {
         u.setPasswordHash("not-a-real-hash");
         if (withProfile) {
             u.setOffer("Custom booking systems for small businesses");
-            u.setDisplayName("Dhia");
+            u.setDisplayName("Test Sender");
         }
         return users.save(u);
     }

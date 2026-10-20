@@ -130,6 +130,7 @@ public class LeadController {
         lead.setEmailBody(null);
         lead.setDraftLanguage(null);
         lead.setDraftChannel(null);
+        lead.setDraftPromptVersion(null);
         return LeadDto.of(leads.save(lead));
     }
 
@@ -193,6 +194,7 @@ public class LeadController {
         lead.setSubject(draft.subject() == null ? "" : draft.subject());
         lead.setEmailBody(withLinks(draft.body(), user));
         lead.setDraftLanguage(req.language());
+        lead.setDraftPromptVersion(draft.promptVersion() == null || draft.promptVersion().isBlank() ? null : draft.promptVersion());
         lead.setDraftChannel(req.channel());
         return LeadDto.of(leads.save(lead));
     }
