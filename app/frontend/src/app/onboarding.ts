@@ -5,7 +5,7 @@ import { ApiService, Lang, ProfileUpdate } from './api.service';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
 import { I18n, I18nKey } from './i18n';
-import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPTIONS } from './profile-options';
+import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPTIONS, closestServices } from './profile-options';
 
 /** First-run picker, also reused to change the chips later (?edit=1&step=1|2|3). */
 @Component({
@@ -190,8 +190,12 @@ export class Onboarding {
   private readonly targetScores = computed(() => {
     const score = new Map<string, number>();
     for (const service of this.services()) {
-      const fits = SERVICE_TARGETS[service] ?? [];
-      fits.forEach((t, i) => score.set(t, (score.get(t) ?? 0) + (fits.length - i)));
+      // a service the person typed is read as the standard services it is closest to
+      const known = SERVICE_TARGETS[service] ? [service] : closestServices(service);
+      for (const key of known) {
+        const fits = SERVICE_TARGETS[key] ?? [];
+        fits.forEach((t, i) => score.set(t, (score.get(t) ?? 0) + (fits.length - i)));
+      }
     }
     return score;
   });
