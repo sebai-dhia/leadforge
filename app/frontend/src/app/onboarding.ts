@@ -67,7 +67,7 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPT
                 <p class="group-label">{{ t('ob.otherKinds') }}</p>
               }
               <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
-                @for (tg of otherTargets(); track tg) {
+                @for (tg of visibleOthers(); track tg) {
                   <button type="button" class="pick" [class.on]="targets().includes(tg)"
                     [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
                     (click)="toggle(targets, tg, maxTargets)">
@@ -75,6 +75,11 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPT
                   </button>
                 }
               </div>
+              @if (otherTargets().length > OTHERS_SHOWN) {
+                <button type="button" class="more-kinds" [attr.aria-expanded]="showAllOthers()" (click)="showAllOthers.set(!showAllOthers())">
+                  {{ showAllOthers() ? t('ob.showFewer') : t('ob.showAll', { n: otherTargets().length }) }}
+                </button>
+              }
               <p class="count-note" role="status">{{ t('ob.selected', { n: targets().length, max: maxTargets }) }}</p>
             }
             @default {
@@ -140,6 +145,8 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPT
     .other { display: flex; gap: 12px; align-items: flex-end; margin-top: 24px; flex-wrap: wrap; }
     .other label { flex: 1 1 260px; margin: 0; }
     .count-note { margin: 20px 0 0; font-size: 14px; color: var(--mute); }
+    .more-kinds { margin-top: 14px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: transparent; color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); font-weight: 500; }
+    .more-kinds:hover { background: var(--accent-soft); filter: none; }
     .group-label { margin: 22px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
     .group-label:first-of-type { margin-top: 0; }
     .preview { margin: 0 0 24px; padding: 16px 18px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
@@ -204,6 +211,13 @@ export class Onboarding {
     const top = score.get(ranked[0]) ?? 0;
     const strong = ranked.filter(t => (score.get(t) ?? 0) >= top * 0.6);
     return ranked.slice(0, Math.min(6, Math.max(3, strong.length)));
+  });
+  protected readonly OTHERS_SHOWN = 6;
+  protected readonly showAllOthers = signal(false);
+  /** The rest start folded to six, so the page stays short. A type that is already chosen is always shown. */
+  protected readonly visibleOthers = computed(() => {
+    const all = this.otherTargets();
+    return this.showAllOthers() ? all : all.filter((t, i) => i < this.OTHERS_SHOWN || this.targets().includes(t));
   });
   protected readonly otherTargets = computed(() => this.rankedTargets().filter(t => !this.suggestedTargets().includes(t)));
 

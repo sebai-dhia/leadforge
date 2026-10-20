@@ -149,6 +149,7 @@ const CHIPS_FR: Record<string, string> = {
   'Branding and logos': 'Identité visuelle et logos', SEO: 'SEO (référencement)', Automation: 'Automatisation',
   Copywriting: 'Rédaction', 'Video and motion': 'Vidéo et animation', Photography: 'Photographie',
   'Social media': 'Réseaux sociaux',
+  'Real estate agencies': "Agences immobilières", 'Opticians': "Opticiens", 'Veterinary clinics': "Cliniques vétérinaires", 'Travel agencies': "Agences de voyage", 'Wedding and event venues': "Salles de mariage et de fêtes", 'Florists': "Fleuristes", 'Clothing boutiques': "Boutiques de vêtements", 'Furniture and decor stores': "Magasins de meubles et déco", 'Architects and interior design': "Architectes et décoration d'intérieur", 'Accounting firms': "Cabinets comptables", 'Driving schools': "Auto-écoles", 'Spas and wellness': "Spas et bien-être",
   'Online ads': 'Publicité en ligne', 'Graphic design': 'Design graphique', Translation: 'Traduction', Illustration: 'Illustration', 'Voice-over': 'Voix off',
   'Dentists and clinics': 'Dentistes et cabinets', 'Doctors and clinics': 'Médecins et cliniques', Pharmacies: 'Pharmacies',
   'Restaurants and cafés': 'Restaurants et cafés', 'Hotels and guesthouses': "Hôtels et maisons d'hôtes",

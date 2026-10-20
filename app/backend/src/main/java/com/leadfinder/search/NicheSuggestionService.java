@@ -31,6 +31,18 @@ public class NicheSuggestionService {
             java.util.Map.entry("law firms", "lawyers"),
             java.util.Map.entry("car repair", "car repair"),
             java.util.Map.entry("bakeries", "bakeries"),
+            java.util.Map.entry("real estate agencies", "real estate agencies"),
+            java.util.Map.entry("opticians", "opticians"),
+            java.util.Map.entry("veterinary clinics", "veterinary clinics"),
+            java.util.Map.entry("travel agencies", "travel agencies"),
+            java.util.Map.entry("wedding and event venues", "wedding venues"),
+            java.util.Map.entry("florists", "florists"),
+            java.util.Map.entry("clothing boutiques", "clothing stores"),
+            java.util.Map.entry("furniture and decor stores", "furniture stores"),
+            java.util.Map.entry("architects and interior design", "architects"),
+            java.util.Map.entry("accounting firms", "accounting firms"),
+            java.util.Map.entry("driving schools", "driving schools"),
+            java.util.Map.entry("spas and wellness", "spas"),
             java.util.Map.entry("schools and training", "schools"));
 
     /** The person's own picks first, then guesses from what they offer. */

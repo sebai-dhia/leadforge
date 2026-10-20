@@ -327,6 +327,8 @@ export const EN_APP = {
   'ob.s2SubFor': "Because you offer {services}, we put the businesses most likely to need you first. Pick up to {max} kinds.",
   'ob.bestFit': "Best fit for what you offer",
   'ob.otherKinds': "Other businesses",
+  'ob.showAll': "Show all {n} other businesses",
+  'ob.showFewer': "Show fewer",
   'ob.yourName': 'Your name',
   'ob.based': 'Where are you based?',
   'ob.basedPh': 'Tunis, Tunisia',
