@@ -1,11 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService, Lang, ProfileUpdate } from './api.service';
 import { AuthService } from './auth.service';
 import { Logo } from './logo';
 import { I18n, I18nKey } from './i18n';
-import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './profile-options';
+import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, SERVICE_TARGETS, TARGET_OPTIONS } from './profile-options';
 
 /** First-run picker, also reused to change the chips later (?edit=1&step=1|2|3). */
 @Component({
@@ -50,9 +50,24 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './pr
             }
             @case (2) {
               <h1>{{ t('ob.s2Title') }}</h1>
-              <p class="sub">{{ t('ob.s2Sub', { max: maxTargets }) }}</p>
+              <p class="sub">{{ suggestedTargets().length ? t('ob.s2SubFor', { services: serviceList(), max: maxTargets }) : t('ob.s2Sub', { max: maxTargets }) }}</p>
+              @if (suggestedTargets().length) {
+                <p class="group-label">{{ t('ob.bestFit') }}</p>
+              }
               <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
-                @for (tg of targetChoices; track tg) {
+                @for (tg of suggestedTargets(); track tg) {
+                  <button type="button" class="pick" [class.on]="targets().includes(tg)"
+                    [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
+                    (click)="toggle(targets, tg, maxTargets)">
+                    <span class="mark" aria-hidden="true">{{ targets().includes(tg) ? '✓' : '+' }}</span>{{ i18n.chip(tg) }}
+                  </button>
+                }
+              </div>
+              @if (suggestedTargets().length && otherTargets().length) {
+                <p class="group-label">{{ t('ob.otherKinds') }}</p>
+              }
+              <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
+                @for (tg of otherTargets(); track tg) {
                   <button type="button" class="pick" [class.on]="targets().includes(tg)"
                     [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
                     (click)="toggle(targets, tg, maxTargets)">
@@ -65,6 +80,17 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './pr
             @default {
               <h1>{{ t('ob.s3Title') }}</h1>
               <p class="sub">{{ t('ob.s3Sub') }}</p>
+              @if (previewRows().length) {
+                <section class="preview" [attr.aria-label]="t('ob.pvTitle')">
+                  <p class="group-label">{{ t('ob.pvTitle') }}</p>
+                  <dl class="rows" aria-live="polite">
+                    @for (r of previewRows(); track r.label) {
+                      <div class="prow"><dt>{{ t(r.label) }}</dt><dd>{{ r.value }}</dd></div>
+                    }
+                  </dl>
+                  <p class="note">{{ t('ob.pvNote') }}</p>
+                </section>
+              }
               <div class="fields">
                 <label>{{ t('ob.yourName') }} <input name="name" maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
                 <label>{{ t('ob.based') }} <input name="city" maxlength="120" [placeholder]="t('ob.basedPh')" [(ngModel)]="city"></label>
@@ -114,6 +140,16 @@ import { MAX_SERVICES, MAX_TARGETS, SERVICE_OPTIONS, TARGET_OPTIONS } from './pr
     .other { display: flex; gap: 12px; align-items: flex-end; margin-top: 24px; flex-wrap: wrap; }
     .other label { flex: 1 1 260px; margin: 0; }
     .count-note { margin: 20px 0 0; font-size: 14px; color: var(--mute); }
+    .group-label { margin: 22px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+    .group-label:first-of-type { margin-top: 0; }
+    .preview { margin: 0 0 24px; padding: 16px 18px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+    .preview .group-label { margin: 0 0 8px; }
+    .rows { margin: 0; display: grid; gap: 10px; }
+    .prow { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: baseline; }
+    .prow dt { font-size: 13px; color: var(--mute); }
+    .prow dd { margin: 0; font-size: 16px; line-height: 1.45; color: var(--ink); }
+    @media (max-width: 520px) { .prow { grid-template-columns: 1fr; gap: 2px; } }
+    .preview .note { margin: 10px 0 0; font-size: 13px; color: var(--mute); }
     .fields { display: grid; gap: 4px; max-width: 460px; }
     .nav { margin-top: 36px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .next { min-height: 52px; padding: 0 32px; border-radius: 12px; font-size: 16px; }
@@ -142,9 +178,45 @@ export class Onboarding {
 
   protected readonly services = signal<string[]>([]);
   protected readonly targets = signal<string[]>([]);
+
+  /** The business types that fit the chosen services, best fit first. A type listed by several services ranks higher. */
+  protected readonly suggestedTargets = computed(() => {
+    const score = new Map<string, number>();
+    for (const service of this.services()) {
+      const fits = SERVICE_TARGETS[service] ?? [];
+      fits.forEach((t, i) => score.set(t, (score.get(t) ?? 0) + (fits.length - i)));
+    }
+    return TARGET_OPTIONS.filter(t => score.has(t)).sort((a, b) => score.get(b)! - score.get(a)!);
+  });
+  protected readonly otherTargets = computed(() => TARGET_OPTIONS.filter(t => !this.suggestedTargets().includes(t)));
+
+  /** "photography, copywriting and SEO" in the interface language, for use in the middle of a sentence. */
+  protected serviceList() { return this.words(this.services()); }
+
+  private words(items: string[]) {
+    const soft = (v: string) => (v.length > 1 && /[A-Z]/.test(v[1]) ? v : v.charAt(0).toLowerCase() + v.slice(1));
+    return new Intl.ListFormat(this.i18n.lang() === 'fr' ? 'fr' : 'en', { style: 'long', type: 'conjunction' })
+      .format(items.map(i => soft(this.i18n.chip(i))));
+  }
+
+  /** What the messages will be built from, in the person's own words: who they are, what they offer, who it is for. Empty until a service is chosen. */
+  protected readonly previewRows = computed<{ label: I18nKey; value: string }[]>(() => {
+    if (!this.services().length) return [];
+    const name = this.displayNameSignal().trim();
+    const city = this.citySignal().trim();
+    const rows: { label: I18nKey; value: string }[] = [];
+    if (name || city) rows.push({ label: 'ob.pvIntro', value: [name, city].filter(Boolean).join(' · ') });
+    rows.push({ label: 'ob.pvOffer', value: this.services().map(v => this.i18n.chip(v)).join(' · ') });
+    if (this.targets().length) rows.push({ label: 'ob.pvFor', value: this.targets().map(v => this.i18n.chip(v)).join(' · ') });
+    return rows;
+  });
   protected readonly language = signal<Lang>('en');
-  protected displayName = '';
-  protected city = '';
+  private readonly displayNameSignal = signal('');
+  private readonly citySignal = signal('');
+  protected get displayName() { return this.displayNameSignal(); }
+  protected set displayName(v: string) { this.displayNameSignal.set(v); }
+  protected get city() { return this.citySignal(); }
+  protected set city(v: string) { this.citySignal.set(v); }
   protected other = '';
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
