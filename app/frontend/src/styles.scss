@@ -262,6 +262,7 @@ a.card.link:hover, .past:hover { box-shadow: inset 0 0 0 1px var(--accent); }
 button.quiet { color: var(--mute); }
 button.quiet:hover:not(:disabled) { color: var(--ink); }
 .field-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 16px; }
+.field-row .msg-toggle { margin: 0 0 0 auto; }
 .sec-label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); font-weight: 600; }
 .sent { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); font-size: 14px; }
 .sent span { flex: 1 1 160px; }
