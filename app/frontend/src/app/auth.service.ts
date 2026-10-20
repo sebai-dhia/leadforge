@@ -58,9 +58,13 @@ export class AuthService {
       .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
   }
 
+  /** True from the moment someone logs out until the next page is on screen, so the page does not change shape in between. */
+  readonly leaving = signal(false);
+
   logout() {
+    this.leaving.set(true);
     this.set(null, null, null, false);
-    this.router.navigateByUrl('/');
+    this.router.navigateByUrl('/').finally(() => this.leaving.set(false));
   }
 
   private auth(kind: 'login' | 'register', email: string, password: string) {

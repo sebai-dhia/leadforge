@@ -24,7 +24,7 @@ import { UserMenu } from './user-menu';
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               {{ t('nav.find') }}</a>
           </nav>
-          <app-user-menu />
+          @if (auth.loggedIn()) { <app-user-menu /> }
         </div>
       </header>
       @if (auth.isGuest()) {
@@ -50,7 +50,8 @@ export class App {
   private readonly fullPage = toSignal(
     this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(e => (e as NavigationEnd).urlAfterRedirects.startsWith('/welcome'))),
     { initialValue: this.router.url.startsWith('/welcome') });
-  protected readonly showChrome = () => this.auth.loggedIn() && !this.fullPage();
+  // while logging out the header and the page width stay as they were until the next page has loaded
+  protected readonly showChrome = () => (this.auth.loggedIn() || this.auth.leaving()) && !this.fullPage();
 
   protected keepLeads() {
     this.auth.logout();
