@@ -59,6 +59,7 @@ function tagLevel(flag: string): ReasonTag['level'] {
 /** The reason line split for display: the kind of business, one tag per fact, and the AI sentence apart. */
 export function splitReason(text: string | null, fr: boolean): ReasonParts {
   if (!text) return { kind: '', tags: [], ai: '' };
+  text = text.replace(/\s*\[\[sig:\w+\]\]\s*$/, '').trim();
   const ai = text.match(AI_PART);
   const rules = (ai ? text.slice(0, ai.index) : text).trim();
   const colon = rules.indexOf(': ');

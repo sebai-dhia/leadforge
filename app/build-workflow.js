@@ -371,7 +371,12 @@ for (const res of results) {
   l.score = Math.max(1, Math.min(10, Math.round(0.5 * l.score + 0.5 * fit)));
   const en = tidy(res.why_en), fr = tidy(res.why_fr);
   const sig = ['gap', 'pain', 'neglect', 'momentum'].includes(res.signal) ? res.signal : '';
-  if (en) l.reason = l.reason + ' AI: ' + en + (fr ? ' [[fr:' + fr + ']]' : '') + (sig ? ' [[sig:' + sig + ']]' : '');
+  // a note that reuses a word of the rule checks says the same thing twice: keep only the group
+  const words = t => (String(t).toLowerCase().match(/[a-zà-ÿ]{4,}/g) || []);
+  const known = new Set(words(l.reason));
+  const repeats = words(en).some(w => known.has(w));
+  if (en && !repeats) l.reason = l.reason + ' AI: ' + en + (fr ? ' [[fr:' + fr + ']]' : '') + (sig ? ' [[sig:' + sig + ']]' : '');
+  else if (sig) l.reason = l.reason + ' [[sig:' + sig + ']]';
 }
 return leads.map(json => ({ json }));
 
