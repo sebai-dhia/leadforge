@@ -109,6 +109,13 @@ function audit(html) {
     noVideo: !/<video\b|youtube\.com\/embed|youtube-nocookie|player\.vimeo|<iframe[^>]+(youtube|vimeo)/i.test(html),
     noMeta: !/<meta[^>]+name=["']description["']/i.test(html),
     noH1: !/<h1\b/i.test(html),
+    noForm: !/<form\b/i.test(html),
+    noChat: !/wa\.me|api\.whatsapp|whatsapp\.com\/send|m\.me\/|messenger\.com|tawk\.to|crisp\.chat|intercom|livechat|tidio/i.test(html),
+    noAnalytics: !/googletagmanager|google-analytics|gtag\(|fbq\(|fbevents|analytics\.js|hotjar|matomo|plausible/i.test(html),
+    noBlog: !/href=["'][^"']*(blog|news|actualit|articles?|journal)/i.test(html),
+    noFavicon: !/<link[^>]+rel=["'][^"']*icon/i.test(html),
+    noAppLink: !/play\.google\.com\/store|apps\.apple\.com|itunes\.apple\.com/i.test(html),
+    noMultilingual: !/hreflang=/i.test(html) && new Set((html.match(/\b(english|français|francais|deutsch|italiano|español|espanol)\b|العربية/gi) || []).map(x => x.toLowerCase())).size < 2,
     outdatedSoftware: Boolean((wp && +wp[1] < 5) || (jq && +jq[1] < 2) || /joomla!?\s*1\./i.test(gen)),
   };
 }

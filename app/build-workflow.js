@@ -268,12 +268,23 @@ const body = $('Webhook').first().json.body || {};
 const offer = String(body.service || '').toLowerCase();
 // What to look for depends on what is sold. An offer can be several things at once ("Photography, Video and motion, SEO"):
 // each kind looks for its own weaknesses and the best opening found counts. Nothing recognised means a website or booking gap.
-const FOCI = [];
-if (/strateg|social media|copywrit|content|brand|advert|\bads\b|marketing|translat|voice/.test(offer)) FOCI.push('creative');
-if (/\bux\b|\bui\b|design|logo|graphic/.test(offer)) FOCI.push('design');
-if (/photo|video|motion|film|illustrat/.test(offer)) FOCI.push('visual');
-if (/\bseo\b|referencement|référencement|search engine/.test(offer)) FOCI.push('seo');
-if (!FOCI.length) FOCI.push('dev');
+// Each pattern is a kind of work; the first word list that matches the offer text adds that kind. Unrecognised text gets a neutral check.
+const KINDS = [
+  ['dev', /web|site|wordpress|shopify|woocommerce|e-?commerce|develop|full.?stack|laravel|react|angular|php/],
+  ['app', /\bapps?\b|mobile|android|ios|flutter/],
+  ['automation', /automat|zapier|n8n|\bbots?\b|workflow|integration|\bcrm\b/],
+  ['design', /\bux\b|\bui\b|design|graphic|flyer|poster|packaging/],
+  ['brand', /logo|brand|identit/],
+  ['visual', /photo|video|motion|film|illustrat|drone/],
+  ['voice', /voice|narrat|dubbing|podcast|audio/],
+  ['seo', /\bseo\b|referencement|référencement|search engine/],
+  ['copy', /copywrit|writer|writing|content|blog|article|storytelling|rédact|redact/],
+  ['creative', /strateg|social media|instagram|tiktok|community/],
+  ['ads', /advert|\bads\b|marketing|campaign|sponsor/],
+  ['translation', /translat|traduc|interpret|locali[sz]/],
+];
+const FOCI = KINDS.filter(([, re]) => re.test(offer)).map(([name]) => name);
+if (!FOCI.length) FOCI.push('presence');
 const wantsVideo = /video|motion|film/.test(offer);
 const items = $input.all();
 // a name shared by three or more results is a chain: hard to sell to, decided far away
@@ -329,6 +340,53 @@ const scored = items.map(item => {
       if (au.stale) { opp += 1; flags.push('site looks outdated'); }
       if (!opp) flags.push('site basics are in place');
     }
+  } else if (focus === 'app') {
+    if (noSite) { opp += 1.5; flags.push('no website'); }
+    else if (au && au.noAppLink) { opp += 2.5; flags.push('no mobile app found'); }
+    if (!l.hasBooking && (appointment || food)) { opp += 1.5; flags.push('no way to book or order from a phone'); }
+  } else if (focus === 'automation') {
+    if (noSite) { opp += 2; flags.push('no website to connect'); }
+    else if (au) {
+      if (!l.hasBooking && (appointment || food)) { opp += 2.5; flags.push('no online booking or ordering'); }
+      if (au.noForm) { opp += 1.5; flags.push('no contact form'); }
+      if (au.noChat) { opp += 1; flags.push('no WhatsApp or chat button'); }
+    }
+  } else if (focus === 'brand') {
+    if (noSite) { opp += 2.5; flags.push('no website to show a brand'); }
+    else if (au) {
+      if (au.noFavicon) { opp += 1.5; flags.push('no site icon'); }
+      if (au.noPreview) { opp += 1; flags.push('no social preview image on the site'); }
+      if (au.legacyMarkup || au.stale) { opp += 2; flags.push('dated look'); }
+    }
+    if (!hasSocial) { opp += 1; flags.push('no social page found'); }
+  } else if (focus === 'voice') {
+    if (noSite) { opp += 1; flags.push('no website'); }
+    else if (au && au.noVideo) { opp += 3; flags.push('no video or audio on the site'); }
+    if (!hasSocial) { opp += 1; flags.push('no social page found'); }
+  } else if (focus === 'copy') {
+    if (noSite) { opp += 2; flags.push('no website text'); }
+    else if (au) {
+      if (au.thin) { opp += 2; flags.push('very thin or unfinished site'); }
+      if (au.noMeta) { opp += 1.5; flags.push('no page description'); }
+      if (au.noH1) { opp += 1; flags.push('no main heading on the home page'); }
+      if (au.noBlog) { opp += 1.5; flags.push('no blog or news section'); }
+    }
+  } else if (focus === 'ads') {
+    if (noSite) { opp += 3; flags.push('no website to send ad traffic to'); }
+    else if (au && au.noAnalytics) { opp += 3; flags.push('no visit or ad tracking found'); }
+    if (!hasSocial) { opp += 1.5; flags.push('no social page found'); }
+  } else if (focus === 'translation') {
+    if (noSite) { opp += 1; flags.push('no website'); }
+    else if (au && au.noMultilingual) { opp += 3; flags.push('site is in one language'); }
+  } else if (focus === 'presence') {
+    if (noSite) { opp += 2.5; flags.push('no website'); }
+    else if (brokenSite) { opp += 0.5; flags.push('website could not be checked'); }
+    else if (au) {
+      if (au.noViewport) { opp += 1; flags.push('site is not mobile-friendly'); }
+      if (au.legacyMarkup || au.stale) { opp += 1; flags.push('dated site'); }
+      if (au.thin) { opp += 1; flags.push('very thin or unfinished site'); }
+    }
+    if (!hasSocial) { opp += 2; flags.push('no social page found'); }
   } else if (focus === 'creative') {
     if (!hasSocial) { opp += 3; flags.push('no social page found'); }
     if (noSite) { opp += 1; flags.push('no website'); }
