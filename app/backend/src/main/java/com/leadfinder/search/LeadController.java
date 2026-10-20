@@ -44,7 +44,9 @@ public class LeadController {
                                 @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 5000) String body) {}
 
     public record DraftRequest(@Pattern(regexp = "en|fr|ar") String language,
-                               @Pattern(regexp = "email|whatsapp") String channel) {}
+                               @Pattern(regexp = "email|whatsapp") String channel,
+                               @Pattern(regexp = "auto|missing|success|fresh|timing|tip|curiosity") String approach,
+                               @jakarta.validation.constraints.Size(max = 200) String note) {}
 
     /** What a contact lookup added, so the UI can say it plainly. */
     public record EnrichResponse(LeadDto lead, List<String> found, String note, List<String> sources) {}
@@ -162,6 +164,9 @@ public class LeadController {
         payload.put("senderName", senderName(user));
         payload.put("language", req.language());
         payload.put("channel", req.channel());
+        // the person steers the message: an approach, and one thing they know about the business
+        payload.put("approach", req.approach() == null ? "auto" : req.approach());
+        payload.put("note", req.note() == null ? "" : req.note().strip());
         // what the message may say about the sender and about the business
         var profile = com.leadfinder.auth.ProfileController.ProfileDto.of(user);
         payload.put("headline", profile.headline());

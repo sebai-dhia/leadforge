@@ -80,7 +80,10 @@ const tier = F.reputation.find(t => reviews >= t.minReviews && rating >= t.minRa
 const reputation = tier ? tier.text : F.reputationNone;
 const socialNames = [...new Set((Array.isArray(b.social) ? b.social : []).map(u => /instagram/i.test(u) ? 'Instagram' : /facebook/i.test(u) ? 'Facebook' : null).filter(Boolean))];
 const sigMatch = String(b.reason || '').match(/\[\[sig:(gap|pain|neglect|momentum)\]\]/);
-const signalText = sigMatch ? F.signals[sigMatch[1]] : '';
+const approach = ['missing', 'success', 'fresh', 'timing', 'tip', 'curiosity'].includes(b.approach) ? b.approach : '';
+const userNote = clean(b.note, L.userNote);
+// a chosen approach wins over the group the AI check found
+const signalText = approach ? F.approaches[approach] : (sigMatch ? F.signals[sigMatch[1]] : '');
 const reason = clean(String(b.reason || '').replace(/\s*\[\[fr:.*?\]\]/g, '').replace(/\s*\[\[sig:\w+\]\]/g, ''), L.reason);
 const aiAt = reason.indexOf(' AI: ');
 const checks = (aiAt >= 0 ? reason.slice(0, aiAt) : reason).replace(/^[^:]*:\s*/, '');
@@ -96,6 +99,7 @@ const business = [
   checks ? line(F.business.checks, checks) : null,
   aiNote ? line(F.business.aiNote, aiNote) : null,
   signalText ? line(F.business.signal, signalText) : null,
+  userNote ? line(F.business.userNote, userNote) : null,
 ].filter(Boolean).join('\n');
 
 const system = render(PROMPTS.templates.system, { open: D.open, close: D.close });

@@ -21,7 +21,8 @@
     "says": "What the business says about itself (copied text): {{open}}{{value}}{{close}}",
     "checks": "Our own checks (internal notes, never quote them): {{value}}",
     "aiNote": "Our AI note (internal, never quote it): {{value}}",
-    "signal": "Kind of opening: {{value}}"
+    "signal": "Kind of opening: {{value}}",
+    "userNote": "From the sender (true, and allowed to use): {{value}}"
   },
   "reputation": [
     {
@@ -46,5 +47,13 @@
     "pain": "customers seem to struggle with this. Show you understand the problem, with no blame, then ask a small question about it.",
     "neglect": "it exists but looks dated or little used. Frame the benefit of a fresh start without criticising what they have.",
     "momentum": "the business looks active and growing. Congratulate the growth briefly and ask whether they are planning the next step."
+  },
+  "approaches": {
+    "missing": "Missing piece. Name, gently and in their own terms, one thing the business seems to lack that the sender's service provides, then ask whether they have it covered.",
+    "success": "Build on success. Start from the good reputation shown in the facts, then suggest one natural next step the sender could help with.",
+    "fresh": "Fresh start. Present an update of what they have as an easy opportunity, without criticising what exists.",
+    "timing": "Timing. Tie the message to something recent or seasonal that appears in the facts or in the sender's note. If none is given, do not invent one and keep it plain.",
+    "tip": "Quick tip. Offer one small, concrete and genuinely useful idea for their business, free, then ask a light question.",
+    "curiosity": "Curiosity. Write one short, open question about how they handle this today, with no pitch."
   }
 }

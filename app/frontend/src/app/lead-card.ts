@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { AreaPipe } from './area.pipe';
 import { FormsModule } from '@angular/forms';
-import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus } from './api.service';
+import { ApiService, Channel, EnrichResult, Lang, Lead, LeadStatus, Approach } from './api.service';
 import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
 import { Toasts } from './toast';
@@ -213,6 +213,19 @@ export function whatsappDigits(phone: string | null): string | null {
             </button>
           </div>
 
+          <div class="ctl approach">
+            <span class="ctl-label">{{ t('card.approach') }}</span>
+            <div class="chips" role="group" [attr.aria-label]="t('card.approach')">
+              @for (a of approaches; track a) {
+                <button type="button" class="chip" [class.on]="approach() === a" [attr.aria-pressed]="approach() === a" (click)="approach.set(a)">{{ t(approachKey[a]) }}</button>
+              }
+            </div>
+          </div>
+          <label class="ctl note-field">
+            <span class="ctl-label">{{ t('card.noteLabel') }}</span>
+            <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
+          </label>
+
           @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
 
           @if (generating()) {
@@ -338,6 +351,10 @@ export class LeadCard {
   private saveTimer?: ReturnType<typeof setTimeout>;
 
   /** A guest cannot set a message language, so drafts follow the language of the interface. */
+  protected readonly approaches: Approach[] = ['auto', 'missing', 'success', 'fresh', 'timing', 'tip', 'curiosity'];
+  protected readonly approachKey = { auto: 'card.approach.auto', missing: 'card.approach.missing', success: 'card.approach.success', fresh: 'card.approach.fresh', timing: 'card.approach.timing', tip: 'card.approach.tip', curiosity: 'card.approach.curiosity' } as const;
+  protected readonly approach = signal<Approach>('auto');
+  protected readonly note = signal('');
   protected readonly language = linkedSignal<Lang>(() =>
     this.current().draftLanguage ?? (this.auth.isGuest() ? this.i18n.lang() : this.defaultLanguage()));
   protected readonly channel = linkedSignal<Channel>(() =>
@@ -471,7 +488,7 @@ export class LeadCard {
     this.error.set(null);
     clearTimeout(this.saveTimer);
     this.saveTimer = undefined;
-    this.api.draft(this.current().id, this.language(), this.channel()).subscribe({
+    this.api.draft(this.current().id, this.language(), this.channel(), this.approach(), this.note()).subscribe({
       next: l => { this.current.set(l); this.generating.set(false); this.saveState.set('idle'); this.changed.emit(l); },
       error: e => {
         this.generating.set(false);

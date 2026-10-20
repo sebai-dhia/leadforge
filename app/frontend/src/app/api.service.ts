@@ -5,6 +5,7 @@ import { API } from './auth.service';
 export type JobStatus = 'PENDING' | 'DONE' | 'FAILED';
 export type Lang = 'en' | 'fr' | 'ar';
 export type Channel = 'email' | 'whatsapp';
+export type Approach = 'auto' | 'missing' | 'success' | 'fresh' | 'timing' | 'tip' | 'curiosity';
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'REPLIED' | 'NOT_INTERESTED';
 export type LeadSort = 'score' | 'recent' | 'name';
 
@@ -107,8 +108,8 @@ export class ApiService {
   clearMessage(leadId: number) {
     return this.http.delete<Lead>(`${API}/leads/${leadId}/message`);
   }
-  draft(leadId: number, language: Lang, channel: Channel) {
-    return this.http.post<Lead>(`${API}/leads/${leadId}/draft`, { language, channel });
+  draft(leadId: number, language: Lang, channel: Channel, approach: Approach = 'auto', note = '') {
+    return this.http.post<Lead>(`${API}/leads/${leadId}/draft`, { language, channel, approach, note: note.trim() });
   }
 
   private params(f: LeadFilters): HttpParams {

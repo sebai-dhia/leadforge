@@ -309,3 +309,8 @@ button.quiet:hover:not(:disabled) { color: var(--ink); }
 .lead .composer .actions { margin-top: 14px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.composer .approach { margin-bottom: 12px; }
+.composer .approach .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.composer .note-field { display: grid; margin-bottom: 14px; }
+.composer .note-field input { min-height: 42px; }

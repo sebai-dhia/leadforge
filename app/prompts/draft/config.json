@@ -4,11 +4,23 @@
   "model": "gemini-3.5-flash-lite",
   "temperature": 0.7,
   "maxOutputTokens": 900,
-  "delimiters": { "open": "<<<", "close": ">>>" },
+  "delimiters": {
+    "open": "<<<",
+    "close": ">>>"
+  },
   "languages": {
-    "en": { "name": "English", "tone": "Warm, professional and plain." },
-    "fr": { "name": "French", "tone": "Courteous and simple, with \"vous\". Natural everyday French, not stiff." },
-    "ar": { "name": "Arabic", "tone": "Modern Standard Arabic, simple, polite and natural to read. No dialect." }
+    "en": {
+      "name": "English",
+      "tone": "Warm, professional and plain."
+    },
+    "fr": {
+      "name": "French",
+      "tone": "Courteous and simple, with \"vous\". Natural everyday French, not stiff."
+    },
+    "ar": {
+      "name": "Arabic",
+      "tone": "Modern Standard Arabic, simple, polite and natural to read. No dialect."
+    }
   },
   "channels": {
     "whatsapp": {
@@ -25,14 +37,45 @@
     }
   },
   "limits": {
-    "senderName": 80, "headline": 160, "senderCity": 80, "about": 500, "offer": 600, "listItem": 60, "knowledge": 1200,
-    "leadName": 120, "type": 60, "address": 160, "host": 80, "reason": 700,
-    "pageFact": 160, "pageFacts": 450
+    "senderName": 80,
+    "headline": 160,
+    "senderCity": 80,
+    "about": 500,
+    "offer": 600,
+    "listItem": 60,
+    "knowledge": 1200,
+    "leadName": 120,
+    "type": 60,
+    "address": 160,
+    "host": 80,
+    "reason": 700,
+    "pageFact": 160,
+    "pageFacts": 450,
+    "userNote": 200
   },
   "variables": {
-    "system": ["open", "close"],
-    "user": ["sender", "business", "language_name", "language_tone", "channel_line", "example"],
-    "facts": ["value", "open", "close"],
-    "channels": ["words", "subjectWords", "subject", "body"]
+    "system": [
+      "open",
+      "close"
+    ],
+    "user": [
+      "sender",
+      "business",
+      "language_name",
+      "language_tone",
+      "channel_line",
+      "example"
+    ],
+    "facts": [
+      "value",
+      "open",
+      "close"
+    ],
+    "channels": [
+      "words",
+      "subjectWords",
+      "subject",
+      "body"
+    ]
   }
 }
