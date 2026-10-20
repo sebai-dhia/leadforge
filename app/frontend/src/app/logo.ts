@@ -19,7 +19,9 @@ export const SHOW_BETA = true;
     :host { display: inline-flex; align-items: center; gap: 10px; color: var(--accent); }
     .word { color: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 21px; letter-spacing: -0.02em; line-height: 1; }
     svg { flex: none; }
-    .beta { align-self: center; margin-left: -2px; padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); font: 600 10.5px/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; cursor: default; }
+    /* A real 1px border (snapped to whole device pixels, so it stays crisp when the browser is zoomed) and whole-pixel sizes.
+       Hanken Grotesk at 11px stays sharp where a monospace face at 10.5px turned blocky. */
+    .beta { align-self: center; box-sizing: border-box; height: 20px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font: 600 11px/1 var(--font-body, 'Hanken Grotesk', system-ui, sans-serif); letter-spacing: .06em; text-transform: uppercase; cursor: default; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   `,
 })
 export class Logo {
