@@ -52,7 +52,10 @@ const wa = channel === 'whatsapp';
 const limits = { words: C.channels[channel].words, subjectWords: C.channels[channel].subjectWords };
 // the example matches the situation: a business without a website, or one that has a website (then only a question)
 const host = String(b.website || '').replace(/^https?:\/\//i, '').split('/')[0];
-const exampleSource = PROMPTS.data.examples[lang][channel][host ? 'website' : 'nosite'];
+// does the sender sell websites or anything built on them? Only then is a missing website a reason to write
+const WEB = /\b(web|websites?|sites?|e-?commerce|shop|booking|landing|wordpress|seo|full.?stack|front.?end|back.?end|developer|development|apps?|ux|ui)\b/i;
+const webOffer = WEB.test([b.offer, b.headline, b.about, ...(Array.isArray(b.services) ? b.services : [])].join(' '));
+const exampleSource = PROMPTS.data.examples[lang][channel][webOffer ? (host ? 'website' : 'nosite') : 'other'];
 const exampleText = render(C.channels[channel].example, { subject: exampleSource.subject, body: exampleSource.body, words: limits.words, subjectWords: limits.subjectWords });
 
 // ---- facts about the sender
@@ -93,11 +96,12 @@ const business = [
   b.niche ? line(F.business.type, clean(b.niche, L.type)) : null,
   b.address ? line(F.business.address, clean(b.address, L.address)) : null,
   line(F.business.reputation, reputation),
-  host ? line(F.business.website, clean(host, L.host)) : F.business.noWebsite,
+  webOffer ? (host ? line(F.business.website, clean(host, L.host)) : F.business.noWebsite) : F.business.notWeb,
   socialNames.length ? line(F.business.social, socialNames.join(', ')) : null,
   businessSays ? line(F.business.says, businessSays) : null,
-  checks ? line(F.business.checks, checks) : null,
-  aiNote ? line(F.business.aiNote, aiNote) : null,
+  // the internal notes talk about websites: they are only given to a sender who sells them
+  webOffer && checks ? line(F.business.checks, checks) : null,
+  aiNote && (webOffer || !/web ?site|site web|موقع/i.test(aiNote)) ? line(F.business.aiNote, aiNote) : null,
   signalText ? line(F.business.signal, signalText) : null,
   userNote ? line(F.business.userNote, userNote) : null,
 ].filter(Boolean).join('\n');
@@ -114,5 +118,5 @@ const prompt = render(PROMPTS.templates.user, {
 
 return [{ json: {
   system, prompt, knowledgeNew, linksHash: b.linksHash || '', lang, channel, limits, senderName,
-  businessName: clean(b.leadName, L.leadName), hasWebsite: !!host, promptVersion: PROMPTS.version,
+  businessName: clean(b.leadName, L.leadName), hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
 } }];

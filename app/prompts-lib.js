@@ -67,7 +67,7 @@ const validators = {
     const { languages, channels } = data.config;
     for (const lang of Object.keys(languages)) {
       for (const ch of Object.keys(channels)) {
-        for (const situation of ['nosite', 'website']) {
+        for (const situation of ['nosite', 'website', 'other']) {
           const ex = data.examples[lang] && data.examples[lang][ch] && data.examples[lang][ch][situation];
           if (!ex || !ex.body || !ex.body.trim()) errors.push(`draft/examples.json: no example for ${lang} / ${ch} / ${situation}`);
           else if (ch === 'email' && !ex.subject) errors.push(`draft/examples.json: the ${lang} email example for ${situation} needs a subject`);

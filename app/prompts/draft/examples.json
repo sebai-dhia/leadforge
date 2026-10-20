@@ -8,6 +8,10 @@
       "website": {
         "subject": "",
         "body": "Bonjour,\n\nLes adhérents de Gym Horizon semblent très satisfaits.\n\nJe suis Sami, designer web à Tunis. J'aide les salles de sport à faciliter la réservation des séances pour leurs adhérents.\n\nPeuvent-ils déjà réserver leurs séances en ligne ?"
+      },
+      "other": {
+        "subject": "",
+        "body": "Bonjour,\n\nLes clients de Café Lumière semblent très satisfaits de l'endroit.\n\nJe suis Sami, photographe à Tunis. J'aide les cafés à montrer leurs plats et leur ambiance avec des photos soignées.\n\nVos photos en ligne reflètent-elles bien ce que vos clients apprécient chez vous ?"
       }
     },
     "email": {
@@ -18,6 +22,10 @@
       "website": {
         "subject": "Réserver en ligne chez Gym Horizon ?",
         "body": "Bonjour,\n\nJe suis Sami, designer web à Tunis. J'aide les salles de sport à proposer à leurs adhérents une réservation simple depuis leur téléphone.\n\nLes adhérents de Gym Horizon semblent très satisfaits. Peuvent-ils déjà réserver leurs séances ou leurs cours directement en ligne ?\n\nSami"
+      },
+      "other": {
+        "subject": "Des photos à la hauteur de Café Lumière ?",
+        "body": "Bonjour,\n\nLes clients de Café Lumière semblent très satisfaits de l'endroit.\n\nJe suis Sami, photographe à Tunis. J'aide les cafés à montrer leurs plats et leur ambiance avec des photos soignées, pensées pour l'écran du téléphone.\n\nVos photos en ligne reflètent-elles bien ce que vos clients apprécient chez vous ?\n\nSami"
       }
     }
   },
@@ -30,6 +38,10 @@
       "website": {
         "subject": "",
         "body": "Hello,\n\nMembers seem very happy with Gym Horizon.\n\nI'm Sami, a web designer in Tunis. I help gyms make it easy for members to book their sessions.\n\nCan they already book their sessions online?"
+      },
+      "other": {
+        "subject": "",
+        "body": "Hello,\n\nCustomers seem very happy with Café Lumière.\n\nI'm Sami, a photographer in Tunis. I help cafes show their dishes and atmosphere with well-made photos.\n\nDo your photos online reflect what your customers enjoy about the place?"
       }
     },
     "email": {
@@ -40,6 +52,10 @@
       "website": {
         "subject": "Online booking for Gym Horizon?",
         "body": "Hello,\n\nI'm Sami, a web designer in Tunis. I help gyms give their members a simple way to book sessions from a phone.\n\nMembers seem very happy with Gym Horizon. Can they already book their sessions or classes directly online?\n\nSami"
+      },
+      "other": {
+        "subject": "Photos worthy of Café Lumière?",
+        "body": "Hello,\n\nCustomers seem very happy with Café Lumière.\n\nI'm Sami, a photographer in Tunis. I help cafes show their dishes and atmosphere with well-made photos made for phone screens.\n\nDo your photos online reflect what your customers enjoy about the place?\n\nSami"
       }
     }
   },
@@ -52,6 +68,10 @@
       "website": {
         "subject": "",
         "body": "مرحباً،\n\nيبدو أن مشتركي جيم أفق راضون جداً.\n\nأنا سامي، مصمم مواقع في تونس. أساعد النوادي الرياضية على تسهيل حجز المشتركين لحصصهم.\n\nهل يستطيعون حجز حصصهم عبر الإنترنت حالياً؟"
+      },
+      "other": {
+        "subject": "",
+        "body": "مرحباً،\n\nيبدو أن زبائن مقهى لوميار راضون جداً عن المكان.\n\nأنا سامي، مصور في تونس. أساعد المقاهي على إبراز أطباقها وأجوائها بصور مميزة.\n\nهل تعكس صوركم على الإنترنت ما يحبه زبائنكم في المكان؟"
       }
     },
     "email": {
@@ -62,6 +82,10 @@
       "website": {
         "subject": "الحجز الإلكتروني في جيم أفق؟",
         "body": "مرحباً،\n\nأنا سامي، مصمم مواقع في تونس. أساعد النوادي الرياضية على منح مشتركيها طريقة بسيطة للحجز من الهاتف.\n\nيبدو أن مشتركي جيم أفق راضون جداً. هل يستطيعون حجز حصصهم أو دروسهم مباشرة عبر الإنترنت؟\n\nسامي"
+      },
+      "other": {
+        "subject": "صور تليق بمقهى لوميار؟",
+        "body": "مرحباً،\n\nيبدو أن زبائن مقهى لوميار راضون جداً عن المكان.\n\nأنا سامي، مصور في تونس. أساعد المقاهي على إبراز أطباقها وأجوائها بصور مميزة تظهر جيداً على الهاتف.\n\nهل تعكس صوركم الحالية ما يحبه زبائنكم في المكان؟\n\nسامي"
       }
     }
   }
