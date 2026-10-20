@@ -105,6 +105,10 @@ function audit(html) {
     stale: lastYear !== null && lastYear <= year - 4,
     thin: html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, ' ').replace(/\s+/g, ' ').length < 400 || /under construction|coming soon|en construction|site en cours/i.test(html),
     noPreview: !/property=["']og:image["']/i.test(html),
+    fewImages: (html.match(/<img\b/gi) || []).length < 4,
+    noVideo: !/<video\b|youtube\.com\/embed|youtube-nocookie|player\.vimeo|<iframe[^>]+(youtube|vimeo)/i.test(html),
+    noMeta: !/<meta[^>]+name=["']description["']/i.test(html),
+    noH1: !/<h1\b/i.test(html),
     outdatedSoftware: Boolean((wp && +wp[1] < 5) || (jq && +jq[1] < 2) || /joomla!?\s*1\./i.test(gen)),
   };
 }

@@ -266,7 +266,15 @@ const scoreCode = NAME_MATCH + '\n' + String.raw`
 // the AI check then confirms or lowers those.
 const body = $('Webhook').first().json.body || {};
 const offer = String(body.service || '').toLowerCase();
-const focus = /strateg|social media|copywrit|content|brand/.test(offer) ? 'creative' : /\bux\b|\bui\b|design|logo/.test(offer) ? 'design' : 'dev';
+// What to look for depends on what is sold. An offer can be several things at once ("Photography, Video and motion, SEO"):
+// each kind looks for its own weaknesses and the best opening found counts. Nothing recognised means a website or booking gap.
+const FOCI = [];
+if (/strateg|social media|copywrit|content|brand|advert|\bads\b|marketing|translat|voice/.test(offer)) FOCI.push('creative');
+if (/\bux\b|\bui\b|design|logo|graphic/.test(offer)) FOCI.push('design');
+if (/photo|video|motion|film|illustrat/.test(offer)) FOCI.push('visual');
+if (/\bseo\b|referencement|référencement|search engine/.test(offer)) FOCI.push('seo');
+if (!FOCI.length) FOCI.push('dev');
+const wantsVideo = /video|motion|film/.test(offer);
 const items = $input.all();
 // a name shared by three or more results is a chain: hard to sell to, decided far away
 const nameKey = n => tokens(n)[0] || '';
@@ -286,6 +294,8 @@ const scored = items.map(item => {
   const au = l.audit || null;
   const noSite = !l.website;
   const brokenSite = Boolean(l.website) && !l.siteChecked;
+
+  const gapsFor = focus => {
   const flags = [];
   let opp = 0;
 
@@ -298,6 +308,26 @@ const scored = items.map(item => {
       if (au.stale) { opp += 1.5; flags.push('site looks outdated'); }
       if (au.thin) { opp += 1.5; flags.push('very thin or unfinished site'); }
       if (!opp) flags.push('site looks modern');
+    }
+  } else if (focus === 'visual') {
+    if (!hasSocial) { opp += 2; flags.push('no social page found'); }
+    if (noSite) { opp += 1; flags.push('no website'); }
+    else if (au) {
+      if (au.fewImages) { opp += 2; flags.push('few photos on the site'); }
+      if (wantsVideo && au.noVideo) { opp += 1.5; flags.push('no video on the site'); }
+      if (au.noPreview) { opp += 0.5; flags.push('no social preview image on the site'); }
+    }
+    if (hasSocial && !opp) flags.push('active online presence');
+  } else if (focus === 'seo') {
+    if (noSite) { opp = 4; flags.push('no website to rank'); }
+    else if (brokenSite) { opp = 0.5; flags.push('website could not be checked'); }
+    else if (au) {
+      if (au.noMeta) { opp += 2; flags.push('no page description for search engines'); }
+      if (au.noH1) { opp += 1; flags.push('no main heading on the home page'); }
+      if (au.noViewport) { opp += 1.5; flags.push('site is not mobile-friendly'); }
+      if (au.thin) { opp += 1.5; flags.push('very thin or unfinished site'); }
+      if (au.stale) { opp += 1; flags.push('site looks outdated'); }
+      if (!opp) flags.push('site basics are in place');
     }
   } else if (focus === 'creative') {
     if (!hasSocial) { opp += 3; flags.push('no social page found'); }
@@ -315,7 +345,12 @@ const scored = items.map(item => {
       if (au.noViewport) { opp += 1; flags.push('site is not mobile-friendly'); }
     }
   }
-  opp = Math.min(opp, 5);
+  return { opp: Math.min(opp, 5), flags };
+  };
+  // the best opening among the kinds of work this freelancer sells
+  const found = FOCI.map(gapsFor).sort((x, y) => y.opp - x.opp)[0];
+  const flags = found.flags;
+  const opp = found.opp;
 
   const reviews = l.reviews || 0;
   const demand = reviews >= 100 ? 1.5 : reviews >= 30 ? 1 : reviews >= 5 ? 0.5 : 0;
