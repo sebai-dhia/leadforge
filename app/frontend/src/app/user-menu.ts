@@ -76,6 +76,10 @@ import { AppLang, I18n } from './i18n';
       border: 0; font: inherit; font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; justify-content: flex-start; }
     .item:hover, .item:focus-visible { background: var(--accent-soft); filter: none; }
     .lang { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; min-height: 44px; font-weight: 500; }
+    /* the two language buttons sit side by side in one rounded pill; they never wrap under each other */
+    .lang .seg { flex: none; flex-wrap: nowrap; border-radius: 999px; padding: 3px; gap: 2px; }
+    .lang .seg-btn { min-height: 32px; padding: 4px 14px; border: 0; border-radius: 999px; font-size: 13.5px; white-space: nowrap; }
+    .lang .seg-btn + .seg-btn { border-left: 0; }
   `,
 })
 export class UserMenu {
