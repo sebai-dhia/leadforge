@@ -38,7 +38,9 @@ export class Toasts {
     </div>
   `,
   styles: `
-    .toasts { position: fixed; z-index: 50; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; width: min(440px, calc(100vw - 32px)); pointer-events: none; }
+    /* top right, below the top bar: it does not cover the list or the profile circle */
+    .toasts { position: fixed; z-index: 50; top: 76px; right: 24px; display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+    @media (max-width: 560px) { .toasts { right: 16px; left: 16px; width: auto; } }
     .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; background: var(--card); color: var(--ink);
       border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line-strong), 0 12px 32px rgb(0 0 0 / .35); animation: up .22s ease both; }
     .msg { flex: 1; min-width: 0; font-size: 14px; }
@@ -47,7 +49,7 @@ export class Toasts {
     .x { min-height: 34px; width: 34px; padding: 0; border-radius: 50%; background: transparent; border: 0; color: var(--mute); }
     .x:hover { background: var(--accent-soft); color: var(--ink); filter: none; }
     .x svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-    @keyframes up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes up { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
   `,
 })
