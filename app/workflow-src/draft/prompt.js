@@ -92,11 +92,30 @@ const aiAt = reason.indexOf(' AI: ');
 const checks = (aiAt >= 0 ? reason.slice(0, aiAt) : reason).replace(/^[^:]*:\s*/, '');
 const aiNote = aiAt >= 0 ? reason.slice(aiAt + 5) : '';
 // the name as a person would say it: the part before " - ", " | " or " : " (Maps names often carry a tagline), never an underscore
-const fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ');
+// A name written in two scripts ("Cabinet Hammami-المحامي مكتب ...") is cut to the script of the message:
+// Latin for French and English, Arabic for Arabic. The AI is never asked to choose between two spellings.
+const ARABIC_RUN = /[-–—|:]?[ \t]*[؀-ۿݐ-ݿ][؀-ۿݐ-ݿ \t.,،()]*/g;
+const LATIN_RUN = /[-–—|:]?[ \t]*[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'’.& \t]*/g;
+let fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ');
+const hasArabic = /[؀-ۿ]/.test(fullName);
+const hasLatin = /[A-Za-zÀ-ÿ]/.test(fullName);
+const tidy = t => t.replace(/\s+/g, ' ').replace(/^[-–—|:\s]+|[-–—|:\s]+$/g, '');
+// a name only in Arabic letters cannot be written inside a French or English message: the message says "your clinic" instead
+let arabicOnlyName = false;
+if (hasArabic && hasLatin) {
+  if (lang === 'ar') {
+    // in an Arabic message the Arabic spelling is used when it is a real name (three words or more); a short Arabic tagline next to a Latin brand is dropped
+    const arabicPart = tidy(fullName.replace(LATIN_RUN, ' '));
+    if (arabicPart.split(' ').length >= 3) fullName = arabicPart;
+  } else {
+    const latinPart = tidy(fullName.replace(ARABIC_RUN, ' '));
+    if (latinPart.length >= 2) fullName = latinPart;
+  }
+} else if (hasArabic && lang !== 'ar') arabicOnlyName = true;
 const SEPARATOR = /\s+[-–—|:]\s+/;
-const businessName = fullName.split(SEPARATOR)[0].length >= 6 ? fullName.split(SEPARATOR)[0] : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
+const businessName = arabicOnlyName ? '' : fullName.split(SEPARATOR)[0].length >= 6 ? fullName.split(SEPARATOR)[0] : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
 const business = [
-  line(F.business.name, businessName),
+  arabicOnlyName ? F.business.nameArabicOnly : line(F.business.name, businessName),
   b.niche ? line(F.business.type, clean(b.niche, L.type)) : null,
   b.address ? line(F.business.address, clean(b.address, L.address)) : null,
   line(F.business.reputation, reputation),

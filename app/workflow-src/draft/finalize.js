@@ -14,7 +14,8 @@ if (check.retryPrompt) {
 if (!chosen) return [{ json: { error: true, message: 'The AI did not return a usable message' } }];
 
 // the last guard: dashes used as punctuation become commas, underscores become spaces
-const plainText = t => String(t || '').replace(/\s+[—–-]\s+/g, ', ').replace(/[—–]/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',');
+const withoutArabic = t => (ctx.lang === 'ar' ? t : t.replace(/[-–—|:]?[ \t]*[؀-ۿݐ-ݿ][؀-ۿݐ-ݿ \t.,،()]*/g, ' ').replace(/ {2,}/g, ' ').replace(/ ([.,])/g, '$1'));
+const plainText = t => withoutArabic(String(t || '')).replace(/\s+[—–-]\s+/g, ', ').replace(/[—–]/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',');
 const out = {
   subject: ctx.channel === 'whatsapp' ? '' : plainText(chosen.subject),
   body: plainText(chosen.body),

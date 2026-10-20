@@ -79,6 +79,8 @@ function lint(o, ctx) {
   if (ctx.lang === 'fr' && body.length > 120 && (body.match(/[àâçéèêëîïôùûü]/gi) || []).length < 2) problems.push('the French is missing its accents');
   if (ctx.lang === 'fr' && (plain.match(/\b(the|and|your|with|you|our)\b/gi) || []).length >= 2) problems.push('it is not written in French');
   if (ctx.lang === 'en' && ((plain.match(/\b(vous|votre|nous|pour|avec|merci)\b/gi) || []).length >= 2 || arabic > 3)) problems.push('it is not written in English');
+  // a business name in another script must not be copied in: the message uses one language only
+  if (ctx.lang !== 'ar' && (plain.match(/[؀-ۿ]/g) || []).length > 0) problems.push('it contains Arabic letters: write only in ' + (ctx.lang === 'fr' ? 'French' : 'English') + ' and leave out a name written in another script');
 
   const firstLine = body.split('\n')[0].trim();
   if (words(firstLine) > 4) problems.push('the greeting must be a single short line, such as "Bonjour,"');
