@@ -1,0 +1,55 @@
+{
+  "_note": "Cases for tools/draft-eval.js. EVERYTHING HERE IS INVENTED ON PURPOSE: fictional people and businesses, and only the reserved example.com / example.org addresses. Never put a real name, business, address, phone number or website in this file.",
+  "senders": {
+    "full": {
+      "senderName": "Test Sender",
+      "headline": "Web developer for local businesses",
+      "senderCity": "Testville",
+      "about": "I build simple websites and booking tools.",
+      "services": ["Web development", "Automation"],
+      "targets": ["Cafes", "Restaurants", "Clinics"],
+      "offer": "Web development, Automation",
+      "links": [{ "label": "Portfolio", "url": "https://portfolio.example.org" }],
+      "linksHash": "hash-for-evaluation",
+      "linksKnowledge": "Portfolio: Example portfolio text used only in evaluation. Booking pages for small businesses"
+    },
+    "minimal": {
+      "senderName": "Test Sender",
+      "offer": "Logos and branding for small shops",
+      "links": []
+    },
+    "guest": {
+      "senderName": "",
+      "headline": "Web developer for local businesses",
+      "services": ["Web development"],
+      "offer": "Custom websites for small local businesses",
+      "links": []
+    }
+  },
+  "cases": [
+    { "name": "fr-whatsapp-cafe-no-site", "sender": "full", "language": "fr", "channel": "whatsapp",
+      "lead": { "leadName": "Café Exemple", "address": "Rue de l'Exemple, Testville", "niche": "cafes", "website": null, "rating": 4.4, "reviews": 140,
+        "social": ["https://www.instagram.com/test_account_example"], "reason": "Reservation and ordering business: no website (needs a build), active on Google Maps. AI: Cafe without an official website." } },
+    { "name": "fr-email-clinic-no-site", "sender": "full", "language": "fr", "channel": "email",
+      "lead": { "leadName": "Cabinet Exemple", "address": "Avenue de l'Exemple, Testville", "niche": "dental clinics", "website": null, "rating": 4.6, "reviews": 80,
+        "social": [], "reason": "Appointment-based business: no website (needs a build), active on Google Maps. AI: Clinic without a website." } },
+    { "name": "en-email-gym-with-site", "sender": "full", "language": "en", "channel": "email",
+      "lead": { "leadName": "Gym Exemple", "address": "Example Street, Testville", "niche": "gyms", "website": "https://www.example.com/", "rating": 4.3, "reviews": 60,
+        "social": [], "reason": "Appointment-based business: no online booking or ordering, active on Google Maps." } },
+    { "name": "en-whatsapp-hotel-few-reviews", "sender": "minimal", "language": "en", "channel": "whatsapp",
+      "lead": { "leadName": "Hotel Exemple", "address": "Example Road, Testville", "niche": "hotels", "website": null, "rating": 3.8, "reviews": 9,
+        "social": [], "reason": "Appointment-based business: no website (needs a build)." } },
+    { "name": "ar-whatsapp-salon-no-site", "sender": "full", "language": "ar", "channel": "whatsapp",
+      "lead": { "leadName": "صالون مثال", "address": "شارع المثال، تيستفيل", "niche": "hair salons", "website": null, "rating": 4.5, "reviews": 45,
+        "social": [], "reason": "Appointment-based business: no website (needs a build), active on Google Maps." } },
+    { "name": "ar-email-restaurant-with-site", "sender": "full", "language": "ar", "channel": "email",
+      "lead": { "leadName": "مطعم مثال", "address": "شارع المثال، تيستفيل", "niche": "restaurants", "website": "https://www.example.com/", "rating": 4.1, "reviews": 220,
+        "social": [], "reason": "Reservation and ordering business: no online booking or ordering, active on Google Maps." } },
+    { "name": "fr-whatsapp-shop-social-only-guest", "sender": "guest", "language": "fr", "channel": "whatsapp",
+      "lead": { "leadName": "Boutique Exemple", "address": "Rue du Test, Testville", "niche": "shops", "website": null, "rating": 4.0, "reviews": 25,
+        "social": ["https://www.facebook.com/test.page.example"], "reason": "Local business: no website, social profile available." } },
+    { "name": "en-email-bakery-no-site", "sender": "minimal", "language": "en", "channel": "email",
+      "lead": { "leadName": "Boulangerie Exemple", "address": "Example Lane, Testville", "niche": "bakeries", "website": null, "rating": 4.7, "reviews": 12,
+        "social": [], "reason": "Local business: no website (needs a build)." } }
+  ]
+}

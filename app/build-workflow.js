@@ -569,7 +569,7 @@ const workflow = {
       },
       id: 'n21', name: 'AI Check', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [2200, 160],
       credentials: { httpHeaderAuth: { id: 'zl08YnKaBcKVRKg0', name: 'Header Auth account 6' } },
-      retryOnFail: true, maxTries: 2, waitBetweenTries: 2000,
+      retryOnFail: true, maxTries: 3, waitBetweenTries: 5000,
       onError: 'continueRegularOutput'
     },
     {

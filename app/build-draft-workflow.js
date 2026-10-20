@@ -56,7 +56,8 @@ const workflow = {
         options: { timeout: 30000 }
       },
       id: 'd3', name: 'AI Write Message', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [800, 0],
-      retryOnFail: true, maxTries: 2, waitBetweenTries: 2000,
+      // the free AI tier answers 429 when asked too fast: wait and ask again (n8n allows up to 5 tries and 5 s between them)
+      retryOnFail: true, maxTries: 4, waitBetweenTries: 5000,
       onError: 'continueRegularOutput'
     },
     {
@@ -73,6 +74,7 @@ const workflow = {
         options: { timeout: 30000 }
       },
       id: 'd9', name: 'AI Retry', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1200, 0],
+      retryOnFail: true, maxTries: 3, waitBetweenTries: 5000,
       onError: 'continueRegularOutput'
     },
     {

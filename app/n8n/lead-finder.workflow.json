@@ -360,8 +360,8 @@
         }
       },
       "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
       "onError": "continueRegularOutput"
     },
     {

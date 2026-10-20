@@ -12,7 +12,7 @@ if (check.retryPrompt) {
 }
 if (!chosen) return [{ json: { error: true, message: 'The AI did not return a usable message' } }];
 
-return [{ json: {
+const out = {
   subject: ctx.channel === 'whatsapp' ? '' : chosen.subject,
   body: chosen.body,
   // what was read on the sender's own links this time, for the backend to keep (null when nothing was read)
@@ -20,4 +20,9 @@ return [{ json: {
   linksHash: ctx.linksHash,
   // which version of the prompt files wrote this message
   promptVersion: ctx.promptVersion,
-} }];
+};
+// For the evaluation script only: how the message came about. The backend never asks for it.
+if ((($('Webhook').first().json.body) || {}).debug === true) {
+  out.debug = { attempts: check.retryPrompt ? 2 : 1, firstProblems: check.problems || [], finalProblems: lint(chosen, ctx), angle: chosen.angle, firstBody: first ? first.body : null };
+}
+return [{ json: out }];
