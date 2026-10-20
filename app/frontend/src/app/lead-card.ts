@@ -51,7 +51,7 @@ export function whatsappDigits(phone: string | null): string | null {
               }
               @if (!reach().length) { <span class="reach none">{{ t('reach.none') }}</span> }
             }
-            <span class="pill" [attr.data-status]="current().hidden ? 'HIDDEN' : current().status">{{ current().hidden ? t('card.hiddenPill') : t(statusKey()) }}</span>
+            @if (!expanded()) { <span class="pill" [attr.data-status]="current().hidden ? 'HIDDEN' : current().status">{{ current().hidden ? t('card.hiddenPill') : t(statusKey()) }}</span> }
             <ng-container *ngTemplateOutlet="menu" />
             <button type="button" class="chev-btn" [attr.aria-expanded]="expanded()" [attr.aria-label]="t('card.details', { name: current().name })"
               (click)="expanded.set(!expanded())"><span class="chev" [class.open]="expanded()" aria-hidden="true"></span></button>
@@ -104,74 +104,7 @@ export function whatsappDigits(phone: string | null): string | null {
         </section>
       }
 
-      <div class="contacts" [attr.aria-label]="t('card.contactAria')">
-        @if (telHref(); as tel) {
-          <a class="btn ghost" [href]="tel" (click)="reached()">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
-            {{ t('card.call', { phone: current().phone ?? '' }) }}</a>
-        }
-        @if (waHref(); as wa) {
-          <a class="btn ghost" [href]="wa" target="_blank" rel="noopener" (click)="reached()">
-            <svg class="ic wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            {{ t('card.whatsapp') }}</a>
-        }
-        @if (mailHref(); as mail) {
-          <a class="btn ghost" [href]="mail" (click)="reached()">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
-            {{ t('card.email', { email: current().emails[0] }) }}</a>
-        }
-        @if (current().website; as site) {
-          <a class="btn ghost" [href]="site" target="_blank" rel="noopener">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            {{ t('card.website') }}</a>
-        }
-        @for (s of socialLinks(); track s.url) {
-          <a class="btn ghost" [href]="s.url" target="_blank" rel="noopener" [title]="t('card.socialNote')">
-            @if (s.label === 'Instagram') {
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
-            } @else {
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-            }
-            {{ s.label }}</a>
-        }
-        @if (canEnrich()) {
-          <button type="button" class="ghost quiet" (click)="enrich()" [disabled]="enriching()">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
-            {{ enriching() ? t('card.looking') : (current().contactCheckedAt ? t('card.lookAgain') : t('card.findContact')) }}
-          </button>
-        }
-        @if (!telHref() && !current().emails.length && !current().website && !current().social.length) {
-          <span class="warn">{{ t('card.noneFound') }}</span>
-        }
-      </div>
-      @if (enrichResult(); as r) {
-        <p class="help" role="status">
-          @if (r.found.length) { <strong>{{ t('card.found', { list: foundList(r.found) }) }}</strong> } @else { <strong>{{ t('card.nothingNew') }}</strong> }
-          {{ i18n.note(r.note) }}
-        </p>
-      }
-      @if (enrichError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
-
-      <div class="field-row">
-        <span class="sec-label" [id]="'st' + current().id">{{ t('card.statusLabel') }}</span>
-        <div class="seg" role="group" [attr.aria-labelledby]="'st' + current().id">
-          @for (s of statuses; track s.value) {
-            <button type="button" class="seg-btn" [class.on]="current().status === s.value"
-              [attr.aria-pressed]="current().status === s.value" (click)="setStatus(s.value)">{{ t(s.key) }}</button>
-          }
-        </div>
-      </div>
-      @if (sentAsk() && current().status === 'NEW') {
-        <div class="sent" role="status">
-          <span>{{ t('card.sentAsk') }}</span>
-          <button type="button" (click)="markContacted()">{{ t('card.markContacted') }}</button>
-          <button type="button" class="ghost" (click)="sentAsk.set(false)">{{ t('card.notNow') }}</button>
-        </div>
-      }
-      @if (statusError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
-      @if (actionError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
-
-      <button type="button" class="msg-toggle" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+      <button type="button" class="msg-toggle" [class.primary]="!current().emailBody" [attr.aria-expanded]="open()" (click)="open.set(!open())">
         <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span class="msg-title">{{ open() ? t('card.hide') : (current().emailBody ? t('card.show') : t('card.write')) }}</span>
         @if (current().emailBody && current().draftLanguage) {
@@ -293,6 +226,73 @@ export function whatsappDigits(phone: string | null): string | null {
           }
         </div>
       }
+
+      <div class="contacts" [attr.aria-label]="t('card.contactAria')">
+        @if (telHref(); as tel) {
+          <a class="btn ghost" [href]="tel" (click)="reached()">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+            {{ t('card.call', { phone: current().phone ?? '' }) }}</a>
+        }
+        @if (waHref(); as wa) {
+          <a class="btn ghost" [href]="wa" target="_blank" rel="noopener" (click)="reached()">
+            <svg class="ic wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            {{ t('card.whatsapp') }}</a>
+        }
+        @if (mailHref(); as mail) {
+          <a class="btn ghost" [href]="mail" (click)="reached()">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
+            {{ t('card.email', { email: current().emails[0] }) }}</a>
+        }
+        @if (current().website; as site) {
+          <a class="btn ghost" [href]="site" target="_blank" rel="noopener">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            {{ t('card.website') }}</a>
+        }
+        @for (s of socialLinks(); track s.url) {
+          <a class="btn ghost" [href]="s.url" target="_blank" rel="noopener" [title]="t('card.socialNote')">
+            @if (s.label === 'Instagram') {
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
+            } @else {
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            }
+            {{ s.label }}</a>
+        }
+        @if (canEnrich()) {
+          <button type="button" class="ghost quiet" (click)="enrich()" [disabled]="enriching()">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+            {{ enriching() ? t('card.looking') : (current().contactCheckedAt ? t('card.lookAgain') : t('card.findContact')) }}
+          </button>
+        }
+        @if (!telHref() && !current().emails.length && !current().website && !current().social.length) {
+          <span class="warn">{{ t('card.noneFound') }}</span>
+        }
+      </div>
+      @if (enrichResult(); as r) {
+        <p class="help" role="status">
+          @if (r.found.length) { <strong>{{ t('card.found', { list: foundList(r.found) }) }}</strong> } @else { <strong>{{ t('card.nothingNew') }}</strong> }
+          {{ i18n.note(r.note) }}
+        </p>
+      }
+      @if (enrichError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+
+      <div class="field-row">
+        <span class="sec-label" [id]="'st' + current().id">{{ t('card.statusLabel') }}</span>
+        <div class="seg" role="group" [attr.aria-labelledby]="'st' + current().id">
+          @for (s of statuses; track s.value) {
+            <button type="button" class="seg-btn" [class.on]="current().status === s.value"
+              [attr.aria-pressed]="current().status === s.value" (click)="setStatus(s.value)">{{ t(s.key) }}</button>
+          }
+        </div>
+      </div>
+      @if (sentAsk() && current().status === 'NEW') {
+        <div class="sent" role="status">
+          <span>{{ t('card.sentAsk') }}</span>
+          <button type="button" (click)="markContacted()">{{ t('card.markContacted') }}</button>
+          <button type="button" class="ghost" (click)="sentAsk.set(false)">{{ t('card.notNow') }}</button>
+        </div>
+      }
+      @if (statusError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+      @if (actionError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
       }
     </article>
 

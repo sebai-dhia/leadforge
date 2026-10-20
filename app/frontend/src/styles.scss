@@ -350,3 +350,9 @@ button.quiet:hover:not(:disabled) { color: var(--ink); }
 .brief-panel .seg-btn:not(.on):hover { background: var(--accent-soft); color: var(--ink); }
 .brief-panel .seg-btn.on { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
 @media (prefers-reduced-motion: reduce) { .brief-panel .seg-btn { transition: none; } }
+
+/* before a message exists, writing it is the main action of the card */
+.msg-toggle.primary { background: var(--accent); color: var(--on-accent); box-shadow: none; font-weight: 600; }
+.msg-toggle.primary:hover { background: var(--accent); filter: brightness(1.08); }
+.msg-toggle.primary .ic { color: inherit; }
+.msg-toggle.primary .chev { border-color: var(--on-accent); }
