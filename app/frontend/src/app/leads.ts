@@ -67,12 +67,12 @@ type StatusFilter = LeadStatus | 'ALL';
         }
         <span class="sp sel-inline">
           @if (selectedCount() > 0) {
-            <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
+            <span class="sr-only" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
             @if (hidden()) {
-              <button type="button" class="ghost small" (click)="bulk('restore')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> {{ t('leads.bulkRestore') }}</button>
-              <button type="button" class="danger-btn small" (click)="askDelete()" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg> {{ t('leads.bulkDelete') }}</button>
+              <button type="button" class="ghost small" (click)="bulk('restore')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> {{ t('leads.bulkRestoreN', { n: selectedCount() }) }}</button>
+              <button type="button" class="danger-btn small" (click)="askDelete()" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg> {{ t('leads.bulkDeleteN', { n: selectedCount() }) }}</button>
             } @else {
-              <button type="button" class="ghost small" (click)="bulk('hide')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg> {{ t('leads.bulkHide') }}</button>
+              <button type="button" class="danger-btn small" (click)="bulk('hide')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg> {{ t('leads.bulkHideN', { n: selectedCount() }) }}</button>
             }
             <button type="button" class="ghost quiet small" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
           }
