@@ -86,6 +86,7 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   protected readonly sizeKm = signal({ w: 0, h: 0 });
   private map: L.Map | null = null;
   private rect: L.Rectangle | null = null;
+  private static readonly MAX_KM = 100;
   private start: L.LatLng | null = null;
   private bounds: L.LatLngBounds | null = null;
   private handles: L.Marker[] = [];
@@ -213,12 +214,14 @@ export class AreaMapSelector implements AfterViewInit, OnDestroy {
   }
 
   private emit(b: L.LatLngBounds) {
-    this.tooBig.set(b.getEast() - b.getWest() > 0.35 || b.getNorth() - b.getSouth() > 0.35);
     const midLat = (b.getNorth() + b.getSouth()) / 2;
-    this.sizeKm.set({
+    const size = {
       w: Math.round((b.getEast() - b.getWest()) * 111.32 * Math.cos(midLat * Math.PI / 180)),
       h: Math.round((b.getNorth() - b.getSouth()) * 110.57),
-    });
+    };
+    this.sizeKm.set(size);
+    // one search covers at most about 100 x 100 km; beyond that it finds fewer useful businesses
+    this.tooBig.set(size.w > AreaMapSelector.MAX_KM || size.h > AreaMapSelector.MAX_KM);
     // Geoapify rect format: minLon,minLat,maxLon,maxLat
     const minLon = b.getWest().toFixed(4);
     const minLat = b.getSouth().toFixed(4);
