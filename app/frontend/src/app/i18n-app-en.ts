@@ -253,6 +253,8 @@ export const EN_APP = {
   'profile.yourName': 'Your name',
   'profile.addHeadline': 'Add a one-line headline',
   'profile.writesIn': 'Messages in {lang}',
+  'beta.label': "Beta",
+  'beta.hint': "Leadforge is in beta. Some things are still rough, and your feedback helps it improve.",
   'profile.guestAccount': 'Guest account',
   'profile.edit': 'Edit profile',
   'profile.fieldName': 'Name',

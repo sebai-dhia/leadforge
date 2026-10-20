@@ -246,6 +246,8 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'profile.yourName': 'Votre nom',
   'profile.addHeadline': 'Ajoutez une phrase de présentation',
   'profile.writesIn': 'Messages en {lang}',
+  'beta.label': "Bêta",
+  'beta.hint': "Leadforge est en version bêta. Certaines choses sont encore imparfaites, et vos retours l'aident à progresser.",
   'profile.guestAccount': 'Compte invité',
   'profile.edit': 'Modifier le profil',
   'profile.fieldName': 'Nom',
