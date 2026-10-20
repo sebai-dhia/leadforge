@@ -58,7 +58,7 @@ type StatusFilter = LeadStatus | 'ALL';
       <div class="chips" role="group" [attr.aria-label]="t('status.filterAria')">
         @if (items().length) {
           <label class="check all-check" [title]="t('leads.selectAll')">
-            <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
+            <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll($event)" [attr.aria-label]="t('leads.selectAll')">
           </label>
         }
         @for (f of statusFilters; track f.value) {
@@ -95,7 +95,7 @@ type StatusFilter = LeadStatus | 'ALL';
       @for (l of items(); track l.id; let i = $index) {
         <div class="pick-row">
           <label class="check pick">
-            <input type="checkbox" [checked]="isSelected(l.id)" (click)="shift = $event.shiftKey" (change)="pick($event, l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
+            <input type="checkbox" [checked]="isSelected(l.id)" (click)="trackShift($event)" (change)="pick($event, l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
           </label>
           <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
         </div>
@@ -210,12 +210,19 @@ export class LeadsPage {
   protected toggleHidden() { this.hidden.update(v => !v); this.status.set('ALL'); this.fetch(true); }
   protected reload() { this.fetch(true); }
 
+  /** Remembers whether shift was held. It must return nothing: a template handler that returns false cancels the click. */
+  protected trackShift(event: MouseEvent): void { this.shift = event.shiftKey; }
+
   protected isSelected(id: number) { return this.selected().has(id); }
   protected clearSelection() { this.selected.set(new Set()); this.lastPicked = -1; }
-  protected toggleAll() {
+  protected toggleAll(event: Event) {
     // like Gmail: with anything selected the box clears the selection, with nothing selected it selects all
     this.selected.set(this.selectedCount() > 0 ? new Set() : new Set(this.items().map(l => l.id)));
     this.lastPicked = -1;
+    // the browser already flipped the box; put it back in line with what is really selected
+    const box = event.target as HTMLInputElement;
+    box.checked = this.allSelected();
+    box.indeterminate = this.someSelected();
   }
   /** The box decides: ticked adds the lead, unticked removes it. Shift-click applies the same to everything since the last click. */
   protected pick(event: Event, id: number, index: number) {
