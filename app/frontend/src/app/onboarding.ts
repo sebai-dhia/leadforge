@@ -179,16 +179,33 @@ export class Onboarding {
   protected readonly services = signal<string[]>([]);
   protected readonly targets = signal<string[]>([]);
 
-  /** The business types that fit the chosen services, best fit first. A type listed by several services ranks higher. */
-  protected readonly suggestedTargets = computed(() => {
+  /** How well each business type fits the chosen services: a type listed high by several services scores most. */
+  private readonly targetScores = computed(() => {
     const score = new Map<string, number>();
     for (const service of this.services()) {
       const fits = SERVICE_TARGETS[service] ?? [];
       fits.forEach((t, i) => score.set(t, (score.get(t) ?? 0) + (fits.length - i)));
     }
-    return TARGET_OPTIONS.filter(t => score.has(t)).sort((a, b) => score.get(b)! - score.get(a)!);
+    return score;
   });
-  protected readonly otherTargets = computed(() => TARGET_OPTIONS.filter(t => !this.suggestedTargets().includes(t)));
+  /** All business types, the best fit first (ties keep the usual order). */
+  private readonly rankedTargets = computed(() => {
+    const score = this.targetScores();
+    return [...TARGET_OPTIONS].sort((x, y) => (score.get(y) ?? 0) - (score.get(x) ?? 0));
+  });
+  /**
+   * Only the clear best fits get the label: those scoring at least 60% of the top score, between 3 and 6 of them.
+   * With several services nearly everything is listed by someone, so a plain "listed at all" would label every type.
+   */
+  protected readonly suggestedTargets = computed(() => {
+    const score = this.targetScores();
+    const ranked = this.rankedTargets().filter(t => (score.get(t) ?? 0) > 0);
+    if (!ranked.length) return [];
+    const top = score.get(ranked[0]) ?? 0;
+    const strong = ranked.filter(t => (score.get(t) ?? 0) >= top * 0.6);
+    return ranked.slice(0, Math.min(6, Math.max(3, strong.length)));
+  });
+  protected readonly otherTargets = computed(() => this.rankedTargets().filter(t => !this.suggestedTargets().includes(t)));
 
   /** "photography, copywriting and SEO" in the interface language, for use in the middle of a sentence. */
   protected serviceList() { return this.words(this.services()); }
