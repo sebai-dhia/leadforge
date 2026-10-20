@@ -61,29 +61,29 @@ type StatusFilter = LeadStatus | 'ALL';
             <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll()" [attr.aria-label]="t('leads.selectAll')">
           </label>
         }
-        @if (selectedCount() === 0) {
         @for (f of statusFilters; track f.value) {
           <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
             (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
         }
-        <span class="sp"></span>
+        <span class="sp sel-inline">
+          @if (selectedCount() > 0) {
+            <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
+            @if (hidden()) {
+              <button type="button" class="ghost small" (click)="bulk('restore')" [disabled]="working()">{{ t('leads.bulkRestore') }}</button>
+              <button type="button" class="danger-btn small" (click)="askDelete()" [disabled]="working()">{{ t('leads.bulkDelete') }}</button>
+            } @else {
+              <button type="button" class="ghost small" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
+            }
+            <button type="button" class="ghost quiet small" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
+          }
+        </span>
         @if (hiddenCount() > 0 || hidden()) {
           <button type="button" class="chip hidden-chip" [class.on]="hidden()" [attr.aria-pressed]="hidden()"
             (click)="toggleHidden()">{{ t('leads.hiddenChip') }} <span class="num">{{ hiddenCount() }}</span></button>
         }
         <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
-        } @else {
-          <span class="sel-count" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
-          <span class="sp"></span>
-          @if (hidden()) {
-            <button type="button" class="ghost" (click)="bulk('restore')" [disabled]="working()">{{ t('leads.bulkRestore') }}</button>
-            <button type="button" class="danger-btn" (click)="askDelete()" [disabled]="working()">{{ t('leads.bulkDelete') }}</button>
-          } @else {
-            <button type="button" class="ghost" (click)="bulk('hide')" [disabled]="working()">{{ t('leads.bulkHide') }}</button>
-          }
-          <button type="button" class="ghost quiet" (click)="clearSelection()">{{ t('leads.cancelSel') }}</button>
-        }
+
       </div>
 
       @if (error(); as e) { <p class="err" role="alert">{{ t(e) }} <button type="button" class="ghost" (click)="reload()">{{ t('leads.tryAgain') }}</button></p> }

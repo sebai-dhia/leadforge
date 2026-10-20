@@ -385,3 +385,8 @@ button.danger-btn { background: var(--warn); border-color: var(--warn); color: #
 .del-box .warn { color: var(--warn); font-weight: 600; }
 .del-box .ack { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; cursor: pointer; }
 .del-box .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+.chips .sel-inline { display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding-left: 10px; min-width: 0; }
+.chips .sel-inline .sel-count { font-weight: 600; white-space: nowrap; margin-right: 4px; }
+.chips .sel-inline button { min-height: 34px; padding: 4px 14px; font-size: 13.5px; }
+@media (max-width: 560px) { .chips .sp.sel-inline { display: flex; flex: 1 1 100%; padding-left: 0; } }
