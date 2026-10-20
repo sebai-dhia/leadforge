@@ -65,10 +65,6 @@ type StatusFilter = LeadStatus | 'ALL';
           <button type="button" class="chip hidden-chip" [class.on]="hidden()" [attr.aria-pressed]="hidden()"
             (click)="toggleHidden()">{{ t('leads.hiddenChip') }} <span class="num">{{ hiddenCount() }}</span></button>
         }
-        @for (g of signalGroups; track g) {
-          <button type="button" class="chip" [class.on]="signal() === g" [attr.aria-pressed]="signal() === g" [title]="t('leads.signalHint')"
-            (click)="setSignal(g)">{{ t(signalKey[g]) }}</button>
-        }
         <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
           (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
       </div>
@@ -115,9 +111,6 @@ export class LeadsPage {
 
   protected readonly status = signal<StatusFilter>('ALL');
   protected readonly reachable = signal(false);
-  protected readonly signalGroups = ['gap', 'pain', 'neglect', 'momentum'] as const;
-  protected readonly signalKey = { gap: 'leads.signal.gap', pain: 'leads.signal.pain', neglect: 'leads.signal.neglect', momentum: 'leads.signal.momentum' } as const;
-  protected readonly signal = signal<'' | 'gap' | 'pain' | 'neglect' | 'momentum'>('');
   /** Showing the hidden leads instead of the others. */
   protected readonly hidden = signal(false);
   protected readonly hiddenCount = signal(0);
@@ -164,14 +157,13 @@ export class LeadsPage {
   protected setStatus(s: StatusFilter) { this.status.set(s); this.fetch(true); }
   protected setSearch(id: number) { this.searchId.set(id); this.fetch(true); }
   protected setSort(s: LeadSort) { this.sort.set(s); this.fetch(true); }
-  protected setSignal(g: 'gap' | 'pain' | 'neglect' | 'momentum') { this.signal.update(v => (v === g ? '' : g)); this.fetch(true); }
   protected toggleReachable() { this.reachable.update(v => !v); this.fetch(true); }
   protected toggleHidden() { this.hidden.update(v => !v); this.status.set('ALL'); this.fetch(true); }
   protected reload() { this.fetch(true); }
   protected loadMore() { this.fetch(false); }
 
   protected clearFilters() {
-    this.status.set('ALL'); this.reachable.set(false); this.signal.set(''); this.hidden.set(false); this.q.set(''); this.searchId.set(0);
+    this.status.set('ALL'); this.reachable.set(false); this.hidden.set(false); this.q.set(''); this.searchId.set(0);
     this.fetch(true);
   }
 
@@ -213,7 +205,7 @@ export class LeadsPage {
   }
 
   private filters(): LeadFilters {
-    return { status: this.status(), reachable: this.reachable(), signal: this.signal(), hidden: this.hidden(), q: this.q(), searchId: this.searchId(), sort: this.sort() };
+    return { status: this.status(), reachable: this.reachable(), hidden: this.hidden(), q: this.q(), searchId: this.searchId(), sort: this.sort() };
   }
 
   /** Loads the first page again (reset) or the next page. A newer request makes older answers irrelevant. */
@@ -248,6 +240,6 @@ export class LeadsPage {
   }
 
   private isUnfiltered() {
-    return !this.reachable() && !this.signal() && !this.hidden() && !this.q().trim() && this.searchId() === 0;
+    return !this.reachable() && !this.hidden() && !this.q().trim() && this.searchId() === 0;
   }
 }

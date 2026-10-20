@@ -47,7 +47,7 @@ const REASON_PHRASES: [string, string][] = [
 ].sort((a, b) => b[0].length - a[0].length) as [string, string][];
 
 export interface ReasonTag { text: string; level: 'opportunity' | 'info' | 'warn' }
-export interface ReasonParts { kind: string; tags: ReasonTag[]; ai: string }
+export interface ReasonParts { kind: string; tags: ReasonTag[]; ai: string; signal: '' | 'gap' | 'pain' | 'neglect' | 'momentum' }
 
 /** What the person should take away: an opportunity, a plain fact, or something to be careful about. */
 function tagLevel(flag: string): ReasonTag['level'] {
@@ -65,7 +65,8 @@ function repeatsChecks(note: string, rules: string): boolean {
 
 /** The reason line split for display: the kind of business, one tag per fact, and the AI sentence apart. */
 export function splitReason(text: string | null, fr: boolean): ReasonParts {
-  if (!text) return { kind: '', tags: [], ai: '' };
+  if (!text) return { kind: '', tags: [], ai: '', signal: '' };
+  const sig = text.match(/\[\[sig:(gap|pain|neglect|momentum)\]\]\s*$/);
   text = text.replace(/\s*\[\[sig:\w+\]\]\s*$/, '').trim();
   const ai = text.match(AI_PART);
   const rules = (ai ? text.slice(0, ai.index) : text).trim();
@@ -76,6 +77,7 @@ export function splitReason(text: string | null, fr: boolean): ReasonParts {
   return {
     kind: kind ? translateReason(kind, fr) : '',
     tags: flags.map(f => ({ text: cap(translateReason(f, fr)), level: tagLevel(f) })),
+    signal: sig ? (sig[1] as ReasonParts['signal']) : '',
     ai: ai && !repeatsChecks(ai[1], rules) ? (fr ? ai[2] : ai[1]) : '',
   };
 }

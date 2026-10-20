@@ -49,7 +49,7 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'leads.signal.pain': "Clients en difficulté",
   'leads.signal.neglect': "Semble négligé",
   'leads.signal.momentum': "En croissance",
-  'leads.signalHint': "Opportunité trouvée par la vérification IA, pour les meilleurs prospects d'une recherche",
+  'leads.signalHint': "Opportunité repérée par la vérification IA",
   'leads.tryAgain': 'Réessayer',
   'leads.updating': 'Mise à jour…',
   'leads.showing': '{n} prospects affichés sur {total}',

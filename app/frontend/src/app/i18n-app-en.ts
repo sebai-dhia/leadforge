@@ -51,7 +51,7 @@ export const EN_APP = {
   'leads.signal.pain': "Customers struggle",
   'leads.signal.neglect': "Looks neglected",
   'leads.signal.momentum': "Growing",
-  'leads.signalHint': "Opening found by the AI check, for the best leads of a search",
+  'leads.signalHint': "Opening spotted by the AI check",
   'leads.tryAgain': 'Try again',
   'leads.updating': 'Updating…',
   'leads.showing': 'Showing {n} of {total} leads',

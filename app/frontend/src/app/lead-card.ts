@@ -88,6 +88,12 @@ export function whatsappDigits(phone: string | null): string | null {
           @if (w.kind) { <span class="why-kind">{{ w.kind }}</span> }
           <div class="rtags">
             @for (tag of w.tags; track tag.text) { <span class="rtag" [attr.data-level]="tag.level">{{ tag.text }}</span> }
+            @if (w.signal) {
+              <span class="rtag ai-tag" [title]="t('leads.signalHint')">
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+                <span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ t(signalKey[w.signal]) }}
+              </span>
+            }
             @if (w.ai && w.ai.length <= 90) {
               <span class="rtag ai-tag" [title]="t('card.aiNote')">
                 <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
@@ -306,6 +312,7 @@ export class LeadCard {
     { value: 'NEW', key: 'status.new' }, { value: 'CONTACTED', key: 'status.contacted' },
     { value: 'REPLIED', key: 'status.replied' }, { value: 'NOT_INTERESTED', key: 'status.notInterested' },
   ];
+  protected readonly signalKey = { gap: 'leads.signal.gap', pain: 'leads.signal.pain', neglect: 'leads.signal.neglect', momentum: 'leads.signal.momentum' } as const;
   protected readonly languages: { value: Lang; short: string; nameKey: I18nKey }[] = [
     { value: 'en', short: 'EN', nameKey: 'lang.en' }, { value: 'fr', short: 'FR', nameKey: 'lang.fr' },
     { value: 'ar', short: 'AR', nameKey: 'lang.ar' },
