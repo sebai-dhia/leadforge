@@ -2,6 +2,9 @@
   "name": "draft",
   "description": "First-contact message from a freelancer to a local business (WhatsApp or email, English, French or Arabic).",
   "model": "gemini-3-flash-preview",
+  "thinking": {
+    "thinkingLevel": "minimal"
+  },
   "timeoutMs": 10000,
   "tries": 2,
   "fallbacks": [
@@ -17,7 +20,7 @@
     }
   ],
   "temperature": 0.7,
-  "maxOutputTokens": 900,
+  "maxOutputTokens": 2000,
   "delimiters": {
     "open": "<<<",
     "close": ">>>"
