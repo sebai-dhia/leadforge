@@ -81,6 +81,8 @@ function lint(o, ctx) {
   if (ctx.lang === 'en' && ((plain.match(/\b(vous|votre|nous|pour|avec|merci)\b/gi) || []).length >= 2 || arabic > 3)) problems.push('it is not written in English');
   // a name that mixes French and English must not be written out in full: one version only
   if (ctx.nameBilingual && ctx.businessName && body.includes(ctx.businessName)) problems.push('the business name is written in two languages: use one version only, in the language of the message');
+  // letters from an alphabet the message cannot use (Cyrillic, Hebrew, Chinese, Berber...) are never allowed
+  if (/(?![\p{Script=Latin}\p{Script=Arabic}])\p{L}/u.test(plain)) problems.push('it contains letters from another alphabet: write only with ' + (ctx.lang === 'ar' ? 'Arabic' : ctx.lang === 'fr' ? 'French' : 'English') + ' letters, and leave out a name written in another alphabet');
   // a business name in another script must not be copied in: the message uses one language only
   if (ctx.lang !== 'ar' && (plain.match(/[؀-ۿ]/g) || []).length > 0) problems.push('it contains Arabic letters: write only in ' + (ctx.lang === 'fr' ? 'French' : 'English') + ' and leave out a name written in another script');
 

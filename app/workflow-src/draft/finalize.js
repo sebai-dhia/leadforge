@@ -14,8 +14,10 @@ if (check.retryPrompt) {
 if (!chosen) return [{ json: { error: true, message: 'The AI did not return a usable message' } }];
 
 // the last guard: dashes used as punctuation become commas, underscores become spaces
+const FOREIGN_RUN = /[-–—|:\/]?[ \t]*(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L})(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L}|[ \t.,()\p{M}])*/gu;
+const withoutForeign = t => t.replace(FOREIGN_RUN, ' ').replace(/ {2,}/g, ' ').replace(/ ([.,])/g, '$1');
 const withoutArabic = t => (ctx.lang === 'ar' ? t : t.replace(/[-–—|:]?[ \t]*[؀-ۿݐ-ݿ][؀-ۿݐ-ݿ \t.,،()]*/g, ' ').replace(/ {2,}/g, ' ').replace(/ ([.,])/g, '$1'));
-const plainText = t => withoutArabic(String(t || '')).replace(/\s+[—–-]\s+/g, ', ').replace(/[—–]/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',');
+const plainText = t => withoutArabic(withoutForeign(String(t || ''))).replace(/\s+[—–-]\s+/g, ', ').replace(/[—–]/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',');
 const out = {
   subject: ctx.channel === 'whatsapp' ? '' : plainText(chosen.subject),
   body: plainText(chosen.body),

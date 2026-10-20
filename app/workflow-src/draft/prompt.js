@@ -97,6 +97,13 @@ const aiNote = aiAt >= 0 ? reason.slice(aiAt + 5) : '';
 const ARABIC_RUN = /[-–—|:\/]?[ \t]*[؀-ۿݐ-ݿ][؀-ۿݐ-ݿ \t.,،()]*/g;
 const LATIN_RUN = /[-–—|:\/]?[ \t]*[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'’.& \t]*/g;
 let fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ');
+// Letters from any other alphabet (Cyrillic, Hebrew, Chinese, Berber...) cannot be written in these messages: they are cut like the other language of a name.
+const FOREIGN_RUN = /[-–—|:\/]?[ \t]*(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L})(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L}|[ \t.,()\p{M}])*/gu;
+let foreignOnly = false;
+if (/(?![\p{Script=Latin}\p{Script=Arabic}])\p{L}/u.test(fullName)) {
+  const kept = fullName.replace(FOREIGN_RUN, ' ').replace(/\s+/g, ' ').replace(/^[-–—|:\/\s]+|[-–—|:\/\s]+$/g, '');
+  if (/[\p{Script=Latin}\p{Script=Arabic}]/u.test(kept)) fullName = kept; else foreignOnly = true;
+}
 const hasArabic = /[؀-ۿ]/.test(fullName);
 const hasLatin = /[A-Za-zÀ-ÿ]/.test(fullName);
 const tidy = t => t.replace(/\s+/g, ' ').replace(/^[-–—|:\/\s]+|[-–—|:\/\s]+$/g, '');
@@ -112,11 +119,16 @@ if (hasArabic && hasLatin) {
     if (latinPart.length >= 2) fullName = latinPart;
   }
 } else if (hasArabic && lang !== 'ar') arabicOnlyName = true;
+if (foreignOnly) arabicOnlyName = true;
 const SEPARATOR = /\s+[-–—|:\/]\s+/;
 // words that tell French from English in a business name (accents ignored by the second pass)
 const FR_NAME = /\b(cabinet|clinique|dentaire|dentiste|avocats?|pharmacie|agence|immobili[eè]re?|boulangerie|p[aâ]tisserie|institut|[ée]cole|ma[iî]tre|docteur|fleuriste|magasin|soci[ée]t[ée]|salle|coiffure|assurances?|opticien)\b/gi;
-const EN_NAME = /\b(clinic|dental|dentist|law|firm|lawyers?|pharmacy|agency|real|estate|bakery|school|center|store|florist|hairdresser|doctor|optician|travel|insurance|studio|office)\b/gi;
-const nameLanguage = s => { const f = (s.match(FR_NAME) || []).length, e = (s.match(EN_NAME) || []).length; return f > e ? 'fr' : e > f ? 'en' : ''; };
+const EN_NAME = /\b(clinic|dentist|law|firm|lawyers?|pharmacy|agency|real|estate|bakery|school|center|store|florist|hairdresser|doctor|optician|travel|insurance|studio|office)\b/gi;
+const OTHER_NAME = /\b(farmacia|dentistico|avvocat[oi]|agenzia|immobiliare|cl[ií]nica|abogados|inmobiliaria|[a-zäöü]*apotheke|zahnarzt\w*|praxis|rechtsanw[aä]lt\w*|kanzlei|immobilien|zentrum|eczane|hukuk)\b/gi;
+const nameLanguage = s => {
+  const f = (s.match(FR_NAME) || []).length, e = (s.match(EN_NAME) || []).length, o = (s.match(OTHER_NAME) || []).length;
+  return f > e && f > o ? 'fr' : e > f && e > o ? 'en' : o > f && o > e ? 'other' : '';
+};
 // "Pharmacie Centrale / Central Pharmacy": the same name twice. Keep the version in the message language, never both.
 const nameParts = fullName.split(SEPARATOR).map(s => s.trim()).filter(Boolean);
 const firstPart = nameParts[0] || fullName;
@@ -127,7 +139,7 @@ const shortName = nameLanguage(firstPart) && nameLanguage(firstPart) !== lang &&
 // a tagline after a dash or a bar is dropped; a very short first part keeps the whole name
 const businessName = arabicOnlyName ? '' : shortName.length >= 6 ? shortName : fullName.replace(new RegExp(SEPARATOR.source, 'g'), ' ');
 // a name that still mixes the two languages (no separator to cut at) is flagged so the message writes one version only
-const nameBilingual = !arabicOnlyName && (businessName.match(FR_NAME) || []).length > 0 && (businessName.match(EN_NAME) || []).length > 0;
+const nameBilingual = !arabicOnlyName && [FR_NAME, EN_NAME, OTHER_NAME].filter(re => (businessName.match(re) || []).length > 0).length >= 2;
 const business = [
   arabicOnlyName ? F.business.nameArabicOnly : line(F.business.name, businessName),
   nameBilingual ? F.business.nameBilingual : null,
