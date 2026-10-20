@@ -104,7 +104,7 @@ function emailOf(credential: string): string {
                   </label>
                   @if (linkError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
                   <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.linkBusy') : t('login.linkBtn') }}</button>
-                  <button type="button" class="btn ghost cancel" (click)="cancelLink()" [disabled]="busy()">{{ t('login.linkCancel') }}</button>
+                  <button type="button" class="quiet-link" (click)="cancelLink()" [disabled]="busy()">{{ t('login.linkCancel') }}</button>
                 </form>
               </section>
             } @else {
@@ -141,18 +141,20 @@ function emailOf(credential: string): string {
               </form>
             }
 
-            <section class="guest" [attr.aria-label]="t('login.newHere')">
-              <div class="guest-head">
-                <strong>{{ t('login.newHere') }}</strong>
-                <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ t('login.seats', { n: activeCount(), max: maxCount() }) }}</span>
-              </div>
-              <p>{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
-              <button type="button" class="btn ghost guest-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(true)">
-                {{ t('login.guest') }}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-              </button>
-              @if (demoFull()) { <p class="problem" role="alert">{{ t('login.full') }}</p> }
-            </section>
+            @if (!linkCredential()) {
+              <section class="guest" [attr.aria-label]="t('login.newHere')">
+                <div class="guest-head">
+                  <strong>{{ t('login.newHere') }}</strong>
+                  <span class="seats" role="status"><span class="dot" [class.full]="demoFull()"></span>{{ t('login.seats', { n: activeCount(), max: maxCount() }) }}</span>
+                </div>
+                <p>{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
+                <button type="button" class="btn ghost guest-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(true)">
+                  {{ t('login.guest') }}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                </button>
+                @if (demoFull()) { <p class="problem" role="alert">{{ t('login.full') }}</p> }
+              </section>
+            }
           </div>
         </div>
       </main>
@@ -215,9 +217,10 @@ function emailOf(credential: string): string {
     .link-head { display: flex; align-items: center; gap: 12px; }
     .link-head svg { flex: none; color: var(--accent); }
     .link-head strong { display: block; font-size: 16px; }
-    .link-head .who { display: block; margin-top: 2px; font: 500 13px/1.4 var(--font-mono); color: var(--mute); overflow-wrap: anywhere; }
-    .link-text { margin: 12px 0 14px; font-size: 14px; line-height: 1.5; color: var(--mute); }
-    .link .cancel { width: 100%; min-height: 44px; margin-top: 8px; }
+    .link-head .who { display: inline-block; max-width: 100%; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); font: 500 12.5px/1.6 var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
+    .link-text { margin: 12px 0 12px; font-size: 14px; line-height: 1.5; color: var(--mute); }
+    .quiet-link { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 0; background: transparent; border: 0; color: var(--mute); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: transparent; transition: color .2s ease, text-decoration-color .2s ease; }
+    .quiet-link:hover:not(:disabled) { color: var(--ink); text-decoration-color: currentColor; filter: none; }
     .guest { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .025); }
     .guest-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
     .guest-head strong { font-family: var(--font-display); font-size: 17px; letter-spacing: -.01em; }
@@ -323,6 +326,7 @@ export class Login implements OnInit {
           this.linkEmail.set(emailOf(credential));
           this.linkPassword = '';
           this.linkError.set(null);
+          setTimeout(() => document.querySelector<HTMLInputElement>('input[name=linkpw]')?.focus());
         }
       },
     });
