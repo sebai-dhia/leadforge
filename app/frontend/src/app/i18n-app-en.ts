@@ -218,7 +218,8 @@ export const EN_APP = {
   'find.in': 'in',
 
   // search detail
-  'sd.back': '← All searches',
+  'sd.back': "All searches",
+  'sd.navAria': "Page navigation",
   'sd.all': 'All your leads',
   'sd.progress': 'Finding businesses and scoring them. This page updates by itself, about a minute.',
   'sd.failed': 'The search service did not answer. Try again in a moment.',

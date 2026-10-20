@@ -213,7 +213,8 @@ export const FR_APP: Record<keyof typeof EN_APP, string> = {
   'find.searchIn': '{niche} à {city}',
   'find.in': 'à',
 
-  'sd.back': '← Toutes les recherches',
+  'sd.back': "Toutes les recherches",
+  'sd.navAria': "Navigation de la page",
   'sd.all': 'Tous vos prospects',
   'sd.progress': "Recherche des entreprises et calcul des scores. Cette page se met à jour toute seule, environ une minute.",
   'sd.failed': "Le service de recherche n'a pas répondu. Réessayez dans un instant.",

@@ -393,3 +393,12 @@ button.danger-btn { background: var(--warn); border-color: var(--warn); color: #
 .chips .sel-inline .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
 .slow-hint { margin: 10px 0 0; font-size: 13.5px; }
+
+/* the row of links at the top of a detail page: a quiet back button on the left, the related list on the right */
+.page-nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 14px; }
+.page-nav a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 10px; border-radius: 12px; color: var(--mute); font-weight: 500; text-decoration: none; transition: color .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.page-nav a:hover { color: var(--ink); background: var(--accent-soft); }
+.page-nav .nav-back svg { margin-right: -2px; }
+.page-nav .nav-leads { padding: 0 16px; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.page-nav .nav-leads:hover { box-shadow: inset 0 0 0 1px var(--accent); }
+@media (prefers-reduced-motion: reduce) { .page-nav a { transition: none; } }
