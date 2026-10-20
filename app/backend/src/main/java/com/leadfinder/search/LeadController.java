@@ -156,9 +156,23 @@ public class LeadController {
         payload.put("niche", lead.getNiche());
         payload.put("city", lead.getCity());
         payload.put("offer", user.getOffer());
-        payload.put("senderName", user.getDisplayName());
+        payload.put("senderName", senderName(user));
         payload.put("language", req.language());
         payload.put("channel", req.channel());
+        // what the message may say about the sender and about the business
+        var profile = com.leadfinder.auth.ProfileController.ProfileDto.of(user);
+        payload.put("headline", profile.headline());
+        payload.put("senderCity", profile.city());
+        payload.put("about", profile.about());
+        payload.put("services", profile.services());
+        payload.put("targets", profile.targets());
+        payload.put("links", profile.links());
+        String linksHash = SenderKnowledge.hashOf(user);
+        payload.put("linksHash", linksHash);
+        payload.put("linksKnowledge", SenderKnowledge.fresh(user, linksHash));
+        payload.put("rating", lead.getRating());
+        payload.put("reviews", lead.getReviews());
+        payload.put("social", LeadService.split(lead.getSocial()));
 
         Long usageId = usage.consume(userId(jwt), UsageService.Kind.DRAFT);
         N8nClient.Draft draft;
@@ -173,11 +187,20 @@ public class LeadController {
             usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI returned an empty message");
         }
+        if (SenderKnowledge.store(user, linksHash, draft.linksHash(), draft.linksKnowledge())) {
+            users.save(user);
+        }
         lead.setSubject(draft.subject() == null ? "" : draft.subject());
         lead.setEmailBody(withLinks(draft.body(), user));
         lead.setDraftLanguage(req.language());
         lead.setDraftChannel(req.channel());
         return LeadDto.of(leads.save(lead));
+    }
+
+    /** A guest has no real name: the message then does not introduce or sign with one. */
+    private static String senderName(AppUser user) {
+        String name = user.getDisplayName() == null ? "" : user.getDisplayName().strip();
+        return "GUEST".equals(user.getRole()) || name.equalsIgnoreCase("guest") ? "" : name;
     }
 
     /** Adds the person's first two links under the message, unless the AI already wrote them. */

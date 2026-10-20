@@ -3,16 +3,19 @@ package com.leadfinder.search;
 import com.leadfinder.config.AppProperties;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Component
 public class N8nClient {
-    public record Draft(String subject, String body) {}
+    /** linksKnowledge and linksHash: what was read on the sender's own links, to be cached (null when not read this time). */
+    public record Draft(String subject, String body, String linksKnowledge, String linksHash) {}
 
     /** Contact details found for one business by the on-demand lookup. */
     public record Enrichment(String website, List<String> emails, List<String> phones, List<String> social,
@@ -55,31 +58,52 @@ public class N8nClient {
         payload.put("alertChatId", job.isAlertOwner() && alerts != null && alerts.telegramChatId() != null ? alerts.telegramChatId() : "");
         payload.put("callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results");
 
-        trigger.post()
+        retryOnStaleConnection(() -> trigger.post()
                 .uri(props.n8n().webhookUrl())
                 .header("X-Webhook-Secret", props.n8n().webhookSecret())
                 .body(payload)
                 .retrieve()
-                .toBodilessEntity();
+                .toBodilessEntity());
     }
 
     /** Asks the n8n "enrich-contact" workflow to look for contact details; it answers when done. */
     public Enrichment enrich(Map<String, Object> request) {
-        return draft.post()
+        return retryOnStaleConnection(() -> draft.post()
                 .uri(props.n8n().enrichUrl())
                 .header("X-Webhook-Secret", props.n8n().webhookSecret())
                 .body(request)
                 .retrieve()
-                .body(Enrichment.class);
+                .body(Enrichment.class));
     }
 
     /** Asks the n8n "draft-message" workflow to write one message; it answers when the AI is done. */
     public Draft draft(Map<String, Object> request) {
-        return draft.post()
+        return retryOnStaleConnection(() -> draft.post()
                 .uri(props.n8n().draftUrl())
                 .header("X-Webhook-Secret", props.n8n().webhookSecret())
                 .body(request)
                 .retrieve()
-                .body(Draft.class);
+                .body(Draft.class));
+    }
+
+    /**
+     * n8n closes idle connections after a few seconds, and a pooled one can be reused at that very moment:
+     * the request then never reached n8n ("received no bytes"). Sending it again is safe, and only that case is retried.
+     */
+    static <T> T retryOnStaleConnection(Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (ResourceAccessException e) {
+            if (!isStaleConnection(e)) throw e;
+            return call.get();
+        }
+    }
+
+    static boolean isStaleConnection(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof java.io.EOFException) return true;
+            if (t.getMessage() != null && t.getMessage().contains("received no bytes")) return true;
+        }
+        return false;
     }
 }

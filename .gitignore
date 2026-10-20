@@ -8,3 +8,4 @@ target/
 .vscode/
 .env.prod
 n8n-credentials*.json
+draft-compare-*.json

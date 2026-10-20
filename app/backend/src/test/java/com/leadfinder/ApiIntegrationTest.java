@@ -159,7 +159,7 @@ class ApiIntegrationTest extends IntegrationTestBase {
         }
         mvc.perform(get("/api/usage").with(as(u))).andExpect(jsonPath("$.draft.used").value(0));
 
-        doReturn(new N8nClient.Draft("Sujet", "Bonjour")).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("Sujet", "Bonjour", null, null)).when(n8n).draft(any());
         for (int i = 0; i < 2; i++) {
             mvc.perform(post("/api/leads/" + id + "/draft").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isOk())

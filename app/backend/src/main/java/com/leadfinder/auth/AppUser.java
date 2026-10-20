@@ -57,6 +57,16 @@ public class AppUser {
     @Column(nullable = false)
     private String links = "[]";
 
+    /** What the draft workflow read on the person's links, and for which links (hash) and when. See SenderKnowledge. */
+    @Column(name = "links_knowledge")
+    private String linksKnowledge;
+
+    @Column(name = "links_knowledge_hash")
+    private String linksKnowledgeHash;
+
+    @Column(name = "links_knowledge_at")
+    private java.time.Instant linksKnowledgeAt;
+
     /** Guests only: FULLSTACK, UXUI or STRATEGY. */
     @Column
     private String specialization;
