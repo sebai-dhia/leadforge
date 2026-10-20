@@ -98,6 +98,22 @@ const DEPLOY = {
           }
         }
       },
+      "AI Write B": {
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "zl08YnKaBcKVRKg0",
+            "name": "Header Auth account 6"
+          }
+        }
+      },
+      "AI Write C": {
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "zl08YnKaBcKVRKg0",
+            "name": "Header Auth account 6"
+          }
+        }
+      },
       "AI Retry": {
         "credentials": {
           "httpHeaderAuth": {

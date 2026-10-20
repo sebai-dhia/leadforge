@@ -10,6 +10,23 @@ function parseAi(r) {
   return null;
 }
 
+/**
+ * The first usable answer among the model attempts (the fast model, then the fallbacks), which attempt gave it,
+ * and whether any model replied at all. Attempts that were skipped or failed have no usable answer.
+ */
+function firstAnswer() {
+  const names = ['AI Write Message', 'AI Write B', 'AI Write C'];
+  let replied = false;
+  for (let i = 0; i < names.length; i++) {
+    let json = null;
+    try { json = $(names[i]).first().json; } catch (e) { continue; }
+    if (json && json.candidates) replied = true;
+    const answer = parseAi(json);
+    if (answer) return { answer, index: i, replied };
+  }
+  return { answer: null, index: 0, replied };
+}
+
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
 const words = s => String(s || '').split(/\s+/).filter(Boolean).length;
 

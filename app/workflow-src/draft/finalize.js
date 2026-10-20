@@ -1,7 +1,8 @@
 // Picks the answer to send back: the first one when it was fine, otherwise the second try if it is better.
 const ctx = $('Build Prompt').first().json;
 const check = $('Check').first().json;
-const first = parseAi($('AI Write Message').first().json);
+const found = firstAnswer();
+const first = found.answer || parseAi($('AI Write Message').first().json);
 const retry = check.retryPrompt ? parseAi($input.first().json) : null;
 
 let chosen = first;
@@ -23,6 +24,6 @@ const out = {
 };
 // For the evaluation script only: how the message came about. The backend never asks for it.
 if ((($('Webhook').first().json.body) || {}).debug === true) {
-  out.debug = { attempts: check.retryPrompt ? 2 : 1, firstProblems: check.problems || [], finalProblems: lint(chosen, ctx), angle: chosen.angle, firstBody: first ? first.body : null };
+  out.debug = { attempts: check.retryPrompt ? 2 : 1, modelIndex: found.index, firstProblems: check.problems || [], finalProblems: lint(chosen, ctx), angle: chosen.angle, firstBody: first ? first.body : null };
 }
 return [{ json: out }];

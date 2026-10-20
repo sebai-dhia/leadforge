@@ -1,5 +1,5 @@
 // Generates n8n/draft-message.workflow.json (run: node build-draft-workflow.js)
-// Flow: Webhook -> Plan Fetch -> Fetch Pages -> Build Prompt -> AI Write -> Check -> (AI Retry) -> Finalize -> Respond.
+// Flow: Webhook -> Plan Fetch -> Fetch Pages -> Build Prompt -> AI Write (fast model, then fallbacks) -> Check -> (AI Retry) -> Finalize -> Respond.
 // The Code nodes live as real files in workflow-src/draft/ so they can be checked and tested.
 // The backend waits for the reply. Facts come only from the sender's profile, the lead, and pages read here.
 const fs = require('fs');
@@ -11,7 +11,14 @@ const prompts = require('./prompts-lib');
 const DRAFT = prompts.load('draft');
 
 const src = name => fs.readFileSync(__dirname + '/workflow-src/draft/' + name + '.js', 'utf8').trim();
-const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/' + DRAFT.data.config.model + ':generateContent';
+const url = model => 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
+// the fast model first, then fallbacks with longer timeouts: when one is overloaded or out of quota, the next one answers
+const CFG = DRAFT.data.config;
+const MODELS = [{ model: CFG.model, timeoutMs: CFG.timeoutMs || 15000, tries: CFG.tries || 2 }, ...(CFG.fallbacks || [])];
+if (MODELS.length > 3) throw new Error('the draft workflow has room for 3 models (shared.js lists the attempts)');
+const AI_NAMES = ['AI Write Message', 'AI Write B', 'AI Write C'];
+/** True when an earlier attempt already gave a reply with text, so this one is skipped. */
+const answered = names => names.map(n => "((($('" + n + "').first().json.candidates || [])[0] || {}).content?.parts?.[0]?.text || '').length > 20").join(' || ');
 
 const planCode = SAFE_URL + '\n' + src('plan');
 const promptCode = prompts.embed(DRAFT) + '\n' + src('prompt');
@@ -47,46 +54,47 @@ const workflow = {
       parameters: { jsCode: promptCode },
       id: 'd2', name: 'Build Prompt', type: 'n8n-nodes-base.code', typeVersion: 2, position: [600, 0]
     },
-    {
+    ...MODELS.map((m, i) => ({
       parameters: {
-        method: 'POST', url: GEMINI,
+        method: 'POST',
+        url: i === 0 ? url(m.model) : "={{ (" + answered(AI_NAMES.slice(0, i)) + ") ? 'http://invalid.invalid/' : '" + url(m.model) + "' }}",
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
-        jsonBody: geminiBody('$json.prompt'),
-        options: { timeout: 15000 }
+        jsonBody: geminiBody("$('Build Prompt').first().json.prompt"),
+        options: { timeout: m.timeoutMs }
       },
-      id: 'd3', name: 'AI Write Message', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [800, 0],
-      // the free AI tier answers 429 when asked too fast: wait and ask again (n8n allows up to 5 tries). A call that has not answered after 15 s is given up and asked again: a normal answer takes 1 to 3 s
-      retryOnFail: true, maxTries: 4, waitBetweenTries: 4000,
+      id: 'd' + (3 + i * 10), name: AI_NAMES[i], type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [800 + i * 200, 0],
+      // the free tier answers 429 when asked too fast and 503 when busy: ask again after a short wait (n8n needs 2 or more tries)
+      ...(m.tries > 1 ? { retryOnFail: true, maxTries: m.tries, waitBetweenTries: 3000 } : {}),
       onError: 'continueRegularOutput'
-    },
+    })),
     {
       parameters: { jsCode: checkCode },
-      id: 'd8', name: 'Check', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1000, 0]
+      id: 'd8', name: 'Check', type: 'n8n-nodes-base.code', typeVersion: 2, position: [800 + MODELS.length * 200, 0]
     },
     {
       parameters: {
         method: 'POST',
-        url: "={{ $json.retryPrompt ? '" + GEMINI + "' : 'http://invalid.invalid/' }}",
+        url: "={{ $json.retryPrompt ? " + JSON.stringify(MODELS.map(m => url(m.model))) + "[$json.modelIndex || 0] : 'http://invalid.invalid/' }}",
         authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
         sendBody: true, specifyBody: 'json',
         jsonBody: geminiBody("$json.retryPrompt || ''"),
-        options: { timeout: 15000 }
+        options: { timeout: 25000 }
       },
-      id: 'd9', name: 'AI Retry', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1200, 0],
-      retryOnFail: true, maxTries: 3, waitBetweenTries: 4000,
+      id: 'd9', name: 'AI Retry', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [1000 + MODELS.length * 200, 0],
+      retryOnFail: true, maxTries: 2, waitBetweenTries: 3000,
       onError: 'continueRegularOutput'
     },
     {
       parameters: { jsCode: finalizeCode },
-      id: 'd4', name: 'Finalize', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1400, 0]
+      id: 'd4', name: 'Finalize', type: 'n8n-nodes-base.code', typeVersion: 2, position: [1200 + MODELS.length * 200, 0]
     },
     {
       parameters: {
         respondWith: 'json', responseBody: '={{ $json }}',
         options: { responseCode: '={{ $json.error ? 502 : 200 }}' }
       },
-      id: 'd5', name: 'Respond', type: 'n8n-nodes-base.respondToWebhook', typeVersion: 1.1, position: [1600, 0]
+      id: 'd5', name: 'Respond', type: 'n8n-nodes-base.respondToWebhook', typeVersion: 1.1, position: [1400 + MODELS.length * 200, 0]
     }
   ],
   connections: {
@@ -94,7 +102,7 @@ const workflow = {
     'Plan Fetch': { main: [[{ node: 'Fetch Pages', type: 'main', index: 0 }]] },
     'Fetch Pages': { main: [[{ node: 'Build Prompt', type: 'main', index: 0 }]] },
     'Build Prompt': { main: [[{ node: 'AI Write Message', type: 'main', index: 0 }]] },
-    'AI Write Message': { main: [[{ node: 'Check', type: 'main', index: 0 }]] },
+    ...Object.fromEntries(MODELS.map((m, i) => [AI_NAMES[i], { main: [[{ node: i + 1 < MODELS.length ? AI_NAMES[i + 1] : 'Check', type: 'main', index: 0 }]] }])),
     'Check': { main: [[{ node: 'AI Retry', type: 'main', index: 0 }]] },
     'AI Retry': { main: [[{ node: 'Finalize', type: 'main', index: 0 }]] },
     'Finalize': { main: [[{ node: 'Respond', type: 'main', index: 0 }]] }
