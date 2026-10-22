@@ -67,6 +67,11 @@ export class AuthService {
   readonly leaving = signal(false);
 
   logout() {
+    // end the session on the server too, so a copied token stops working; a failure must not keep the person signed in
+    const token = this.token();
+    if (token) {
+      this.http.post(`${API}/auth/logout`, {}, { headers: { Authorization: `Bearer ${token}` } }).subscribe({ error: () => {} });
+    }
     this.leaving.set(true);
     this.set(null, null, null, false);
     this.router.navigateByUrl('/').finally(() => this.leaving.set(false));

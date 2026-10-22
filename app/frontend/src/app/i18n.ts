@@ -106,7 +106,7 @@ const EN = {
   'login.passwordHint': 'Your password',
   'login.signin': 'Sign in',
   'login.googleUnavailable': "Google sign-in didn't load. You can still sign in with your email.",
-  'login.errWrong': "That email and password don't match. Check them and try again.",
+  'login.errWrong': "That email and password don't match. Check them and try again. If you signed up with Google, use Continue with Google.",
   'login.errServer': "We couldn't reach the server. Check your connection and try again.",
   'login.linkTitle': "This email already has an account",
   'login.linkText': "Enter its password once to connect Google. Next time, one click signs you in.",
@@ -117,7 +117,6 @@ const EN = {
   'login.errLinkOther': "This account is already connected to another Google account.",
   'login.errLinkLater': "Too many attempts. Wait a few minutes and try again.",
   'login.errLinkExpired': "The Google sign-in expired. Please continue with Google again.",
-  'login.errGoogleOnly': "This account uses Google sign-in. Use Continue with Google.",
   'login.errGoogle': "Google couldn't confirm your sign-in. Please try again.",
 } as const;
 
@@ -221,7 +220,7 @@ const FR_BASE: Record<keyof typeof EN, string> = {
   'login.passwordHint': 'Votre mot de passe',
   'login.signin': 'Se connecter',
   'login.googleUnavailable': "La connexion Google ne s'est pas chargée. Vous pouvez toujours vous connecter avec votre e-mail.",
-  'login.errWrong': "Cet e-mail et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.",
+  'login.errWrong': "Cet e-mail et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez. Si vous vous êtes inscrit avec Google, utilisez Continuer avec Google.",
   'login.errServer': "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
   'login.linkTitle': "Cet e-mail a déjà un compte",
   'login.linkText': "Saisissez son mot de passe une seule fois pour connecter Google. La prochaine fois, un clic suffit.",
@@ -232,7 +231,6 @@ const FR_BASE: Record<keyof typeof EN, string> = {
   'login.errLinkOther': "Ce compte est déjà connecté à un autre compte Google.",
   'login.errLinkLater': "Trop de tentatives. Patientez quelques minutes et réessayez.",
   'login.errLinkExpired': "La connexion Google a expiré. Continuez à nouveau avec Google.",
-  'login.errGoogleOnly': "Ce compte utilise la connexion Google. Utilisez Continuer avec Google.",
   'login.errGoogle': "Google n'a pas pu confirmer votre connexion. Réessayez.",
 };
 

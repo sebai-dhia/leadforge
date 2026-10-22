@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Profile, UsageMap } from './api.service';
 import { AuthService } from './auth.service';
@@ -119,6 +119,7 @@ export class UserMenu {
 
   constructor() {
     this.api.profile().subscribe({ next: p => this.profile.set(p), error: () => { /* initials fall back to the email */ } });
+    effect(() => { const saved = this.api.savedProfile(); if (saved) this.profile.set(saved); });
   }
 
   protected toggle() {

@@ -6,6 +6,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # Git Bash on Windows would rewrite container paths such as /tmp/x into Windows paths
 export MSYS_NO_PATHCONV=1
+# On the server (where .env.prod exists) use the production stack
+if [ -z "${COMPOSE_FILE:-}" ] && [ -f .env.prod ]; then export COMPOSE_FILE=docker-compose.prod.yml COMPOSE_ENV_FILES=.env.prod; fi
 
 # rebuild when Node is available (on your machine); a server uses the JSON files committed with the code
 if command -v node >/dev/null; then

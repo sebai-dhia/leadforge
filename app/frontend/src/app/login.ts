@@ -358,10 +358,6 @@ export class Login implements OnInit {
       this.error.set('login.errWrong');
       return;
     }
-    if (e.status === 403) {
-      this.error.set('login.errGoogleOnly');
-      return;
-    }
     this.error.set('login.errServer');
   }
 }

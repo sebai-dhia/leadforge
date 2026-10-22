@@ -1,4 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { tap } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { API } from './auth.service';
 
@@ -38,10 +39,10 @@ export interface ProfileStats { leads: number; drafted: number; contacted: numbe
 /** available: the server has a bot and this account may connect (not a guest or shared demo account). */
 export interface TelegramStatus { available: boolean; connected: boolean; notifications: boolean; hour: number; }
 export interface TelegramLink { url: string; expiresAt: string; }
-
 /** The admin's view: botName is empty when Telegram does not accept the token. polling: OFF, STARTING, OK or FAILING. */
 export interface AdminTelegramStatus { tokenSet: boolean; botName: string | null; polling: 'OFF' | 'STARTING' | 'OK' | 'FAILING'; alertChatSet: boolean; adminConnected: boolean; connectedPeople: number; }
 export interface AdminTelegramTest { result: 'SENT' | 'NOT_SET' | 'BLOCKED' | 'FAILED'; via: 'CONNECTED' | 'ALERT_CHAT' | 'NONE'; }
+
 export interface NewSearch {
   niche: string;
   city?: string;
@@ -125,7 +126,9 @@ export class ApiService {
   }
 
   profile() { return this.http.get<Profile>(`${API}/profile`); }
-  saveProfile(p: ProfileUpdate) { return this.http.put<Profile>(`${API}/profile`, p); }
+  /** The profile as last saved: the account menu follows it, so a new name shows at once. */
+  readonly savedProfile = signal<Profile | null>(null);
+  saveProfile(p: ProfileUpdate) { return this.http.put<Profile>(`${API}/profile`, p).pipe(tap(saved => this.savedProfile.set(saved))); }
   setSpecialization(specialization: string) { return this.http.put<Profile>(`${API}/profile/specialization`, { specialization }); }
   profileStats() { return this.http.get<ProfileStats>(`${API}/profile/stats`); }
   telegram() { return this.http.get<TelegramStatus>(`${API}/profile/telegram`); }
@@ -186,11 +189,11 @@ export class ApiService {
   adminConfig() { return this.http.get<AdminConfig>(`${API}/admin/settings`); }
   /** A value sets the setting; null goes back to the .env value. */
   saveAdminConfig(values: Record<string, string | null>) { return this.http.put<AdminConfig>(`${API}/admin/settings`, { values }); }
+  adminTelegram() { return this.http.get<AdminTelegramStatus>(`${API}/admin/telegram`); }
+  adminTelegramTest() { return this.http.post<AdminTelegramTest>(`${API}/admin/telegram/test`, {}); }
   adminAccount() { return this.http.get<{ email: string }>(`${API}/admin/account`); }
   changeAdminAccount(change: AccountChange) { return this.http.put<{ email: string }>(`${API}/admin/account`, change); }
 
-  adminTelegram() { return this.http.get<AdminTelegramStatus>(`${API}/admin/telegram`); }
-  adminTelegramTest() { return this.http.post<AdminTelegramTest>(`${API}/admin/telegram/test`, {}); }
   private params(f: LeadFilters): HttpParams {
     return new HttpParams()
       .set('status', f.status === 'ALL' ? '' : f.status)
