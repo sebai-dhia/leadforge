@@ -24,7 +24,7 @@ correct every draft before sending it.
 
 ## ✨ Features
 
-| | |
+| Feature | What it does |
 |---|---|
 | 🗺️ **Search by city or area** | Up to 3 cities at once, or a rectangle drawn on an OpenStreetMap map. |
 | 🎯 **Fit score with reasons** | 1 to 10 from rules in code (business type, website, online booking, contacts found), so every score is explained. Unreachable businesses are capped at 3. |
@@ -37,15 +37,15 @@ correct every draft before sending it.
 ## ⚙️ How it works
 
 ```mermaid
-flowchart LR
-    A[Browser<br/>Angular] --> B[Caddy<br/>HTTPS]
+flowchart TB
+    A[Browser · Angular] --> B[Caddy · HTTPS]
     B --> C[Spring Boot API]
-    C --> D[(PostgreSQL)]
+    C <--> D[(PostgreSQL)]
     C -- search, lookup, draft --> E[n8n workflows]
     E -- results --> C
-    E --> F[Geoapify<br/>places]
-    E --> G[Serper<br/>web search]
-    E --> H[Gemini<br/>AI]
+    E --> F[Geoapify · places]
+    E --> G[Serper · web search]
+    E --> H[Gemini · AI]
 ```
 
 The browser only talks to the API. Searches, contact lookups and drafts run in three n8n workflows, which call the
@@ -53,7 +53,7 @@ outside services. API keys stay in n8n's encrypted credentials, never in the cod
 
 ## 🚀 Run it
 
-| | |
+| Where | Guide |
 |---|---|
 | **On your machine** | [app/README.md](app/README.md): Docker for the databases and n8n, then the backend and the frontend |
 | **Free hosting** | [app/deploy/hf/FREE-HOSTING.md](app/deploy/hf/FREE-HOSTING.md): one Hugging Face Space, Supabase databases, no bank card |
