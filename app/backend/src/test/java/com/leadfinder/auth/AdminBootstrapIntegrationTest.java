@@ -16,7 +16,7 @@ class AdminBootstrapIntegrationTest extends IntegrationTestBase {
     PasswordEncoder encoder;
 
     private void start(String email, String password, boolean reset) {
-        DemoAccountInitializer init = new DemoAccountInitializer(users, encoder);
+        AdminBootstrap init = new AdminBootstrap(users, encoder);
         ReflectionTestUtils.setField(init, "adminEmail", email);
         ReflectionTestUtils.setField(init, "adminPassword", password);
         ReflectionTestUtils.setField(init, "reset", reset);
@@ -24,7 +24,7 @@ class AdminBootstrapIntegrationTest extends IntegrationTestBase {
     }
 
     private void startNamed(String email, String name) {
-        DemoAccountInitializer init = new DemoAccountInitializer(users, encoder);
+        AdminBootstrap init = new AdminBootstrap(users, encoder);
         ReflectionTestUtils.setField(init, "adminEmail", email);
         ReflectionTestUtils.setField(init, "adminPassword", "first-password-123");
         ReflectionTestUtils.setField(init, "adminName", name);

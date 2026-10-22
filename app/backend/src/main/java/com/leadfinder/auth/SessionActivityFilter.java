@@ -14,8 +14,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Updates the last active timestamp of a demo visitor session whenever they make an authenticated request,
- * and when the person was last seen.
+ * On every authenticated request: keeps the visitor's demo seat alive (its last active time) and records
+ * when the person was last seen, for the admin.
  */
 @Component
 @RequiredArgsConstructor

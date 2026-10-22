@@ -13,7 +13,7 @@ import { SpecializationDialog } from '../../shared/specialization-dialog/special
 import { SpecializationKey } from '../../shared/specialization-picker/specialization-picker';
 
 /**
- * Landing page. Direction: a night map, editorial type, one emerald signal.
+ * Landing page. Look: a dark night-map background, magazine-style type, one green accent colour.
  * Motion follows the scroll: the hero map zooms and its layers drift at different speeds (parallax), a sticky
  * stage changes with the step being read, a line is drawn down the steps (scroll-linked), and blocks fade up
  * once as they arrive (scroll-triggered). Without motion everything shows in its finished state.

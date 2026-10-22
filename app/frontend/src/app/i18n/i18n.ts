@@ -1,7 +1,7 @@
 import { ApplicationRef, Injectable, inject, signal } from '@angular/core';
 import { EN_APP } from './i18n-app-en';
 import { FR_APP } from './i18n-app-fr';
-import { splitReason, translateChip, translateFound, translateNiche, translateNote, translateReason } from './i18n-generated';
+import { splitReason, translateChip, translateFound, translateNiche, translateNote, translateReason } from './i18n-phrases';
 
 export type AppLang = 'en' | 'fr';
 

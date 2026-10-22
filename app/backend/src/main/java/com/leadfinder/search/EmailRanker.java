@@ -60,7 +60,7 @@ final class EmailRanker {
             if (isUsable(clean)) seen.add(clean);
         }
         List<String> out = new ArrayList<>(seen);
-        out.sort(Comparator.comparingInt((String e) -> priority(e, websiteHost)).reversed()); // stable
+        out.sort(Comparator.comparingInt((String e) -> priority(e, websiteHost)).reversed()); // stable sort: emails with the same score keep the order they had on the page
         return out;
     }
 

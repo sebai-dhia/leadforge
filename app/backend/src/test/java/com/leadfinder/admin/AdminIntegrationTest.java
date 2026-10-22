@@ -124,7 +124,7 @@ class AdminIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.items[0].usage24h.search.used").value(1))
                 .andExpect(jsonPath("$.items[0].usage24h.search.limit").value(2));
 
-        // guests have their own, smaller limits (application-test.properties)
+        // guests have their own, smaller limits (application-test.yml)
         mvc.perform(as(admin, get("/api/admin/users").param("role", "guest")))
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.items[0].usage24h.draft.used").value(1))

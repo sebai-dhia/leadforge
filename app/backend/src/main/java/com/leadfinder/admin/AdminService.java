@@ -79,8 +79,10 @@ public class AdminService {
     public record UserRow(long id, String email, String displayName, String role, boolean demo, boolean google,
                           Instant createdAt, Instant lastSeenAt, long searches, Map<String, Used> usage24h) {}
 
-    /** What the search was about (niche, area) and the leads found are not included: the admin sees how searches ran, not what people looked for.
-     *  userEmail and userRole are empty when the account was deleted (idle guests). */
+    /**
+     * How a search ran, not what it was about: the niche, the area and the leads found are left out.
+     * userEmail and userRole are empty when the account was deleted (idle guests).
+     */
     public record SearchRow(long id, Instant createdAt, String status, String failureReason,
                             Integer foundCount, Long userId, String userEmail, String userRole) {}
 

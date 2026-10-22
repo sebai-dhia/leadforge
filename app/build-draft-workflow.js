@@ -25,8 +25,10 @@ const promptCode = prompts.embed(DRAFT) + '\n' + src('prompt');
 const checkCode = src('shared') + '\n' + src('check');
 const finalizeCode = src('shared') + '\n' + src('finalize');
 
-/** The request body shared by the first try and the second try: fixed instructions apart from the facts. */
-/** thinking: the model's thinking settings as an expression, or 'undefined'. Some models think before they answer, and that counts against the output limit. */
+/**
+ * The request body shared by the first try and the second try: fixed instructions apart from the facts.
+ * thinking: the model's thinking settings as an expression, or 'undefined'. Some models think before they answer, and that counts against the output limit.
+ */
 const geminiBody = (text, thinking = 'undefined') => "={{ JSON.stringify({ systemInstruction: { parts: [{ text: $('Build Prompt').first().json.system }] }, "
   + "contents: [{ role: 'user', parts: [{ text: " + text + " }] }], "
   + "generationConfig: { responseMimeType: 'application/json', temperature: " + DRAFT.data.config.temperature + ", maxOutputTokens: " + DRAFT.data.config.maxOutputTokens + ", thinkingConfig: " + thinking + " } }) }}";

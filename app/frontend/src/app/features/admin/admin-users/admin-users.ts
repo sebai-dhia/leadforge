@@ -22,7 +22,7 @@ export class AdminUsers {
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
 
-  /** True when a load failed, false when one worked; the page shows the retry notice. */
+  /** Tells the Admin page whether the last load failed (true) or worked (false), so it can show or hide the retry notice. */
   readonly loadError = output<boolean>();
 
   protected readonly kinds = KINDS;

@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Tracks concurrent active visitor sessions on shared demo accounts.
  * An active session is one that was active within the configured idle window.
  * Admin users are exempt and do not count toward the visitor limit.
+ * It also refuses the tokens of signed-out sessions and removed accounts.
  */
 @Component
 @RequiredArgsConstructor

@@ -20,7 +20,7 @@ import java.util.Base64;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class DemoAccountInitializer implements ApplicationRunner {
+public class AdminBootstrap implements ApplicationRunner {
     static final String DEFAULT_ADMIN_EMAIL = "admin@leadforge.dev";
     /** The password the admin was first created with. Never acceptable outside a developer's machine. */
     private static final String OLD_DEFAULT = "admin1234";

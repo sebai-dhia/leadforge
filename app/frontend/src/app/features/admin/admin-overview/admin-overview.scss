@@ -37,7 +37,7 @@
 .pick-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 .api-table small .badge-warn { color: var(--warn); font-weight: 600; padding: 1px 8px; border: 1px solid currentColor; border-radius: 999px; }
 @media (min-width: 1000px) { .api-body { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 36px; align-items: start; } }
-/* overview */
+/* alerts: what needs attention, one full-width row each */
 .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .alert { justify-content: flex-start; gap: 12px; width: 100%; min-height: 48px; padding: 10px 16px; text-align: left; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 12px; font-weight: 500; }
 .alert.bad { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--card)); }

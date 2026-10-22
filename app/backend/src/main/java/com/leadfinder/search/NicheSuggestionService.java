@@ -10,7 +10,7 @@ import java.util.*;
 
 /**
  * Maps freelancer service offerings into targeted local business niches.
- * Results are cached in the database by service hash to preserve $0 AI quota.
+ * Results are cached in the database by a hash of the services text, so the same offer never calls the AI twice.
  */
 @Service
 @RequiredArgsConstructor

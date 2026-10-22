@@ -12,7 +12,7 @@ public record AppProperties(String jwtSecret, String corsOrigin, String publicBa
     public record Limits(int searchesPerDay, int draftsPerDay, int enrichPerDay,
                          int loginFailures, int loginWindowMinutes, int registerPerHour) {}
 
-    /** Settings for demo mode and concurrency limits */
+    /** Shared demo accounts: whether they are on, how many visitors may be signed in at once, how long a visitor may be idle, and whether registration is open. */
     public record Demo(boolean enabled, int maxSessions, int idleMinutes, boolean allowRegistration) {}
 
     /** The OAuth client ID is public (it is also in the web page); no client secret is used. */

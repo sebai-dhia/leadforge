@@ -49,7 +49,7 @@ public class RevokedTokenStore {
         }
     }
 
-    /** Used by tests. */
+    /** Empties the stored revocations, so one test's sign-outs do not carry over to the next. */
     public void deleteAll() {
         jdbc.update("delete from revoked_tokens");
     }

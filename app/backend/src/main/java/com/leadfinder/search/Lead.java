@@ -79,7 +79,7 @@ public class Lead {
     @Column(name = "contacted_at")
     private Instant contactedAt;
 
-    /** The reason without the French copy of the AI sentence that the web app uses for its French view. */
+    /** The reason line in English: the AI sentence's French version ("[[fr:...]]") is cut off; the web app reads that part itself for its French view. */
     public String getReasonText() {
         return reason == null ? null : reason.replaceAll("\\s*\\[\\[fr:.*?]]\\s*$", "");
     }
