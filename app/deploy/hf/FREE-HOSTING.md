@@ -12,19 +12,20 @@ databases are free Supabase projects, so a restart of the Space loses nothing.
 | Databases | Supabase (2 projects) | |
 | Keep-awake and alerts | UptimeRobot | |
 
-The Space is public, but it holds only the Dockerfile: it pulls the code from your private GitHub repo while it builds.
+The Space holds only the Dockerfile: it pulls the code from your GitHub repo while it builds.
 
 Do the steps in order. Keep every value you create in a password manager.
 
-## 1. GitHub: private repository
+## 1. GitHub: the repository
 
-1. Create a **private** repository on github.com (for example `leadforge`), with no README.
+1. Create a repository on github.com (for example `leadforge`), with no README. Public or private both work; a public
+   one can be copied by anyone, and making it private later does not take those copies back.
 2. Push the project, from the project folder:
    ```bash
    git remote add origin https://github.com/YOU/leadforge.git
    git push -u origin main
    ```
-3. A read-only token for the Space: Settings > Developer settings > Fine-grained tokens > Generate.
+3. **Private repository only**: a read-only token for the Space: Settings > Developer settings > Fine-grained tokens > Generate.
    Repository access: only `leadforge`. Permissions: **Contents: Read-only**. Expiration: the longest offered
    (renew it before it expires, or builds fail). Keep it as `GITHUB_TOKEN`.
 
@@ -79,7 +80,7 @@ three workflows. Prepare them on your PC, with the local stack running (`docker 
 
    | Name | Value |
    |---|---|
-   | `GITHUB_TOKEN` | the read-only token from step 1 |
+   | `GITHUB_TOKEN` | private repository only: the read-only token from step 1 |
    | `DB_URL` | `jdbc:postgresql://POOLER_HOST:5432/postgres?sslmode=require` (the `leadforge` project) |
    | `DB_USER` | its pooler user, `postgres.xxxxxxxx` |
    | `DB_PASSWORD` | its database password |

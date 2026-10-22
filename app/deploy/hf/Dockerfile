@@ -1,7 +1,7 @@
 # The whole app in one container for a free Hugging Face Space: Caddy on port 7860 (the web app and /api),
 # the backend and n8n on the container's loopback. The databases are on Supabase.
-# On Hugging Face the source comes from the private GitHub repo (GITHUB_TOKEN build secret, GITHUB_REPO variable,
-# GIT_REF set by .github/workflows/deploy-space.yml), so the public Space holds only this file.
+# On Hugging Face the source comes from the GitHub repo (GITHUB_REPO variable, GIT_REF set by
+# .github/workflows/deploy-space.yml, GITHUB_TOKEN build secret only for a private repo); the Space holds only this file.
 # Locally, from app/:  docker build --build-arg SRC=local -f deploy/hf/Dockerfile -t leadforge-hf .
 ARG SRC=clone
 
@@ -9,8 +9,10 @@ FROM alpine:3.22 AS clone
 ARG GITHUB_REPO
 ARG GIT_REF=main
 RUN apk add --no-cache git
-RUN --mount=type=secret,id=GITHUB_TOKEN,mode=0444,required=true \
-    git clone --quiet "https://x-access-token:$(cat /run/secrets/GITHUB_TOKEN)@github.com/${GITHUB_REPO}.git" /repo \
+# the token is only needed while the repository is private
+RUN --mount=type=secret,id=GITHUB_TOKEN,mode=0444,required=false \
+    auth=""; if [ -s /run/secrets/GITHUB_TOKEN ]; then auth="x-access-token:$(cat /run/secrets/GITHUB_TOKEN)@"; fi \
+    && git clone --quiet "https://${auth}github.com/${GITHUB_REPO}.git" /repo \
     && git -C /repo checkout --quiet "${GIT_REF}" \
     && mv /repo/app /src && rm -rf /repo
 

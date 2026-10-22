@@ -1,4 +1,4 @@
-# Lead Finder V2 (Angular 22 + Spring Boot 4.1 + PostgreSQL + n8n)
+# Leadforge app (Angular 22 + Spring Boot 4.1 + PostgreSQL + n8n)
 
 ```
 Angular -> Spring Boot (auth, profile, DB) -> n8n "find-leads"    (responds at once, calls back later)
@@ -11,7 +11,7 @@ The browser never talks to n8n.
 
 - **Search:** creates a `PENDING` job. n8n finds businesses (Geoapify), reads their websites for emails and booking widgets, scores each lead with transparent rules in code (no AI, so it takes seconds), and posts the leads back. The Angular page polls until the job is `DONE`. A sweeper marks jobs `FAILED` after 10 minutes without a callback.
 - **Message:** written on demand, per lead, in English, French or Arabic, for email or WhatsApp. The backend calls the `draft-message` workflow and waits for the reply.
-- **Leads:** a lead belongs to the user, not to one search. The home page lists every lead across all searches with filters, and exports them as CSV. The same business found by several searches is stored once and keeps its status and message.
+- **Leads:** a lead belongs to the user, not to one search. The home page lists every lead across all searches with filters, and exports them as an Excel file. The same business found by several searches is stored once and keeps its status and message.
 - **Profile:** what you offer, the name you sign with and your default language. Saved once and used by every search and message.
 
 ## Run it
@@ -37,6 +37,11 @@ The browser never talks to n8n.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8081, because 8080 is often taken; Flyway creates the tables).
 4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Use quick demo accounts or register (if enabled), fill in your profile, then search.
 
+
+## Deploy
+
+- Free, no bank card: [deploy/hf/FREE-HOSTING.md](deploy/hf/FREE-HOSTING.md) (one Hugging Face Space, Supabase databases, GitHub Actions to publish and back up).
+- On a Linux server: [deploy/DEPLOY.md](deploy/DEPLOY.md) (`docker-compose.prod.yml`, Caddy with HTTPS, nightly backups).
 
 ## Features & Highlights
 
@@ -89,7 +94,7 @@ When a search reports a business, the backend looks for an existing lead of the 
 - Fit score (1 to 10) is rule-based: business type (appointment-based scores higher), no website (+2), website with no booking seen (+1), booking already offered (-1), large-organisation name (-2), phone or email found (+1). Each lead shows its reasons. It ranks leads, it does not prove need.
 - Messages are drafts written from the listed facts only. Read and correct them before sending.
 - Tests: `./mvnw test -Dtest='LeadMatchingTest,LeadCsvTest'` (pure unit tests). `BackendApplicationTests` needs the database running.
-- Not included yet: per-user quotas, rate limiting, email verification, refresh tokens, integration tests, notes on a lead.
+- Not included yet: email verification, refresh tokens, notes on a lead.
 
 ## Limits, contact lookup and tests (added later)
 
