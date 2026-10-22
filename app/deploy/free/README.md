@@ -1,21 +1,25 @@
-# Free hosting: Cloudflare Pages + Render + SnapDeploy + Supabase
+# Free hosting: Cloudflare Pages + Render + Supabase
 
 Costs $0 and needs no bank card. Each part runs where a free plan fits it:
 
 | Part | Where | Awake |
 |---|---|---|
 | Web app | **Cloudflare Pages** (static files) | always |
-| Backend | **Render** free web service (512 MB, 0.1 CPU) | always: a ping every 10 minutes stops it from sleeping |
-| n8n | **SnapDeploy** free container (512 MB, 0.25 CPU) | sleeps after about 15 minutes idle; the first search after a pause waits about 2 minutes |
+| Backend | **Render** free web service `leadforge-api` (512 MB, 0.1 CPU) | woken every hour by a ping, and by visitors |
+| n8n | **Render** free web service `leadforge-n8n` (512 MB, 0.1 CPU) | sleeps; wakes when the backend calls it |
 | Databases | **Supabase**, projects `leadforge` and `leadforge-n8n` | always |
 
+A free Render service sleeps after 15 minutes without traffic and only uses the workspace's 750 free hours a month
+while awake. The hourly ping (about 190 hours a month) and real use stay well under that, so both services fit in one
+workspace. Keep other apps out of this workspace: they share the 750 hours.
+
 Measured with the same limits on a PC: the backend uses about 360 MB and takes about 3 minutes to start, n8n about
-335 MB and 2 minutes. Render's 750 free hours a month cover one service awake all month, which is why only the backend
-is kept awake: the Telegram bot and the reminders need it.
+335 MB and a few minutes on 0.1 CPU. So the first visitor after a quiet hour waits a few minutes, and the first search
+after a pause waits a few minutes more while n8n wakes.
 
 | File | What it does |
 |---|---|
-| [`render.yaml`](../../../render.yaml) | The backend on Render (Blueprint): Dockerfile, memory settings, the settings to fill in |
+| [`render.yaml`](../../../render.yaml) | Both Render services (Blueprint): Dockerfile or image, memory settings, the settings to fill in |
 | [`.github/workflows/load-n8n.yml`](../../../.github/workflows/load-n8n.yml) | Loads the n8n credentials and workflows into Supabase, and creates n8n's owner account |
 | [`pages-build.mjs`](pages-build.mjs) | Writes the backend's address and the security headers into the built web app |
 | [`.github/workflows/backup-db.yml`](../../../.github/workflows/backup-db.yml) | Nightly dumps of both databases |
@@ -45,42 +49,30 @@ Repository > Settings > Secrets and variables > Actions > **Secrets**:
 | `N8N_OWNER_EMAIL`, `N8N_OWNER_PASSWORD` | n8n's owner account |
 | `BACKUP_APP_DB_URL`, `BACKUP_N8N_DB_URL` | `postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require`, one per project |
 
-Then Actions > **Load n8n workflows** > Run workflow. It ends green with "Owner account created". Delete
-`n8n-credentials.json` from your PC afterwards.
+Then Actions > **Load n8n workflows** > Run workflow. The first run creates n8n's tables in Supabase (about 6
+minutes) and ends green with "Owner account created". Delete `n8n-credentials.json` from your PC afterwards.
 
-## 3. SnapDeploy: n8n
+## 3. Render: the backend and n8n
 
-Sign up at snapdeploy.dev (no card). New container from the image **`n8nio/n8n:2.43.8`**, port **5678**, with these
-environment variables:
+Sign up at render.com with GitHub, in a workspace without other services. **New > Blueprint**, choose this repository:
+it reads `render.yaml` and creates both services, asking for the values marked there.
+
+`leadforge-n8n`:
 
 | Name | Value |
 |---|---|
-| `DB_TYPE` | `postgresdb` |
 | `DB_POSTGRESDB_HOST`, `DB_POSTGRESDB_USER`, `DB_POSTGRESDB_PASSWORD` | the `leadforge-n8n` values |
-| `DB_POSTGRESDB_PORT` / `DB_POSTGRESDB_DATABASE` | `5432` / `postgres` |
-| `DB_POSTGRESDB_SSL_ENABLED` / `DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED` | `true` / `false` |
 | `N8N_ENCRYPTION_KEY` | from `app/.env` |
-| `N8N_DISABLE_UI` | `true` (no editor on the public address) |
-| `N8N_BLOCK_ENV_ACCESS_IN_NODE` | `true` |
-| `N8N_DIAGNOSTICS_ENABLED`, `N8N_PERSONALIZATION_ENABLED` | `false` |
-| `NODE_OPTIONS` | `--max-old-space-size=300` |
-| `EXECUTIONS_DATA_PRUNE` / `EXECUTIONS_DATA_MAX_AGE` | `true` / `336` |
-| `GENERIC_TIMEZONE`, `TZ` | `Africa/Tunis` |
 
-Note its address (like `https://xxxx.containers.snapdeploy.app`). Check: `<address>/healthz` answers `{"status":"ok"}`.
-
-## 4. Render: the backend
-
-Sign up at render.com with GitHub. **New > Blueprint**, choose this repository: it reads `render.yaml` and asks for
-the values marked there:
+`leadforge-api`:
 
 | Name | Value |
 |---|---|
 | `DB_URL` | `jdbc:postgresql://<leadforge host>:5432/postgres?sslmode=require` |
 | `DB_USER`, `DB_PASSWORD` | the `leadforge` values |
 | `JWT_SECRET` | the new secret |
-| `CORS_ORIGIN` | the web app's address from step 5, like `https://leadforge.pages.dev` (put a placeholder now, fix it after step 5) |
-| `PUBLIC_BASE_URL` | this service's address, `https://leadforge-api.onrender.com` (shown at the top of the service page) |
+| `CORS_ORIGIN` | the web app's address from step 4, like `https://leadforge.pages.dev` (fix it after step 4 if it differs) |
+| `PUBLIC_BASE_URL` | this service's address, like `https://leadforge-api.onrender.com` |
 | `N8N_WEBHOOK_URL` | `<n8n address>/webhook/find-leads` |
 | `N8N_DRAFT_URL` | `<n8n address>/webhook/draft-message` |
 | `N8N_ENRICH_URL` | `<n8n address>/webhook/enrich-contact` |
@@ -89,10 +81,13 @@ the values marked there:
 | `GOOGLE_CLIENT_ID` | your OAuth client ID |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a new bot from @BotFather, and your chat id |
 
-The first build and start take about 10 minutes. Check: `https://leadforge-api.onrender.com/api/auth/demo-status`
-answers. If a setting is missing, the log says `Set the environment variable ...`.
+Render shows each service's address (like `https://leadforge-n8n.onrender.com`) as soon as the Blueprint is created;
+if a name was taken, it has a suffix, so copy the real ones. The first build and start take about 10 minutes.
 
-## 5. Cloudflare Pages: the web app
+Check: `<n8n address>/healthz` answers `{"status":"ok"}`, and `<backend address>/api/auth/demo-status` answers. If a
+backend setting is missing, its log says `Set the environment variable ...`.
+
+## 4. Cloudflare Pages: the web app
 
 Sign up at cloudflare.com (no card). Workers & Pages > Create > **Pages** > Connect to Git > this repository:
 
@@ -103,20 +98,22 @@ Sign up at cloudflare.com (no card). Workers & Pages > Create > **Pages** > Conn
 | Root directory | `app/frontend` |
 | Build command | `npm ci && npx ng build --configuration production && node ../deploy/free/pages-build.mjs` |
 | Build output directory | `dist/frontend/browser` |
-| Environment variables | `LEADFORGE_API_URL` = `https://leadforge-api.onrender.com/api`, `NODE_VERSION` = `24` |
+| Environment variables | `LEADFORGE_API_URL` = `<backend address>/api`, `NODE_VERSION` = `24` |
 
 Then set `CORS_ORIGIN` on Render to the Pages address, and in Google Cloud add that address to the OAuth client's
 authorised JavaScript origins.
 
-## 6. Keep the backend awake
+## 5. Wake the backend every hour
 
-At cron-job.org (free), or UptimeRobot: a GET on `https://leadforge-api.onrender.com/api/auth/demo-status` every
-10 minutes. Without it Render puts the backend to sleep after 15 minutes, and the Telegram bot and reminders stop.
+At cron-job.org (free): a GET on `<backend address>/api/auth/demo-status` every hour at minute 50, so the backend is
+awake on the hour when the Telegram reminders are sent. Telegram messages to the bot (connecting a chat, `/stop`)
+are answered at the next wake-up; Telegram keeps them for 24 hours.
 
-## 7. Check it works
+## 6. Check it works
 
-- [ ] The web app opens; sign in as admin, then change the admin password (Admin > Settings)
-- [ ] A city search finds leads (the first one after a pause waits about 2 minutes while n8n wakes)
+- [ ] The web app opens (the first time, wait a few minutes while the backend wakes); sign in as admin, then change
+      the admin password (Admin > Settings)
+- [ ] A city search finds leads (the first one after a pause waits a few more minutes while n8n wakes)
 - [ ] A message in French and in English, a contact lookup, an Excel export
 - [ ] Profile > Telegram connects; Admin > Overview shows Gemini, Serper and Geoapify use
 - [ ] Actions > Database backup > Run workflow ends green
@@ -129,10 +126,10 @@ local n8n, export the credentials again, update the `N8N_CREDENTIALS` secret, ru
 
 ## Limits
 
-- The first search after a quiet period waits about 2 minutes. Searches time out on the backend after 2.5 minutes of
-  waiting for n8n (`N8N_WAKE_SECONDS`).
+- Slow first visits after quiet periods (backend and n8n wake on 0.1 CPU). The backend waits up to 5 minutes for n8n
+  (`N8N_WAKE_SECONDS`).
 - 512 MB is tight for n8n: a very large search could stop it. It starts again on the next request.
-- SnapDeploy's free plan has 100 container-hours a month: every time n8n wakes it stays up about 15 minutes.
-- Render discourages keeping free services awake and could change its free plan. A backend restart (a deploy, or
-  Render moving it) takes about 3 minutes.
+- n8n keeps only failed runs (7 days, 500 at most): a stored run is about 230 KB, and Supabase's free plan allows
+  500 MB per database. The app's own database grows about 1.2 KB per lead.
+- Render's free hours are per workspace: other services in the same workspace use them too.
 - When users come, move the backend and n8n to one small server ([../DEPLOY.md](../DEPLOY.md)): the same images work.

@@ -1,6 +1,8 @@
-# Render Blueprint: the backend on Render's free plan (deploy/free/README.md in app/).
+# Render Blueprint: the backend and n8n on Render's free plan, in one workspace (deploy/free/README.md in app/).
 # In Render: New > Blueprint > this repository. Values marked sync: false are asked for once, in Render, and never
 # stored here. Render rebuilds and redeploys the backend on every push to main.
+# Both sleep after 15 minutes without traffic. An hourly ping wakes the backend (Telegram, reminders); n8n wakes when
+# the backend calls it. Together they use far less than the 750 free hours a workspace gets each month.
 services:
   - type: web
     name: leadforge-api
@@ -19,9 +21,9 @@ services:
         value: "3"
       - key: SERVER_FORWARD_HEADERS_STRATEGY
         value: native
-      # n8n sleeps on its free host; at 0.25 CPU it needs about 2 minutes to start again
+      # n8n sleeps; on 0.1 CPU it needs a few minutes to start again
       - key: N8N_WAKE_SECONDS
-        value: "150"
+        value: "300"
       - key: CAP_SEARCHES_PER_DAY
         value: "20"
       - key: CAP_DRAFTS_PER_DAY
@@ -42,7 +44,7 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         sync: false
-      # the n8n address on SnapDeploy, followed by /webhook/find-leads, /webhook/draft-message, /webhook/enrich-contact
+      # the leadforge-n8n service's address, followed by /webhook/find-leads, /webhook/draft-message, /webhook/enrich-contact
       - key: N8N_WEBHOOK_URL
         sync: false
       - key: N8N_DRAFT_URL
@@ -64,4 +66,66 @@ services:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_CHAT_ID
+        sync: false
+
+  # n8n from its official image. Its credentials and workflows are loaded into Supabase by the GitHub Action
+  # "Load n8n workflows", so it only has to start. No editor on the public address.
+  - type: web
+    name: leadforge-n8n
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:2.43.8
+    plan: free
+    region: frankfurt
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: "5678"
+      - key: N8N_PORT
+        value: "5678"
+      - key: N8N_PROXY_HOPS
+        value: "1"
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_PORT
+        value: "5432"
+      - key: DB_POSTGRESDB_DATABASE
+        value: postgres
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "true"
+      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+      - key: N8N_DISABLE_UI
+        value: "true"
+      - key: N8N_BLOCK_ENV_ACCESS_IN_NODE
+        value: "true"
+      - key: N8N_DIAGNOSTICS_ENABLED
+        value: "false"
+      - key: N8N_PERSONALIZATION_ENABLED
+        value: "false"
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=300
+      # each run stored by n8n is about 230 KB: keep only failed runs, so the 500 MB Supabase database never fills
+      - key: EXECUTIONS_DATA_SAVE_ON_SUCCESS
+        value: none
+      - key: EXECUTIONS_DATA_SAVE_ON_ERROR
+        value: all
+      - key: EXECUTIONS_DATA_PRUNE
+        value: "true"
+      - key: EXECUTIONS_DATA_MAX_AGE
+        value: "168"
+      - key: EXECUTIONS_DATA_PRUNE_MAX_COUNT
+        value: "500"
+      - key: GENERIC_TIMEZONE
+        value: Africa/Tunis
+      - key: TZ
+        value: Africa/Tunis
+      # Supabase project "leadforge-n8n", session pooler, and the key from app/.env that opens its credentials
+      - key: DB_POSTGRESDB_HOST
+        sync: false
+      - key: DB_POSTGRESDB_USER
+        sync: false
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false
+      - key: N8N_ENCRYPTION_KEY
         sync: false
