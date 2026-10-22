@@ -1,0 +1,96 @@
+# Loads the n8n credentials and the three workflows into the n8n database on Supabase (free setup, app/deploy/free).
+# The n8n on the free host then only has to start: it reads them from the database, so waking it stays quick.
+# Runs when the workflows change on main, or by hand from the Actions tab (after changing an API key: export the
+# credentials again, update the N8N_CREDENTIALS secret, then run this).
+# The first run also creates n8n's owner account, so nobody else can claim the public n8n address.
+#
+# Repository secrets: N8N_DB_HOST, N8N_DB_USER, N8N_DB_PASSWORD (Supabase project "leadforge-n8n", session pooler),
+# N8N_ENCRYPTION_KEY, N8N_CREDENTIALS (the whole n8n-credentials.json), N8N_OWNER_EMAIL, N8N_OWNER_PASSWORD
+# (8+ characters with a number and a capital letter).
+name: Load n8n workflows
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/n8n/**']
+  workflow_dispatch:
+
+concurrency: load-n8n
+
+env:
+  N8N_IMAGE: n8nio/n8n:2.43.8
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Settings for the n8n commands
+        env:
+          N8N_DB_HOST: ${{ secrets.N8N_DB_HOST }}
+          N8N_DB_USER: ${{ secrets.N8N_DB_USER }}
+          N8N_DB_PASSWORD: ${{ secrets.N8N_DB_PASSWORD }}
+          N8N_ENCRYPTION_KEY: ${{ secrets.N8N_ENCRYPTION_KEY }}
+        run: |
+          umask 077
+          cat > "$RUNNER_TEMP/n8n.env" <<EOF
+          DB_TYPE=postgresdb
+          DB_POSTGRESDB_HOST=$N8N_DB_HOST
+          DB_POSTGRESDB_PORT=5432
+          DB_POSTGRESDB_DATABASE=postgres
+          DB_POSTGRESDB_USER=$N8N_DB_USER
+          DB_POSTGRESDB_PASSWORD=$N8N_DB_PASSWORD
+          DB_POSTGRESDB_SSL_ENABLED=true
+          DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+          N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
+          N8N_DIAGNOSTICS_ENABLED=false
+          EOF
+
+      - name: Credentials
+        env:
+          N8N_CREDENTIALS: ${{ secrets.N8N_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$N8N_CREDENTIALS" > "$RUNNER_TEMP/credentials.json"
+          docker run --rm --env-file "$RUNNER_TEMP/n8n.env" -v "$RUNNER_TEMP/credentials.json:/tmp/credentials.json:ro" \
+            "$N8N_IMAGE" import:credentials --input=/tmp/credentials.json
+          rm -f "$RUNNER_TEMP/credentials.json"
+
+      - name: Workflows (an active workflow cannot be replaced; unpublish, import, publish)
+        run: |
+          set -euo pipefail
+          files="lead-finder.workflow.json enrich-contact.workflow.json draft-message.workflow.json"
+          ids=$(for f in $files; do grep -Eo '"id": "[A-Za-z0-9]{16}"' "app/n8n/$f" | tail -1 | cut -d'"' -f4; done)
+          run() { docker run --rm --env-file "$RUNNER_TEMP/n8n.env" -v "$PWD/app/n8n:/workflows:ro" "$N8N_IMAGE" "$@"; }
+          for id in $ids; do run unpublish:workflow --id="$id" || true; done
+          for f in $files; do run import:workflow --input="/workflows/$f"; done
+          for id in $ids; do run publish:workflow --id="$id"; done
+
+      - name: Owner account (only when n8n has none yet)
+        env:
+          N8N_OWNER_EMAIL: ${{ secrets.N8N_OWNER_EMAIL }}
+          N8N_OWNER_PASSWORD: ${{ secrets.N8N_OWNER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          docker run -d --name n8n --env-file "$RUNNER_TEMP/n8n.env" -p 127.0.0.1:5678:5678 "$N8N_IMAGE" >/dev/null
+          # /healthz answers while n8n is still starting (and so does the setup call, with a "please wait" page)
+          for _ in $(seq 100); do curl -fsS -o /dev/null http://127.0.0.1:5678/healthz/readiness && break; sleep 3; done
+          body=$(jq -n --arg e "$N8N_OWNER_EMAIL" --arg p "$N8N_OWNER_PASSWORD" \
+            '{email: $e, password: $p, firstName: "Leadforge", lastName: "Admin"}')
+          code=$(curl -s -o "$RUNNER_TEMP/owner.json" -w '%{http_code}' -H 'Content-Type: application/json' \
+            -d "$body" http://127.0.0.1:5678/rest/owner/setup)
+          docker rm -f n8n >/dev/null
+          case "$code" in
+            200) grep -q '"email"' "$RUNNER_TEMP/owner.json" && echo "Owner account created" \
+                   || { echo "n8n was not ready"; exit 1; } ;;
+            400) echo "n8n already has an owner" ;;
+            *) echo "Owner setup answered $code"; cat "$RUNNER_TEMP/owner.json"; exit 1 ;;
+          esac
+
+      - name: Clean up
+        if: always()
+        run: rm -f "$RUNNER_TEMP/n8n.env" "$RUNNER_TEMP/credentials.json" "$RUNNER_TEMP/owner.json"
+
+      - name: Next
+        run: echo "Loaded. Restart n8n on its host (or let it sleep and wake) so it reads the new workflows."

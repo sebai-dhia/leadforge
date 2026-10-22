@@ -40,7 +40,8 @@ The browser never talks to n8n.
 
 ## Deploy
 
-- Free, no bank card: [deploy/hf/FREE-HOSTING.md](deploy/hf/FREE-HOSTING.md) (one Hugging Face Space, Supabase databases, GitHub Actions to publish and back up).
+- Free, no bank card: [deploy/free/README.md](deploy/free/README.md) (web app on Cloudflare Pages, backend on Render, n8n on SnapDeploy, Supabase databases).
+- Hugging Face PRO: [deploy/hf/FREE-HOSTING.md](deploy/hf/FREE-HOSTING.md) (everything in one Space).
 - On a Linux server: [deploy/DEPLOY.md](deploy/DEPLOY.md) (`docker-compose.prod.yml`, Caddy with HTTPS, nightly backups).
 
 ## Features & Highlights

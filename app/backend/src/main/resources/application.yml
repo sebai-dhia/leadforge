@@ -31,6 +31,8 @@ app:
     enrich-url: ${N8N_ENRICH_URL}
     webhook-secret: ${N8N_WEBHOOK_SECRET}
     callback-secret: ${N8N_CALLBACK_SECRET}
+    # Extra seconds to wait for an n8n host that sleeps when idle (deploy/free): 0 when n8n always runs
+    wake-seconds: ${N8N_WAKE_SECONDS:0}
 
   # Usage limits. Daily limits are per user over a rolling 24 hours.
   limits:

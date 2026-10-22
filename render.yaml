@@ -1,0 +1,67 @@
+# Render Blueprint: the backend on Render's free plan (deploy/free/README.md in app/).
+# In Render: New > Blueprint > this repository. Values marked sync: false are asked for once, in Render, and never
+# stored here. Render rebuilds and redeploys the backend on every push to main.
+services:
+  - type: web
+    name: leadforge-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./app/backend/Dockerfile
+    dockerContext: ./app/backend
+    healthCheckPath: /api/auth/demo-status
+    autoDeployTrigger: commit
+    envVars:
+      # 512 MB in all: a small heap, one GC thread, a quicker start on the shared CPU
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xmx256m -Xss512k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "3"
+      - key: SERVER_FORWARD_HEADERS_STRATEGY
+        value: native
+      # n8n sleeps on its free host; at 0.25 CPU it needs about 2 minutes to start again
+      - key: N8N_WAKE_SECONDS
+        value: "150"
+      - key: CAP_SEARCHES_PER_DAY
+        value: "20"
+      - key: CAP_DRAFTS_PER_DAY
+        value: "100"
+      - key: CAP_ENRICH_PER_DAY
+        value: "30"
+      # Supabase project "leadforge", session pooler
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # the web app's address (Cloudflare Pages), and this service's own address (n8n sends results back to it)
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # the n8n address on SnapDeploy, followed by /webhook/find-leads, /webhook/draft-message, /webhook/enrich-contact
+      - key: N8N_WEBHOOK_URL
+        sync: false
+      - key: N8N_DRAFT_URL
+        sync: false
+      - key: N8N_ENRICH_URL
+        sync: false
+      - key: N8N_WEBHOOK_SECRET
+        sync: false
+      - key: N8N_CALLBACK_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

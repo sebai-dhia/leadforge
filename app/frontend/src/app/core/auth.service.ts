@@ -3,8 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 
-/** In development the web app (port 4200) and the API (8081) are separate; deployed, both are served from one address. */
-export const API = globalThis.location?.port === '4200' ? 'http://localhost:8081/api' : '/api';
+/** The API's address when the web app is hosted apart from it (Cloudflare Pages): written into index.html at build time. */
+const hostedApi = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="leadforge-api"]')?.content ?? '';
+
+/** In development the web app (port 4200) and the API (8081) are separate; on a server, both are served from one address. */
+export const API = globalThis.location?.port === '4200' ? 'http://localhost:8081/api'
+  : hostedApi.startsWith('https://') ? hostedApi : '/api';
 
 interface TokenResponse {
   token: string;

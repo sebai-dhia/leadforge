@@ -1,6 +1,7 @@
 package com.leadfinder.search;
 
 import com.leadfinder.config.AppProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -26,17 +27,23 @@ public class N8nClient {
     private final RestClient trigger;
     private final RestClient draft;
 
-    public N8nClient(AppProperties props) {
+    /**
+     * wakeSeconds: extra time for an n8n host that sleeps when idle and needs a while to start again (0 when n8n is
+     * always running). It is added to every wait.
+     */
+    public N8nClient(AppProperties props, @Value("${app.n8n.wake-seconds:0}") int wakeSeconds) {
         this.props = props;
-        this.trigger = client(Duration.ofSeconds(15));
-        this.draft = client(Duration.ofSeconds(120)); // the AI writes the message while we wait; a second try after a rate limit can take over a minute
+        Duration wake = Duration.ofSeconds(wakeSeconds);
+        this.trigger = client(Duration.ofSeconds(15).plus(wake), Duration.ofSeconds(5).plus(wake));
+        // the AI writes the message while we wait; a second try after a rate limit can take over a minute
+        this.draft = client(Duration.ofSeconds(120).plus(wake), Duration.ofSeconds(5).plus(wake));
     }
 
-    private static RestClient client(Duration readTimeout) {
+    private static RestClient client(Duration readTimeout, Duration connectTimeout) {
         // HTTP/1.1 only: the JDK client's default h2c upgrade makes POSTs to n8n hang.
         HttpClient jdk = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofSeconds(5))
+                .connectTimeout(connectTimeout)
                 .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(jdk);
         factory.setReadTimeout(readTimeout);

@@ -1,4 +1,7 @@
-# Free hosting: Hugging Face + Supabase + GitHub
+# Hugging Face Space + Supabase + GitHub
+
+> **No longer free.** Since July 2026 a free Hugging Face account cannot create a Docker Space or use CPU Basic;
+> both need PRO ($9 a month, paid by card). For $0, use [../free/README.md](../free/README.md) instead.
 
 Costs $0 and needs no bank card. Everything runs in one free Hugging Face Space (Docker, 2 vCPU, 16 GB RAM):
 Caddy serves the web app and `/api` on port 7860; the backend and n8n listen only inside the container. Both

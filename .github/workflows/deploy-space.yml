@@ -1,12 +1,11 @@
 # Publishes a version to the Hugging Face Space: copies app/deploy/hf/Dockerfile there with this commit as GIT_REF,
 # and the Space builds it (10 to 15 minutes; follow it in the Space's Logs tab).
-# Runs on a pushed tag (git tag v0.2.0 && git push --follow-tags), or by hand from the Actions tab.
+# Run it by hand from the Actions tab.
 # Needs the repository secret HF_TOKEN (a Hugging Face write token) and variable HF_SPACE (owner/space-name).
 name: Deploy to Hugging Face
 
+# Manual only: since July 2026 a free Hugging Face account cannot run a Docker Space (needs PRO).
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 concurrency: deploy-space
