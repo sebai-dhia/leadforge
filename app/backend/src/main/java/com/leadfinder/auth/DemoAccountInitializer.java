@@ -35,6 +35,9 @@ public class DemoAccountInitializer implements ApplicationRunner {
     @Value("${app.admin.password:}")
     private String adminPassword;
 
+    @Value("${app.admin.name:}")
+    private String adminName;
+
     @Value("${app.admin.password-reset:false}")
     private boolean reset;
 
@@ -51,6 +54,7 @@ public class DemoAccountInitializer implements ApplicationRunner {
             createAdmin(email.isEmpty() ? DEFAULT_ADMIN_EMAIL : email, wanted);
             return;
         }
+        nameAdmin(admin);
         if (reset) {
             resetAdmin(admin, email, wanted);
         } else if (admin.getPasswordHash() != null && encoder.matches(OLD_DEFAULT, admin.getPasswordHash())) {
@@ -70,12 +74,31 @@ public class DemoAccountInitializer implements ApplicationRunner {
         user.setRole("ADMIN");
         user.setDemo(false);
         user.setOffer("Full-Stack Custom Software & Web Automation");
-        user.setDisplayName("Admin");
+        user.setDisplayName(startName(email));
         user.setLanguage("en");
         users.save(user);
         log.info("Seeded account: {} (ADMIN)", email);
         if (wantedPassword.isEmpty()) {
             log.warn("Admin account created with a random password: {}  Set ADMIN_PASSWORD to choose one, or change it on the Admin page.", password);
+        }
+    }
+
+    /** The name the admin starts with: ADMIN_NAME, else the part of the email before the @. */
+    private String startName(String email) {
+        String name = adminName == null ? "" : adminName.trim();
+        if (!name.isEmpty()) return name;
+        String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        return local.isBlank() ? "Admin" : local;
+    }
+
+    /** An admin still called "Admin" gets ADMIN_NAME; a name the admin chose on the Profile page is never overwritten. */
+    private void nameAdmin(AppUser admin) {
+        String name = adminName == null ? "" : adminName.trim();
+        String current = admin.getDisplayName() == null ? "" : admin.getDisplayName().trim();
+        if (!name.isEmpty() && (current.isEmpty() || current.equalsIgnoreCase("admin")) && !name.equals(current)) {
+            admin.setDisplayName(name.length() > 100 ? name.substring(0, 100) : name);
+            users.save(admin);
+            log.info("The admin's name is now {}", admin.getDisplayName());
         }
     }
 

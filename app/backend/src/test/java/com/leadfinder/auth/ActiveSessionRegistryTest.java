@@ -19,7 +19,8 @@ class ActiveSessionRegistryTest {
         props = new AppProperties("secret-must-be-at-least-32-chars-long", "http://localhost:4200", "http://localhost:8081", n8n, limits, demo, new AppProperties.Google("test-client"), new AppProperties.Guest(true, 1, 1, 1, 3),
                 new AppProperties.Caps(0, 0, 0), new AppProperties.Alerts("", ""));
         registry = new ActiveSessionRegistry(new com.leadfinder.settings.RuntimeSettings(props,
-                org.mockito.Mockito.mock(com.leadfinder.settings.AppSettingRepository.class)));
+                org.mockito.Mockito.mock(com.leadfinder.settings.AppSettingRepository.class)),
+                org.mockito.Mockito.mock(RevokedTokenStore.class));
     }
 
     @Test

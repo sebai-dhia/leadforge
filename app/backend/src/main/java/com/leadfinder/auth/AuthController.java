@@ -9,7 +9,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,6 +38,7 @@ public class AuthController {
     private final AppProperties props;
     private final RuntimeSettings settings;
     private final GoogleTokenVerifier googleVerifier;
+    private volatile String dummyHash;
 
     @GetMapping("/demo-status")
     public ActiveSessionRegistry.DemoStatus demoStatus() {
@@ -66,13 +69,10 @@ public class AuthController {
         String email = c.email().trim().toLowerCase();
         throttle.checkLogin(ip, email);
         AppUser found = users.findByEmail(email).orElse(null);
-        AppUser u = found != null && found.getPasswordHash() != null && encoder.matches(c.password(), found.getPasswordHash()) ? found : null;
+        AppUser u = passwordMatches(found, c.password()) ? found : null;
         if (u == null) {
             throttle.recordLoginFailure(ip, email);
-            // an account made with Google has no password: say how to get in instead of "invalid credentials"
-            if (found != null && found.getPasswordHash() == null && found.getGoogleSub() != null) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account uses Google sign-in");
-            }
+            // the same answer for every failure, so the response does not tell whether an email has an account
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         requireFreeSeat(u);
@@ -142,9 +142,8 @@ public class AuthController {
         String ip = request.getRemoteAddr();
         String email = id.email().trim().toLowerCase();
         throttle.checkLogin(ip, email);
-        AppUser u = users.findByEmail(email)
-                .filter(x -> x.getPasswordHash() != null && encoder.matches(body.password(), x.getPasswordHash()))
-                .orElse(null);
+        AppUser candidate = users.findByEmail(email).orElse(null);
+        AppUser u = passwordMatches(candidate, body.password()) ? candidate : null;
         if (u == null) {
             throttle.recordLoginFailure(ip, email);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
@@ -182,6 +181,29 @@ public class AuthController {
         spec.apply(u);
         users.save(u);
         return new TokenResponse(tokens.issue(u), u.getEmail(), u.getRole(), u.isDemo(), u.isOnboarded());
+    }
+
+    /** Revokes the caller's token on the server, so a copied token stops working at once. Always succeeds. */
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt != null) sessionRegistry.revokeSession(jwt.getClaimAsString("sid"));
+    }
+
+    /**
+     * Always runs one BCrypt check, against a throw-away hash when there is no usable password, so an unknown email
+     * and a wrong password take the same time to answer.
+     */
+    private boolean passwordMatches(AppUser user, String password) {
+        boolean usable = user != null && user.getPasswordHash() != null;
+        boolean ok = encoder.matches(password, usable ? user.getPasswordHash() : dummyHash());
+        return usable && ok;
+    }
+
+    private String dummyHash() {
+        String h = dummyHash;
+        if (h == null) dummyHash = h = encoder.encode(java.util.UUID.randomUUID().toString());
+        return h;
     }
 
     private void requireFreeSeat(AppUser u) {

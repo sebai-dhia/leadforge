@@ -12,6 +12,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TokenService {
+    static final Duration LIFETIME = Duration.ofHours(12);
+
     private final JwtEncoder encoder;
     private final ActiveSessionRegistry sessionRegistry;
 
@@ -25,7 +27,7 @@ public class TokenService {
                 .claim("isDemo", u.isDemo())
                 .claim("sid", sessionId)
                 .issuedAt(now)
-                .expiresAt(now.plus(Duration.ofHours(12)))
+                .expiresAt(now.plus(LIFETIME))
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String token = encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

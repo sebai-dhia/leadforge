@@ -1,6 +1,7 @@
 package com.leadfinder;
 
 import com.leadfinder.auth.AppUser;
+import com.leadfinder.auth.RevokedTokenStore;
 import com.leadfinder.search.IncomingLead;
 import com.leadfinder.search.LeadRepository;
 import com.leadfinder.search.LeadService;
@@ -18,6 +19,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -39,6 +41,8 @@ class ApiIntegrationTest extends IntegrationTestBase {
     LeadService leadService;
     @Autowired
     LeadRepository leads;
+    @Autowired
+    RevokedTokenStore revokedStore;
 
     private static RequestPostProcessor as(AppUser u) {
         return jwt().jwt(j -> j.subject(String.valueOf(u.getId())));
@@ -355,6 +359,43 @@ class ApiIntegrationTest extends IntegrationTestBase {
             mvc.perform(post("/api/auth/login").with(from(ip)).contentType(MediaType.APPLICATION_JSON).content(right))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.token").exists());
         }
+    }
+
+    @Test
+    void loggingOutEndsTheTokenOnTheServer() throws Exception {
+        String body = mvc.perform(post("/api/auth/register").with(from("10.4.4.4")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"leaver@x.tn\",\"password\":\"correct-horse-1\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String token = body.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+        mvc.perform(get("/api/profile").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/profile").header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void aRemovedAccountsTokenStopsWorking() throws Exception {
+        String body = mvc.perform(post("/api/auth/register").with(from("10.5.5.5")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"gone@x.tn\",\"password\":\"correct-horse-1\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String token = body.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+        mvc.perform(get("/api/profile").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        sessions.revokeUser(users.findByEmail("gone@x.tn").orElseThrow().getId());
+        mvc.perform(get("/api/profile").header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void revocationsSurviveARestart() {
+        sessions.revokeSession("signed-out-sid");
+        sessions.revokeUser(42L);
+        jdbc.update("insert into revoked_tokens (kind, key, revoked_at) values ('SESSION', 'long-expired', now() - interval '2 days')");
+
+        // a fresh registry stands for the backend after a restart: it only knows what the database kept
+        var restarted = new com.leadfinder.auth.ActiveSessionRegistry(settings, revokedStore);
+        restarted.afterSingletonsInstantiated();
+        assertTrue(restarted.isRevoked("signed-out-sid", null));
+        assertTrue(restarted.isRevoked("other-sid", 42L));
+        assertFalse(restarted.isRevoked("long-expired", null));
+        assertFalse(restarted.isRevoked("other-sid", 7L));
     }
 
     @Test

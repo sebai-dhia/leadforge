@@ -23,6 +23,14 @@ class AdminBootstrapIntegrationTest extends IntegrationTestBase {
         init.run(null);
     }
 
+    private void startNamed(String email, String name) {
+        DemoAccountInitializer init = new DemoAccountInitializer(users, encoder);
+        ReflectionTestUtils.setField(init, "adminEmail", email);
+        ReflectionTestUtils.setField(init, "adminPassword", "first-password-123");
+        ReflectionTestUtils.setField(init, "adminName", name);
+        init.run(null);
+    }
+
     private AppUser admin() {
         return users.findFirstByRoleOrderByIdAsc("ADMIN").orElseThrow();
     }
@@ -32,6 +40,32 @@ class AdminBootstrapIntegrationTest extends IntegrationTestBase {
         start("Owner@Example.com", "first-password-123", false);
         assertEquals("owner@example.com", admin().getEmail());
         assertTrue(encoder.matches("first-password-123", admin().getPasswordHash()));
+    }
+
+    @Test
+    void theAdminStartsWithAnameNotWithTheWordAdmin() {
+        startNamed("owner@example.com", "Sam Owner");
+        assertEquals("Sam Owner", admin().getDisplayName());
+    }
+
+    @Test
+    void withoutANameTheStartOfTheEmailIsUsed() {
+        startNamed("owner@example.com", "");
+        assertEquals("owner", admin().getDisplayName());
+    }
+
+    @Test
+    void anAdminStillCalledAdminGetsTheNameButAChosenNameIsKept() {
+        startNamed("owner@example.com", "");
+        AppUser a = admin();
+        a.setDisplayName("Admin");
+        users.save(a);
+
+        startNamed("owner@example.com", "Sam Owner");
+        assertEquals("Sam Owner", admin().getDisplayName());
+
+        startNamed("owner@example.com", "Someone Else");
+        assertEquals("Sam Owner", admin().getDisplayName(), "a name already chosen is never overwritten");
     }
 
     @Test

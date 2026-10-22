@@ -11,7 +11,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -77,8 +83,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKey key) {
-        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+    JwtDecoder jwtDecoder(SecretKey key, com.leadfinder.auth.ActiveSessionRegistry sessions) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+        // a logged-out session or a removed account is refused even though the token has not expired yet
+        OAuth2TokenValidator<Jwt> notRevoked = jwt -> {
+            Long userId = null;
+            try { userId = Long.valueOf(jwt.getSubject()); } catch (RuntimeException ignored) { /* not one of ours */ }
+            return sessions.isRevoked(jwt.getClaimAsString("sid"), userId)
+                    ? OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Session ended", null))
+                    : OAuth2TokenValidatorResult.success();
+        };
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(), notRevoked));
+        return decoder;
     }
 
     @Bean

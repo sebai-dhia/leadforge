@@ -31,6 +31,7 @@ public class GuestCleanup {
                 .toList();
         if (!idleGuests.isEmpty()) {
             users.deleteAll(idleGuests);
+            idleGuests.forEach(g -> sessions.revokeUser(g.getId()));
             log.info("Deleted {} idle guest account(s)", idleGuests.size());
         }
     }
