@@ -36,9 +36,12 @@ export interface Profile {
 export type ProfileUpdate = Partial<Pick<Profile, 'offer' | 'displayName' | 'headline' | 'city' | 'about' | 'services' | 'targets' | 'links' | 'language' | 'onboarded'>>;
 export interface ProfileStats { leads: number; drafted: number; contacted: number; replied: number; }
 /** available: the server has a bot and this account may connect (not a guest or shared demo account). */
-export interface TelegramStatus { available: boolean; connected: boolean; notifications: boolean; }
+export interface TelegramStatus { available: boolean; connected: boolean; notifications: boolean; hour: number; }
 export interface TelegramLink { url: string; expiresAt: string; }
 
+/** The admin's view: botName is empty when Telegram does not accept the token. polling: OFF, STARTING, OK or FAILING. */
+export interface AdminTelegramStatus { tokenSet: boolean; botName: string | null; polling: 'OFF' | 'STARTING' | 'OK' | 'FAILING'; alertChatSet: boolean; adminConnected: boolean; connectedPeople: number; }
+export interface AdminTelegramTest { result: 'SENT' | 'NOT_SET' | 'BLOCKED' | 'FAILED'; via: 'CONNECTED' | 'ALERT_CHAT' | 'NONE'; }
 export interface NewSearch {
   niche: string;
   city?: string;
@@ -127,7 +130,7 @@ export class ApiService {
   profileStats() { return this.http.get<ProfileStats>(`${API}/profile/stats`); }
   telegram() { return this.http.get<TelegramStatus>(`${API}/profile/telegram`); }
   telegramLink(lang: string, timeZone: string) { return this.http.post<TelegramLink>(`${API}/profile/telegram/link`, { lang, timeZone }); }
-  setTelegramNotifications(notifications: boolean) { return this.http.put<TelegramStatus>(`${API}/profile/telegram`, { notifications }); }
+  setTelegram(settings: { notifications?: boolean; hour?: number }) { return this.http.put<TelegramStatus>(`${API}/profile/telegram`, settings); }
   disconnectTelegram() { return this.http.delete<TelegramStatus>(`${API}/profile/telegram`); }
 
   leads(f: LeadFilters, page: number, size = 40) {
@@ -186,6 +189,8 @@ export class ApiService {
   adminAccount() { return this.http.get<{ email: string }>(`${API}/admin/account`); }
   changeAdminAccount(change: AccountChange) { return this.http.put<{ email: string }>(`${API}/admin/account`, change); }
 
+  adminTelegram() { return this.http.get<AdminTelegramStatus>(`${API}/admin/telegram`); }
+  adminTelegramTest() { return this.http.post<AdminTelegramTest>(`${API}/admin/telegram/test`, {}); }
   private params(f: LeadFilters): HttpParams {
     return new HttpParams()
       .set('status', f.status === 'ALL' ? '' : f.status)

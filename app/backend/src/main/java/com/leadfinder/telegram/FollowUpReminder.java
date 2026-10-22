@@ -18,7 +18,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Each morning (from 9:00 in the person's time zone) tells them on Telegram which businesses they marked Contacted
+ * Each day (from the hour the person chose, 9:00 by default, in their time zone) tells them on Telegram which businesses they marked Contacted
  * and that still have not replied: once 3 days after, once a week after, then never again. Nothing is sent on a day
  * with nothing to follow up.
  */
@@ -26,7 +26,9 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class FollowUpReminder {
-    static final int HOUR = 9;
+    /** The hours a person may choose, on the hour. 9 is the default. */
+    public static final int EARLIEST = 5;
+    public static final int LATEST = 22;
     static final int FIRST_DAY = 3;
     static final int LAST_DAY = 7;
 
@@ -35,7 +37,7 @@ public class FollowUpReminder {
     private final TelegramBot bot;
     private final AppProperties props;
 
-    /** Every 15 minutes, so each person gets theirs shortly after 9:00. "-" turns it off (the tests call remind directly). */
+    /** Every 15 minutes, so each person gets theirs shortly after their hour. "-" turns it off (the tests call remind directly). */
     @Scheduled(cron = "${app.telegram.reminder-cron:0 */15 * * * *}")
     public void run() {
         if (!bot.enabled()) return;
@@ -55,7 +57,7 @@ public class FollowUpReminder {
         ZoneId zone = ZoneId.of(TelegramLinks.validZone(u.getTelegramTimezone()));
         ZonedDateTime local = now.atZone(zone);
         LocalDate today = local.toLocalDate();
-        if (local.getHour() < HOUR || today.equals(u.getTelegramRemindedOn())) return false;
+        if (local.getHour() < u.getTelegramReminderHour() || today.equals(u.getTelegramRemindedOn())) return false;
         users.setTelegramRemindedOn(u.getId(), today); // first: an error below never sends the same reminder twice
 
         Instant from = today.minusDays(LAST_DAY).atStartOfDay(zone).toInstant();
@@ -77,7 +79,7 @@ public class FollowUpReminder {
     }
 
     /** The web app's address for the link to the leads. None for localhost: it opens only on the developer's machine, and Telegram may reject it. */
-    private String appUrl() {
+    String appUrl() {
         String origin = props.corsOrigin() == null ? "" : props.corsOrigin().trim().replaceAll("/+$", "");
         return origin.startsWith("https://") || (origin.startsWith("http://") && !origin.matches("^http://(localhost|127\\.0\\.0\\.1)(:\\d+)?$"))
                 ? origin : "";

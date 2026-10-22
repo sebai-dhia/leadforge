@@ -3,7 +3,8 @@ package com.leadfinder.telegram;
 import com.leadfinder.auth.AppUser;
 import com.leadfinder.auth.UserRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -11,7 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-/** The person's own Telegram chat: connect it with a one-time link, turn the follow-up reminders off, or disconnect it. */
+/** The person's own Telegram chat: connect it with a one-time link, turn the follow-up reminders off or change their hour, or disconnect it. */
 @RestController
 @RequestMapping("/api/profile/telegram")
 @RequiredArgsConstructor
@@ -20,7 +21,8 @@ public class TelegramController {
     /** timeZone: the browser's, for example Africa/Tunis. */
     public record LinkRequest(String lang, String timeZone) {}
 
-    public record NotifyRequest(@NotNull Boolean notifications) {}
+    /** Both optional: what is left out stays as it was. hour: the hour of day (5 to 22) the reminder is sent from. */
+    public record SettingsRequest(Boolean notifications, @Min(FollowUpReminder.EARLIEST) @Max(FollowUpReminder.LATEST) Integer hour) {}
 
     private final UserRepository users;
     private final TelegramLinks links;
@@ -38,9 +40,10 @@ public class TelegramController {
     }
 
     @PutMapping
-    public TelegramLinks.Status setNotifications(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NotifyRequest req) {
+    public TelegramLinks.Status settings(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsRequest req) {
         AppUser u = usable(load(jwt));
-        links.setNotify(u, req.notifications());
+        if (req.notifications() != null) links.setNotify(u, req.notifications());
+        if (req.hour() != null) links.setHour(u, req.hour());
         return links.status(load(jwt));
     }
 

@@ -1,14 +1,14 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { AdminConfig, ApiService, SettingEntry, UsageKind } from './api.service';
+import { AdminConfig, AdminTelegramStatus, AdminTelegramTest, ApiService, SettingEntry, UsageKind } from './api.service';
 import { AuthService } from './auth.service';
 import { I18n, I18nKey } from './i18n';
 import { Toasts } from './toast';
 
 const GROUPS: SettingEntry['group'][] = ['limits', 'caps', 'guests', 'demo', 'throttle'];
-type Section = SettingEntry['group'] | 'account';
-const SECTIONS: Section[] = [...GROUPS, 'account'];
+type Section = SettingEntry['group'] | 'telegram' | 'account';
+const SECTIONS: Section[] = [...GROUPS, 'telegram', 'account'];
 
 /** What the number counts, shown next to it. */
 const UNIT: Record<string, I18nKey> = {
@@ -32,6 +32,16 @@ const CAP_KIND: Record<string, UsageKind> = { 'caps.searchesPerDay': 'search', '
   styles: `
     :host { display: block; }
     .intro { margin: 0 0 20px; max-width: 70ch; }
+    .tg-facts { display: grid; gap: 0; margin: 0 0 20px; }
+    .tg-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+    .tg-facts > div:first-child { border-top: 0; }
+    .tg-facts dt { color: var(--mute); font-size: 14.5px; }
+    .tg-facts dd { margin: 0; text-align: right; font-size: 15px; }
+    .tg-facts dd.bad, .tg-result.bad { color: var(--warn); }
+    .tg-test { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; }
+    .tg-test .mute { font-size: 14px; }
+    .tg-result { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; font-size: 14.5px; box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .tg-result.ok { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
     .layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 8px 40px; align-items: start; }
     .content { display: flex; flex-direction: column; gap: 32px; max-width: 760px; min-width: 0; padding-bottom: 80px; }
 
@@ -195,6 +205,34 @@ const CAP_KIND: Record<string, UsageKind> = { 'caps.searchesPerDay': 'search', '
             }
           }
 
+          <section class="sheet" id="sec-telegram" aria-labelledby="h-telegram">
+            <header class="sheet-head">
+              <h2 id="h-telegram">{{ t('admin.tgTitle') }}</h2>
+              <p class="mute">{{ t('admin.tgHelp') }}</p>
+            </header>
+            @if (tg(); as s) {
+              <dl class="tg-facts">
+                <div><dt>{{ t('admin.tgBot') }}</dt>
+                  <dd [class.bad]="!s.tokenSet || !s.botName">@if (!s.tokenSet) { {{ t('admin.tgNoToken') }} } @else if (!s.botName) { {{ t('admin.tgBadToken') }} } @else { <strong>&#64;{{ s.botName }}</strong> }</dd></div>
+                <div><dt>{{ t('admin.tgPolling') }}</dt>
+                  <dd [class.bad]="s.polling === 'FAILING'">{{ t(pollingKey(s.polling)) }}</dd></div>
+                <div><dt>{{ t('admin.tgYourChat') }}</dt>
+                  <dd>{{ s.adminConnected ? t('admin.tgYourChatYes') : s.alertChatSet ? t('admin.tgYourChatAlert') : t('admin.tgYourChatNo') }}</dd></div>
+                <div><dt>{{ t('admin.tgPeople') }}</dt>
+                  <dd class="num">{{ s.connectedPeople }}</dd></div>
+              </dl>
+            }
+            <div class="tg-test">
+              <button type="button" (click)="testTelegram()" [disabled]="tgTesting()">{{ tgTesting() ? t('admin.tgSending') : t('admin.tgTest') }}</button>
+              <span class="mute">{{ t('admin.tgTestHelp') }}</span>
+            </div>
+            @if (tgResult(); as r) {
+              <p class="tg-result" [class.ok]="r.result === 'SENT'" [class.bad]="r.result !== 'SENT'" role="status">{{ t(resultKey(r)) }}</p>
+            } @else if (tgTestError()) {
+              <p class="tg-result bad" role="alert">{{ t('admin.tgTestErr') }}</p>
+            }
+          </section>
+
           <section class="sheet" id="sec-account" aria-labelledby="h-account">
             <header class="sheet-head">
               <h2 id="h-account">{{ t('admin.acctTitle') }}</h2>
@@ -277,17 +315,52 @@ export class AdminSettings {
   protected readonly accountError = signal<I18nKey | null>(null);
   protected readonly accountSaved = signal(false);
 
+  protected readonly tg = signal<AdminTelegramStatus | null>(null);
+  protected readonly tgTesting = signal(false);
+  protected readonly tgResult = signal<AdminTelegramTest | null>(null);
+  protected readonly tgTestError = signal(false);
+  private tgHide?: ReturnType<typeof setTimeout>;
+
   private spy = 0;
 
   constructor() {
     this.load();
     this.loadUsage();
+    this.loadTelegram();
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.tgHide));
     this.api.adminAccount().subscribe({ next: a => { this.email = this.savedEmail = a.email; }, error: () => { /* the form stays empty */ } });
   }
 
   protected load() {
     this.loadError.set(false);
     this.api.adminConfig().subscribe({ next: c => this.apply(c), error: () => this.loadError.set(true) });
+  }
+
+  private loadTelegram() {
+    this.api.adminTelegram().subscribe({ next: s => this.tg.set(s), error: () => { /* the section keeps its button */ } });
+  }
+
+  /** Sends one sample message to the admin, right now, only because the button was pressed. */
+  protected testTelegram() {
+    clearTimeout(this.tgHide);
+    this.tgTesting.set(true);
+    this.tgResult.set(null);
+    this.tgTestError.set(false);
+    this.api.adminTelegramTest().subscribe({
+      next: r => {
+        this.tgTesting.set(false);
+        this.tgResult.set(r);
+        this.loadTelegram();
+        // a success disappears after 7 seconds; a problem stays until the next test
+        if (r.result === 'SENT') this.tgHide = setTimeout(() => this.tgResult.set(null), 7000);
+      },
+      error: () => { this.tgTesting.set(false); this.tgTestError.set(true); },
+    });
+  }
+
+  protected pollingKey(p: AdminTelegramStatus['polling']): I18nKey { return `admin.tgPolling.${p}` as I18nKey; }
+  protected resultKey(r: AdminTelegramTest): I18nKey {
+    return (r.result === 'SENT' ? `admin.tgSent.${r.via}` : `admin.tgFail.${r.result}`) as I18nKey;
   }
 
   private loadUsage() {
@@ -318,7 +391,7 @@ export class AdminSettings {
   }
 
   protected unsaved(e: SettingEntry): boolean { return (this.draft()[e.key] ?? e.value) !== e.value; }
-  protected dirtyIn(s: Section): boolean { return s !== 'account' && this.dirty().some(e => e.group === s); }
+  protected dirtyIn(s: Section): boolean { return s !== 'account' && s !== 'telegram' && this.dirty().some(e => e.group === s); }
 
   protected edit(key: string, value: string) {
     this.draft.update(d => ({ ...d, [key]: value }));

@@ -183,7 +183,17 @@ import { linkSite, suggestedLabel } from './link-icons';
                 <button type="button" class="switch" role="switch" aria-labelledby="tg-notify" [attr.aria-checked]="tg()!.notifications"
                   [disabled]="tgBusy()" (click)="toggleTg()"><span class="knob"></span></button>
               </div>
-              <p class="mute note">{{ t(tg()!.notifications ? 'tg.notifyHelp' : 'tg.notifyOff') }}</p>
+              @if (tg()!.notifications) {
+                <label class="tg-hour">
+                  <span>{{ t('tg.hourLabel') }}</span>
+                  <select [disabled]="tgBusy()" (change)="setTgHour($any($event.target).value)">
+                    @for (h of tgHours; track h) { <option [value]="h" [selected]="h === tg()!.hour">{{ hourLabel(h) }}</option> }
+                  </select>
+                </label>
+                <p class="mute note">{{ t('tg.notifyHelp') }}</p>
+              } @else {
+                <p class="mute note">{{ t('tg.notifyOff') }}</p>
+              }
               <div class="tg-actions"><button type="button" class="ghost small" [disabled]="tgBusy()" (click)="disconnectTg()">{{ t('tg.disconnect') }}</button></div>
             } @else if (tgLink(); as url) {
               @if (tgQr(); as qr) {
@@ -316,6 +326,8 @@ import { linkSite, suggestedLabel } from './link-icons';
     .tg-state .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
     .tg-text { margin: 0 0 16px; font-size: 15px; }
     .tg-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 15px; }
+    .tg-hour { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; font-size: 15px; }
+    .tg-hour select { width: auto; min-width: 120px; margin: 0; }
     .tg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
     .tg-card .err { margin: 12px 0 0; }
     /* one centred column: the code is the only strong element, everything under it is quiet */
@@ -487,12 +499,31 @@ export class ProfilePage {
     this.tgQr.set(null);
   }
 
+  /** The hours offered, on the hour: 5:00 to 22:00 (the backend accepts the same range). */
+  protected readonly tgHours = Array.from({ length: 18 }, (_, i) => i + 5);
+
+  /** "9:00 AM" in English, "9 h" in French, as the person's own clock would show it. */
+  protected hourLabel(h: number): string {
+    return new Date(2000, 0, 1, h).toLocaleTimeString(this.i18n.lang() === 'fr' ? 'fr-FR' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  protected setTgHour(value: string) {
+    const hour = Number(value);
+    if (!Number.isInteger(hour) || hour === this.tg()?.hour) return;
+    this.tgBusy.set(true);
+    this.tgError.set(null);
+    this.api.setTelegram({ hour }).subscribe({
+      next: r => { this.tg.set(r); this.tgBusy.set(false); this.toasts.show(this.t('tg.hourSaved', { time: this.hourLabel(r.hour) })); },
+      error: () => { this.tgBusy.set(false); this.tgError.set('profile.errSave'); },
+    });
+  }
+
   protected toggleTg() {
     const s = this.tg();
     if (!s) return;
     this.tgBusy.set(true);
     this.tgError.set(null);
-    this.api.setTelegramNotifications(!s.notifications).subscribe({
+    this.api.setTelegram({ notifications: !s.notifications }).subscribe({
       next: r => { this.tg.set(r); this.tgBusy.set(false); },
       error: () => { this.tgBusy.set(false); this.tgError.set('profile.errSave'); },
     });

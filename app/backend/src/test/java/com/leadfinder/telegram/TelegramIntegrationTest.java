@@ -260,4 +260,27 @@ class TelegramIntegrationTest extends IntegrationTestBase {
         assertFalse(reminder.remind(reload(off), MORNING));
         assertNull(reload(off).getTelegramChatId(), "a blocked bot forgets the chat");
     }
+    @Test
+    void thePersonChoosesTheHourAndOnlyWholeHoursBetweenFiveAndTenPmAreAccepted() throws Exception {
+        AppUser u = connected("h@x.tn");
+        mvc.perform(get("/api/profile/telegram").with(as(u))).andExpect(jsonPath("$.hour").value(9));
+        contacted(u, "Due Clinic", 18);
+
+        settings(u, "{\"hour\":12}").andExpect(status().isOk()).andExpect(jsonPath("$.hour").value(12)).andExpect(jsonPath("$.notifications").value(true));
+        assertFalse(reminder.remind(reload(u), MORNING), "9:30 is before the 12:00 they chose");
+        verify(telegram, never()).send(eq(CHAT), argThat(t -> t.contains("Time to follow up")));
+
+        settings(u, "{\"hour\":9}").andExpect(jsonPath("$.hour").value(9));
+        assertTrue(reminder.remind(reload(u), MORNING));
+
+        settings(u, "{\"hour\":4}").andExpect(status().isBadRequest());
+        settings(u, "{\"hour\":23}").andExpect(status().isBadRequest());
+        settings(u, "{\"hour\":5}").andExpect(status().isOk());
+        settings(u, "{\"hour\":22}").andExpect(status().isOk());
+        settings(u, "{\"notifications\":false}").andExpect(jsonPath("$.hour").value(22)).andExpect(jsonPath("$.notifications").value(false));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions settings(AppUser u, String json) throws Exception {
+        return mvc.perform(put("/api/profile/telegram").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(json));
+    }
 }

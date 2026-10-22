@@ -17,8 +17,8 @@ final class TelegramText {
 
     static String connected(String lang) {
         return fr(lang)
-                ? "✅ <b>Telegram est connecté à Leadforge.</b>\nLe matin, je vous écris quand des entreprises que vous avez contactées n'ont pas répondu après 3 jours, puis après une semaine.\nEnvoyez /stop pour arrêter."
-                : "✅ <b>Telegram is connected to Leadforge.</b>\nIn the morning, I'll message you when businesses you contacted haven't replied after 3 days, and again after a week.\nSend /stop to turn this off.";
+                ? "✅ <b>Telegram est connecté à Leadforge.</b>\nChaque jour, je vous écris quand des entreprises que vous avez contactées n'ont pas répondu après 3 jours, puis après une semaine.\nEnvoyez /stop pour arrêter."
+                : "✅ <b>Telegram is connected to Leadforge.</b>\nEach day, I'll message you when businesses you contacted haven't replied after 3 days, and again after a week.\nSend /stop to turn this off.";
     }
 
     static String linkExpired(String lang) {
@@ -36,8 +36,8 @@ final class TelegramText {
     static String help(String lang, boolean connected) {
         if (connected) {
             return fr(lang)
-                    ? "Je vous rappelle seulement les relances à faire, le matin. Envoyez /stop pour me déconnecter."
-                    : "I only remind you of follow-ups, in the morning. Send /stop to disconnect me.";
+                    ? "Je vous rappelle seulement les relances à faire, une fois par jour. Envoyez /stop pour me déconnecter."
+                    : "I only remind you of follow-ups, once a day. Send /stop to disconnect me.";
         }
         return "To connect, open your profile in Leadforge and press \"Connect Telegram\".\n"
                 + "Pour vous connecter, ouvrez votre profil dans Leadforge et appuyez sur « Connecter Telegram ».";
@@ -61,6 +61,11 @@ final class TelegramText {
                     .append(fr ? "Ouvrir mes prospects contactés" : "Open my contacted leads").append("</a>");
         }
         return s.toString();
+    }
+
+    /** First line of the admin's sample reminder, so nobody mistakes it for real work. */
+    static String testBanner(String lang) {
+        return fr(lang) ? "🧪 <b>Test</b> : ceci est un exemple, rien à faire.\n\n" : "🧪 <b>Test</b>: this is a sample, nothing to do.\n\n";
     }
 
     private static void group(StringBuilder s, String title, List<Lead> leads, boolean fr) {

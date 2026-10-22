@@ -23,7 +23,7 @@ public class TelegramLinks {
     static final Duration CODE_LIFE = Duration.ofMinutes(15);
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public record Status(boolean available, boolean connected, boolean notifications) {}
+    public record Status(boolean available, boolean connected, boolean notifications, int hour) {}
 
     public record Link(String url, Instant expiresAt) {}
 
@@ -32,7 +32,7 @@ public class TelegramLinks {
     private final TransactionTemplate tx;
 
     public Status status(AppUser u) {
-        return new Status(bot.enabled() && u.canUseTelegram(), u.getTelegramChatId() != null, u.isTelegramNotify());
+        return new Status(bot.enabled() && u.canUseTelegram(), u.getTelegramChatId() != null, u.isTelegramNotify(), u.getTelegramReminderHour());
     }
 
     /** A new one-time link; an older unused one stops working. Empty when Telegram cannot be reached. zone: the browser's time zone. */
@@ -61,6 +61,10 @@ public class TelegramLinks {
         Long chat = u.getTelegramChatId();
         users.disconnectTelegram(u.getId());
         if (chat != null) CompletableFuture.runAsync(() -> bot.send(chat, TelegramText.stopped(u.getTelegramLanguage())));
+    }
+
+    public void setHour(AppUser u, int hour) {
+        users.setTelegramReminderHour(u.getId(), hour);
     }
 
     public void setNotify(AppUser u, boolean on) {

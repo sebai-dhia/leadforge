@@ -108,6 +108,10 @@ public class AppUser {
     @Column(name = "telegram_timezone", insertable = false, updatable = false)
     private String telegramTimezone = "UTC";
 
+    /** The hour of day (the person's time zone) the reminder is sent from. */
+    @Column(name = "telegram_reminder_hour", insertable = false, updatable = false)
+    private int telegramReminderHour = 9;
+
     @Column(name = "telegram_reminded_on", insertable = false, updatable = false)
     private java.time.LocalDate telegramRemindedOn;
 

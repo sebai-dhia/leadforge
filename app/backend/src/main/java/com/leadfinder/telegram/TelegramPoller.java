@@ -20,6 +20,14 @@ public class TelegramPoller {
     private final TelegramLinks links;
     private final boolean enabled;
     private volatile Thread thread;
+    private volatile boolean everOk;
+    private volatile boolean failing;
+
+    /** OFF (no bot, or turned off), STARTING (no answer from Telegram yet), OK, or FAILING (the last try failed). For the admin. */
+    public String state() {
+        if (!enabled || !bot.enabled()) return "OFF";
+        return failing ? "FAILING" : everOk ? "OK" : "STARTING";
+    }
 
     public TelegramPoller(TelegramBot bot, TelegramLinks links, @Value("${app.telegram.polling:true}") boolean enabled) {
         this.bot = bot;
@@ -54,9 +62,12 @@ public class TelegramPoller {
                     }
                 }
                 failures = 0;
+                everOk = true;
+                failing = false;
             } catch (RuntimeException e) {
                 if (Thread.currentThread().isInterrupted()) return;
                 failures++;
+                failing = true;
                 if (failures == 1 || failures % 20 == 0) {
                     String why = e instanceof HttpClientErrorException h && h.getStatusCode().value() == 409
                             ? "another backend is polling the same bot" : e.getClass().getSimpleName();

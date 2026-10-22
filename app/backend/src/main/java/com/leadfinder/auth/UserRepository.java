@@ -62,6 +62,12 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
     void setTelegramNotify(@org.springframework.data.repository.query.Param("id") Long id,
                            @org.springframework.data.repository.query.Param("on") boolean on);
 
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update AppUser u set u.telegramReminderHour = :hour where u.id = :id")
+    void setTelegramReminderHour(@org.springframework.data.repository.query.Param("id") Long id,
+                                 @org.springframework.data.repository.query.Param("hour") int hour);
+
     /** People with a connected chat and the reminders on. */
     java.util.List<AppUser> findByTelegramChatIdIsNotNullAndTelegramNotifyTrue();
 
