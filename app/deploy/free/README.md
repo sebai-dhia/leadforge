@@ -98,7 +98,7 @@ Sign up at cloudflare.com (no card). Workers & Pages > Create > **Pages** > Conn
 | Root directory | `app/frontend` |
 | Build command | `npm ci && npx ng build --configuration production && node ../deploy/free/pages-build.mjs` |
 | Build output directory | `dist/frontend/browser` |
-| Environment variables | `LEADFORGE_API_URL` = `<backend address>/api`, `NODE_VERSION` = `24` |
+| Environment variables | `LEADFORGE_API_URL` = `<backend address>/api`, `NODE_VERSION` = `24.15.0` (Angular needs 24.15 or later) |
 
 Then set `CORS_ORIGIN` on Render to the Pages address, and in Google Cloud add that address to the OAuth client's
 authorised JavaScript origins.
