@@ -53,6 +53,8 @@ jobs:
         run: |
           umask 077
           printf '%s' "$N8N_CREDENTIALS" > "$RUNNER_TEMP/credentials.json"
+          # n8n runs as another user in its container; the file is still encrypted, and the runner is thrown away
+          chmod 644 "$RUNNER_TEMP/credentials.json"
           docker run --rm --env-file "$RUNNER_TEMP/n8n.env" -v "$RUNNER_TEMP/credentials.json:/tmp/credentials.json:ro" \
             "$N8N_IMAGE" import:credentials --input=/tmp/credentials.json
           rm -f "$RUNNER_TEMP/credentials.json"
