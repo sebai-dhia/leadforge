@@ -52,6 +52,11 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
             + " order by l.score desc nulls last, l.name")
     List<Lead> findByJob(@Param("jobId") Long jobId);
 
+    /** Contacted leads still waiting for a reply, contacted in [from, to), oldest first. For the follow-up reminder. */
+    @Query("select l from Lead l where l.userId = :uid and l.status = 'CONTACTED' and l.hiddenAt is null"
+            + " and l.contactedAt >= :from and l.contactedAt < :to order by l.contactedAt")
+    List<Lead> findAwaitingReply(@Param("uid") Long userId, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to);
+
     @Query(value = "select l from Lead l where" + FILTERS + " and (:status = '' or l.status = :status)",
             countQuery = "select count(l) from Lead l where" + FILTERS + " and (:status = '' or l.status = :status)")
     Page<Lead> search(@Param("uid") Long uid, @Param("hidden") boolean hidden, @Param("status") String status,

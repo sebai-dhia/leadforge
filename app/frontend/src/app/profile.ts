@@ -1,7 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiService, Lang, Profile, ProfileLink, ProfileStats, UsageMap } from './api.service';
+import { ApiService, Lang, Profile, ProfileLink, ProfileStats, TelegramStatus, UsageMap } from './api.service';
 import { AuthService } from './auth.service';
 import { SpecializationKey, SpecializationPicker } from './specialization-picker';
 import { I18n, I18nKey } from './i18n';
@@ -171,6 +171,50 @@ import { linkSite, suggestedLabel } from './link-icons';
           </section>
           }
 
+          @if (tg()?.available) {
+          <section class="card block tg-card">
+            <div class="block-head">
+              <h2 class="tg-title"><svg class="tg-ic" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="tgIcon"/></svg>{{ t('tg.title') }}</h2>
+              @if (tg()!.connected) { <span class="tg-state"><span class="dot" aria-hidden="true"></span>{{ t('tg.connected') }}</span> }
+            </div>
+            @if (tg()!.connected) {
+              <div class="tg-row">
+                <span id="tg-notify">{{ t('tg.notifyLabel') }}</span>
+                <button type="button" class="switch" role="switch" aria-labelledby="tg-notify" [attr.aria-checked]="tg()!.notifications"
+                  [disabled]="tgBusy()" (click)="toggleTg()"><span class="knob"></span></button>
+              </div>
+              <p class="mute note">{{ t(tg()!.notifications ? 'tg.notifyHelp' : 'tg.notifyOff') }}</p>
+              <div class="tg-actions"><button type="button" class="ghost small" [disabled]="tgBusy()" (click)="disconnectTg()">{{ t('tg.disconnect') }}</button></div>
+            } @else if (tgLink(); as url) {
+              @if (tgQr(); as qr) {
+                <!-- on a computer: Telegram is usually on the phone, so the link is a code for the phone's camera -->
+                <div class="tg-qr">
+                  <img [src]="qr" width="176" height="176" [alt]="t('tg.qrAlt')">
+                  <p><strong>{{ t('tg.scan') }}</strong></p>
+                  <p class="mute">{{ t('tg.scanHint') }}</p>
+                  <p class="tg-wait" role="status"><span class="pulse" aria-hidden="true"></span>{{ t('tg.waitingStart') }}</p>
+                  <div class="tg-quiet">
+                    <a class="tg-act" [href]="url" target="_blank" rel="noopener noreferrer">{{ t('tg.desktopLink') }}</a>
+                    <span class="sep" aria-hidden="true">·</span>
+                    <button type="button" class="tg-act" (click)="stopWaiting()">{{ t('tg.cancel') }}</button>
+                  </div>
+                  <p class="tg-expiry">{{ t('tg.expiry') }}</p>
+                </div>
+              } @else {
+                <p class="mute tg-text">{{ t('tg.waiting') }}</p>
+                <div class="tg-actions">
+                  <a class="btn small" [href]="url" target="_blank" rel="noopener noreferrer">{{ t('tg.openAgain') }}</a>
+                  <button type="button" class="ghost small" (click)="stopWaiting()">{{ t('tg.cancel') }}</button>
+                </div>
+              }
+            } @else {
+              <p class="mute tg-text">{{ t('tg.pitch') }}</p>
+              <button type="button" [disabled]="tgBusy()" (click)="connectTg()">{{ tgBusy() ? t('tg.opening') : t('tg.connect') }}</button>
+            }
+            @if (tgError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+          </section>
+          }
+
           <section class="card block">
             <h2>{{ t('profile.activity') }}</h2>
             <div class="stats">
@@ -265,6 +309,36 @@ import { linkSite, suggestedLabel } from './link-icons';
     .use { margin-top: 14px; } .use-row { display: flex; justify-content: space-between; gap: 8px; font-size: 14.5px; margin-bottom: 6px; }
     .meter { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
     .fill { height: 100%; background: var(--accent); border-radius: 6px; }
+    /* Telegram: connect once, then one switch for the messages */
+    .tg-title { display: flex; align-items: center; gap: 10px; }
+    .tg-ic { width: 22px; height: 22px; fill: var(--accent); flex: none; }
+    .tg-state { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--accent); }
+    .tg-state .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .tg-text { margin: 0 0 16px; font-size: 15px; }
+    .tg-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 15px; }
+    .tg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .tg-card .err { margin: 12px 0 0; }
+    /* one centred column: the code is the only strong element, everything under it is quiet */
+    .tg-qr { display: grid; justify-items: center; text-align: center; gap: 6px; }
+    /* dark modules on white whatever the theme: phone cameras read that best */
+    .tg-qr img { width: 176px; height: 176px; padding: 8px; margin-bottom: 8px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+    .tg-qr p { margin: 0; font-size: 15px; max-width: 32ch; }
+    .tg-qr .mute { font-size: 14px; }
+    .tg-qr .tg-wait { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; color: var(--accent); font-weight: 500; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: tg-pulse 1.6s ease-in-out infinite; }
+    @keyframes tg-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.75); } }
+    .tg-quiet { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 14px; }
+    .tg-act { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--mute); font: inherit; font-size: 14px; font-weight: 500; line-height: 1.4; text-decoration: none; cursor: pointer; transition: color .2s ease; }
+    .tg-act:hover { color: var(--accent); filter: none; background: transparent; }
+    .sep { color: var(--mute); opacity: .6; }
+    .tg-qr .tg-expiry { margin-top: 2px; font-size: 12.5px; color: var(--mute); opacity: .8; }
+    .switch { position: relative; flex: none; width: 48px; height: 28px; min-height: 0; padding: 0; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--skeleton); transition: background-color .2s ease, border-color .2s ease; }
+    .switch .knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); transition: transform .2s ease; }
+    .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+    .switch[aria-checked="true"] .knob { transform: translateX(20px); background: var(--on-accent); }
+    .switch:hover:not(:disabled) { filter: none; border-color: var(--accent); }
+    .switch:focus-visible { outline-offset: 3px; }
+    @media (prefers-reduced-motion: reduce) { .switch, .switch .knob, .tg-act { transition: none; } .pulse { animation: none; } }
   `,
 })
 export class ProfilePage {
@@ -303,6 +377,19 @@ export class ProfilePage {
   protected readonly linksError = signal<I18nKey | null>(null);
   private readonly toasts = inject(Toasts);
 
+  protected readonly tg = signal<TelegramStatus | null>(null);
+  protected readonly tgLink = signal<string | null>(null);
+  /** The link as a QR code image, on a computer only. */
+  protected readonly tgQr = signal<string | null>(null);
+  /** A phone or tablet: the link opens the Telegram app directly, no code to scan. */
+  private readonly onPhone = typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+  protected readonly tgBusy = signal(false);
+  protected readonly tgError = signal<I18nKey | null>(null);
+  protected readonly tgIcon = linkSite('https://t.me')?.path ?? '';
+  private tgTimer: ReturnType<typeof setInterval> | null = null;
+  private tgExpires = 0;
+  private readonly onFocus = () => { if (this.tgLink()) this.checkTg(); };
+
   protected readonly initials = computed(() => {
     const p = this.profile();
     const source = (p?.displayName || p?.email || '?').trim();
@@ -335,6 +422,89 @@ export class ProfilePage {
     });
     this.api.profileStats().subscribe({ next: s => this.stats.set(s), error: () => { /* the page works without it */ } });
     this.api.usage().subscribe({ next: u => this.usage.set(u), error: () => { /* the page works without it */ } });
+    this.api.telegram().subscribe({ next: s => this.tg.set(s), error: () => { /* the card stays hidden */ } });
+    window.addEventListener('focus', this.onFocus);
+    inject(DestroyRef).onDestroy(() => { this.stopWaiting(); window.removeEventListener('focus', this.onFocus); });
+  }
+
+  // ---- Telegram: the app opens a one-time t.me link, the person presses Start, and the card sees the chat arrive
+  protected connectTg() {
+    this.tgBusy.set(true);
+    this.tgError.set(null);
+    this.api.telegramLink(this.i18n.lang(), Intl.DateTimeFormat().resolvedOptions().timeZone).subscribe({
+      next: l => {
+        this.tgExpires = new Date(l.expiresAt).getTime();
+        if (this.onPhone) {
+          this.showLink(l.url);
+          window.open(l.url, '_blank', 'noopener'); // if the browser blocks it, the card shows an "Open Telegram" link
+          return;
+        }
+        // without the code (the library failed to load) the card falls back to the "Open Telegram" link
+        this.qrFor(l.url).then(qr => { this.tgQr.set(qr); this.showLink(l.url); });
+      },
+      error: () => { this.tgBusy.set(false); this.tgError.set('tg.err'); },
+    });
+  }
+
+  private showLink(url: string) {
+    this.tgBusy.set(false);
+    this.tgLink.set(url);
+    this.tgTimer = setInterval(() => this.checkTg(), 3000);
+  }
+
+  /** Loaded only when someone connects, so the profile page does not carry the QR library. */
+  private async qrFor(url: string): Promise<string | null> {
+    try {
+      const mod: any = await import('qrcode');
+      const qr = (mod.default ?? mod) as typeof import('qrcode');
+      return await qr.toDataURL(url, { margin: 1, width: 352, errorCorrectionLevel: 'M', color: { dark: '#0b1210', light: '#ffffff' } });
+    } catch {
+      return null;
+    }
+  }
+
+  private checkTg() {
+    if (Date.now() > this.tgExpires) {
+      this.stopWaiting();
+      this.tgError.set('tg.expired');
+      return;
+    }
+    this.api.telegram().subscribe({
+      next: s => {
+        if (!s.connected || !this.tgLink()) return;
+        this.stopWaiting();
+        this.tg.set(s);
+        this.toasts.show(this.t('tg.done'));
+      },
+      error: () => { /* the next check tries again */ },
+    });
+  }
+
+  protected stopWaiting() {
+    if (this.tgTimer) clearInterval(this.tgTimer);
+    this.tgTimer = null;
+    this.tgLink.set(null);
+    this.tgQr.set(null);
+  }
+
+  protected toggleTg() {
+    const s = this.tg();
+    if (!s) return;
+    this.tgBusy.set(true);
+    this.tgError.set(null);
+    this.api.setTelegramNotifications(!s.notifications).subscribe({
+      next: r => { this.tg.set(r); this.tgBusy.set(false); },
+      error: () => { this.tgBusy.set(false); this.tgError.set('profile.errSave'); },
+    });
+  }
+
+  protected disconnectTg() {
+    this.tgBusy.set(true);
+    this.tgError.set(null);
+    this.api.disconnectTelegram().subscribe({
+      next: r => { this.tg.set(r); this.tgBusy.set(false); this.toasts.show(this.t('tg.removed')); },
+      error: () => { this.tgBusy.set(false); this.tgError.set('profile.errSave'); },
+    });
   }
 
   /** A guest's default name is shown in the interface language. */

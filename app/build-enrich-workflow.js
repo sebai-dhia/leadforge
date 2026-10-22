@@ -110,7 +110,10 @@ if (c.searchFailed) {
 } else {
   note = c.results ? 'The search found no website or social page that clearly matches this business.' : 'The search returned nothing for this business.';
 }
-return [{ json: { website, emails, phones, social, sources: c.sources || [], note } }];
+// one Serper search was paid for when it answered (for the admin's statistics)
+let searched = 0;
+try { if ($('Serper Search').first().json.searchParameters !== undefined) searched = 1; } catch (e) { /* no search ran */ }
+return [{ json: { website, emails, phones, social, sources: c.sources || [], note, meter: { serper: { calls: searched } } } }];
 `.trim();
 
 const pageOptions = { timeout: 8000, response: { response: { responseFormat: 'text' } } };

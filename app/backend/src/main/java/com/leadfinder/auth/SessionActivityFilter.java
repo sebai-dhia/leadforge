@@ -14,13 +14,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Updates the last active timestamp of a demo visitor session whenever they make an authenticated request.
+ * Updates the last active timestamp of a demo visitor session whenever they make an authenticated request,
+ * and when the person was last seen.
  */
 @Component
 @RequiredArgsConstructor
 public class SessionActivityFilter extends OncePerRequestFilter {
 
     private final ActiveSessionRegistry sessionRegistry;
+    private final LastSeen lastSeen;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -32,6 +34,11 @@ public class SessionActivityFilter extends OncePerRequestFilter {
     private void touchActiveSession() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) return;
+        try {
+            lastSeen.touch(Long.valueOf(jwt.getSubject()));
+        } catch (RuntimeException e) {
+            logger.debug("Could not record last seen", e); // never fails the request
+        }
         String sid = jwt.getClaimAsString("sid");
         if (sid != null && !"ADMIN".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
             sessionRegistry.touchSession(sid, true);

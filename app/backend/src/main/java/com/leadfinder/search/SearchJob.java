@@ -17,7 +17,8 @@ public class SearchJob {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    /** Empty once the account was deleted (idle guests): the search is kept for the admin. */
+    @Column(name = "user_id")
     private Long userId;
 
     private String niche;
@@ -29,10 +30,6 @@ public class SearchJob {
     /** How many businesses n8n may look up on the web for this search. Not stored: only sent with the request. */
     @Transient
     private int lookupLimit = 10;
-
-    /** The owner is the admin: n8n sends the new-lead alert to Telegram. Not stored: only sent with the request. */
-    @Transient
-    private boolean alertOwner;
 
     @Column(name = "failure_reason")
     private String failureReason;

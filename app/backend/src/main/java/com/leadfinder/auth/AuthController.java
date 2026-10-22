@@ -1,6 +1,7 @@
 package com.leadfinder.auth;
 
 import com.leadfinder.config.AppProperties;
+import com.leadfinder.settings.RuntimeSettings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -33,6 +34,7 @@ public class AuthController {
     private final AuthThrottle throttle;
     private final ActiveSessionRegistry sessionRegistry;
     private final AppProperties props;
+    private final RuntimeSettings settings;
     private final GoogleTokenVerifier googleVerifier;
 
     @GetMapping("/demo-status")
@@ -43,7 +45,7 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse register(@Valid @RequestBody Credentials c, HttpServletRequest request) {
-        if (props.demo() != null && !props.demo().allowRegistration()) {
+        if (settings.demo() != null && !settings.demo().allowRegistration()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Public registration is disabled in demo mode");
         }
         throttle.checkAndRecordRegister(request.getRemoteAddr());
@@ -161,7 +163,7 @@ public class AuthController {
     /** One click, no form: a private temporary account that is deleted after a short idle time. */
     @PostMapping("/guest")
     public TokenResponse guest(@RequestBody(required = false) GuestRequest body, HttpServletRequest request) {
-        if (props.guest() == null || !props.guest().enabled()) {
+        if (settings.guest() == null || !settings.guest().enabled()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Guest access is not enabled");
         }
         Specialization spec;

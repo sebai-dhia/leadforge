@@ -12,49 +12,60 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Creates the admin account on startup if it is not present, and applies ADMIN_PASSWORD when it is set.
- * Without ADMIN_PASSWORD a new admin gets a random password, printed once in the log.
+ * Creates the admin account on the first start, from ADMIN_EMAIL and ADMIN_PASSWORD. Without ADMIN_PASSWORD a new
+ * admin gets a random password, printed once in the log. After that the account lives in the database and the admin
+ * changes the email and password in the app: ADMIN_EMAIL and ADMIN_PASSWORD are not read again, unless
+ * ADMIN_PASSWORD_RESET=true (the way back in when the password is lost; turn it off afterwards).
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DemoAccountInitializer implements ApplicationRunner {
-    static final String ADMIN_EMAIL = "admin@leadforge.dev";
+    static final String DEFAULT_ADMIN_EMAIL = "admin@leadforge.dev";
     /** The password the admin was first created with. Never acceptable outside a developer's machine. */
     private static final String OLD_DEFAULT = "admin1234";
+    static final int MIN_PASSWORD = 12;
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
 
+    @Value("${app.admin.email:}")
+    private String adminEmail;
+
     @Value("${app.admin.password:}")
     private String adminPassword;
+
+    @Value("${app.admin.password-reset:false}")
+    private boolean reset;
 
     @Override
     public void run(ApplicationArguments args) {
         String wanted = adminPassword == null ? "" : adminPassword.trim();
-        if (!wanted.isEmpty() && wanted.length() < 12) {
-            log.warn("ADMIN_PASSWORD is shorter than 12 characters; it was not applied.");
+        if (!wanted.isEmpty() && wanted.length() < MIN_PASSWORD) {
+            log.warn("ADMIN_PASSWORD is shorter than {} characters; it was not applied.", MIN_PASSWORD);
             wanted = "";
         }
-        AppUser admin = users.findByEmail(ADMIN_EMAIL).orElse(null);
+        String email = adminEmail == null ? "" : adminEmail.trim().toLowerCase();
+        AppUser admin = users.findFirstByRoleOrderByIdAsc("ADMIN").orElse(null);
         if (admin == null) {
-            String password = wanted.isEmpty() ? randomPassword() : wanted;
-            seedAdmin(password);
-            if (wanted.isEmpty()) log.warn("Admin account created with a random password: {}  Set ADMIN_PASSWORD to choose one.", password);
+            createAdmin(email.isEmpty() ? DEFAULT_ADMIN_EMAIL : email, wanted);
             return;
         }
-        if (!wanted.isEmpty() && !encoder.matches(wanted, admin.getPasswordHash())) {
-            admin.setPasswordHash(encoder.encode(wanted));
-            users.save(admin);
-            log.info("Admin password updated from ADMIN_PASSWORD.");
-        } else if (wanted.isEmpty() && admin.getPasswordHash() != null && encoder.matches(OLD_DEFAULT, admin.getPasswordHash())) {
-            log.warn("The admin still uses the old default password. Set ADMIN_PASSWORD (12+ characters) and restart.");
+        if (reset) {
+            resetAdmin(admin, email, wanted);
+        } else if (admin.getPasswordHash() != null && encoder.matches(OLD_DEFAULT, admin.getPasswordHash())) {
+            log.warn("The admin still uses the old default password. Change it on the Admin page, Settings tab.");
         }
     }
 
-    private void seedAdmin(String password) {
+    private void createAdmin(String email, String wantedPassword) {
+        if (users.existsByEmail(email)) {
+            log.warn("ADMIN_EMAIL {} belongs to a normal account, so no admin was created. Use another address.", email);
+            return;
+        }
+        String password = wantedPassword.isEmpty() ? randomPassword() : wantedPassword;
         AppUser user = new AppUser();
-        user.setEmail(ADMIN_EMAIL);
+        user.setEmail(email);
         user.setPasswordHash(encoder.encode(password));
         user.setRole("ADMIN");
         user.setDemo(false);
@@ -62,7 +73,31 @@ public class DemoAccountInitializer implements ApplicationRunner {
         user.setDisplayName("Admin");
         user.setLanguage("en");
         users.save(user);
-        log.info("Seeded account: {} (ADMIN)", ADMIN_EMAIL);
+        log.info("Seeded account: {} (ADMIN)", email);
+        if (wantedPassword.isEmpty()) {
+            log.warn("Admin account created with a random password: {}  Set ADMIN_PASSWORD to choose one, or change it on the Admin page.", password);
+        }
+    }
+
+    private void resetAdmin(AppUser admin, String email, String wantedPassword) {
+        if (wantedPassword.isEmpty() && email.isEmpty()) {
+            log.warn("ADMIN_PASSWORD_RESET is on but neither ADMIN_PASSWORD (12+ characters) nor ADMIN_EMAIL is set: nothing was changed.");
+            return;
+        }
+        if (!email.isEmpty() && !email.equals(admin.getEmail())) {
+            if (users.existsByEmail(email)) {
+                log.warn("ADMIN_EMAIL {} belongs to another account: the admin email was not changed.", email);
+            } else {
+                admin.setEmail(email);
+                log.warn("Admin email reset to {} from ADMIN_EMAIL.", email);
+            }
+        }
+        if (!wantedPassword.isEmpty()) {
+            admin.setPasswordHash(encoder.encode(wantedPassword));
+            log.warn("Admin password reset from ADMIN_PASSWORD.");
+        }
+        users.save(admin);
+        log.warn("Set ADMIN_PASSWORD_RESET back to false, or it will reset the admin again at every start.");
     }
 
     private static String randomPassword() {

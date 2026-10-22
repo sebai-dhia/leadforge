@@ -32,7 +32,6 @@ The browser never talks to n8n.
    | Maps Search, Web Search, Serper Search | Header Auth | `X-API-KEY` | your Serper key (serper.dev, free credits) |
    | AI Check (lead-finder workflow) | Header Auth | `x-goog-api-key` | your Gemini API key (same credential as AI Write Message) |
 | Send Results to Backend | Header Auth | `X-Callback-Secret` | same as `N8N_CALLBACK_SECRET` (default `dev-callback-secret`) |
-| Telegram Alert (lead-finder workflow) | Telegram API | `Telegram account` | your Telegram Bot token from @BotFather |
 
    The AI model is `gemini-flash-lite-latest`. Use a model alias like this one: a specific retired name can return a misleading `401`.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8081, because 8080 is often taken; Flyway creates the tables).
@@ -44,12 +43,12 @@ The browser never talks to n8n.
 - **Multi-Area & Interactive Leaflet Map**: Search across up to 3 cities/regions simultaneously or draw a bounding box directly on an interactive OpenStreetMap to discover local businesses anywhere in the world.
 - **Contact-Aware Fit Scoring**: Transparent 1-10 score that prioritizes reachable businesses (phone, direct email, active social) and caps unreachable leads at 3/10.
 - **Service-to-Niche Taxonomy**: Smart recommendation chips on the search page suggest top target niches cached by SHA-256 hash of the freelancer's profile offer.
-- **Telegram Lead Alerts**: Immediate Telegram notifications sent via n8n upon search completion with summary statistics and top opportunities.
+- **Follow-up reminders on Telegram**: each person can connect their own Telegram chat on the Profile page (one-time link to the Leadforge bot, then Start). From 9:00 in their time zone (taken from the browser when they connect), the bot lists the businesses they marked Contacted 3 days ago and a week ago that have not replied yet; then those leads are never reminded again. A day with nothing to follow up sends nothing. Marking a lead Contacted records when (`leads.contacted_at`); marking it Contacted again later starts the count over, and leads contacted before this feature start counting from the migration. One switch turns the reminders off, `/stop` in Telegram disconnects. Guests and shared demo accounts cannot connect.
 - **Demo Guardrails**: Public demo mode with 5 concurrent active session cap, 15-minute idle expiry, one-click demo logins (`demo1@leadforge.dev`, `demo2@leadforge.dev`), read-only demo profiles, and separate admin bypass (`admin@leadforge.dev`).
 
 ## Config (environment variables)
 
-`DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (32+ chars), `CORS_ORIGIN`, `N8N_WEBHOOK_URL`, `N8N_DRAFT_URL`, `N8N_WEBHOOK_SECRET`, `N8N_CALLBACK_SECRET`, `PUBLIC_BASE_URL`, `ADMIN_PASSWORD` (12+ chars; applied to the admin account at startup), `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (admin alerts: failed searches, caps reached, new leads from the admin's own searches), `CAP_SEARCHES_PER_DAY`, `CAP_DRAFTS_PER_DAY`, `CAP_ENRICH_PER_DAY` (ceilings for all users together; 0 turns one off). The defaults are for local development only. Change all secrets before deploying. Never put API keys in a workflow node: keep them in n8n credentials, because workflow JSON gets committed.
+`DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (32+ chars), `CORS_ORIGIN`, `N8N_WEBHOOK_URL`, `N8N_DRAFT_URL`, `N8N_WEBHOOK_SECRET`, `N8N_CALLBACK_SECRET`, `PUBLIC_BASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ chars; they create the admin on the first start, then the admin changes them on the Admin page, Settings tab; `ADMIN_PASSWORD_RESET=true` applies them again at the next start when the password is lost), `TELEGRAM_BOT_TOKEN` (the Leadforge bot: people connect their own chat to it for follow-up reminders) and `TELEGRAM_CHAT_ID` (the admin's chat for alerts: search service down, stuck searches, caps reached), `TELEGRAM_POLLING` (default `true`: the backend reads what people send the bot with long polling, so no public webhook is needed; only one running backend can read a bot, so use one bot per environment, or set it to `false` on the extra one), `CAP_SEARCHES_PER_DAY`, `CAP_DRAFTS_PER_DAY`, `CAP_ENRICH_PER_DAY` (ceilings for all users together; 0 turns one off). The limits, caps, guest and demo values can also be changed on the Admin page, Settings tab: they are saved in the database (`app_settings`), apply at once and win over `.env` until you choose "Use the .env value". Secrets are never shown or edited there. The defaults are for local development only. Change all secrets before deploying. Never put API keys in a workflow node: keep them in n8n credentials, because workflow JSON gets committed.
 
 ## Lead quality benchmark
 
@@ -61,13 +60,22 @@ The browser never talks to n8n.
 |---|---|
 | `POST /api/auth/register`, `/login` | Account and JWT |
 | `GET`, `PUT /api/profile` | Offer, name, language. A search returns 422 until the profile is complete |
+| `GET`, `PUT`, `DELETE /api/profile/telegram`; `POST /api/profile/telegram/link` | The caller's Telegram chat: status (`available`, `connected`, `notifications`), turn the follow-up reminders on or off, disconnect. `/link` (`{lang: en\|fr, timeZone}`, the browser's IANA time zone) returns a one-time `t.me` link valid 15 minutes; pressing Start in Telegram connects the chat. 403 for guests and demo accounts, 503 when the server has no bot |
 | `POST /api/searches`, `GET /api/searches`, `GET /api/searches/{id}` | Searches and their leads. A finished search reports `foundCount` and `newCount` (new to this user) |
 | `GET /api/leads` | All of the caller's leads. Filters: `status`, `reachable`, `q` (name or address), `searchId`; `sort` = `score` | `recent` | `name`; `page`, `size`. Returns `counts` per status for the filter chips |
-| `GET /api/leads/export.csv` | Same filters, as a UTF-8 CSV with BOM (opens correctly in Excel, Arabic included). Cells that look like formulas are neutralised |
+| `GET /api/leads/export.xlsx` | Same filters, as an Excel file (`lang=en\|fr` for the labels): readable status and language, links, real dates, frozen header and filters; named date first, then business type and place |
 | `PATCH /api/leads/{id}/status` | `NEW`, `CONTACTED`, `REPLIED`, `NOT_INTERESTED` |
 | `POST /api/leads/{id}/draft` | `{language: en\|fr\|ar, channel: email\|whatsapp}`, returns the lead with the message |
+| `GET /api/admin/overview`, `/api/admin/users`, `/api/admin/searches` | Admin only (403 for everyone else). Accounts, active users (by last request), use in the last 24 h against the limits and caps, use per day for 30 days, searches by status (`FAILED` by default), and the AI and API use the workflows reported (`api_usage`: Gemini requests and tokens, Serper and Geoapify requests). A use given back after a failure stays in `usage_events` with `refunded = true`; it is not counted against any limit. Usage and searches of a deleted guest are kept without the account |
+| `GET`, `PUT /api/admin/settings`; `GET`, `PUT /api/admin/account` | Admin only. Read and save the limits, caps, guest and demo settings (a null value goes back to the `.env` value; URLs and secrets from `.env` are never returned). `PUT /account` changes the admin's email and/or password and always needs the current password |
 
 A lead is only reachable by the user who owns it (other users get 404).
+
+## AI and API use (admin statistics)
+
+After each run the three n8n workflows report what they spent: Gemini requests with input and output tokens (the answer's `usageMetadata`), Serper and Geoapify requests. The search workflow adds a `meter` object to its callback, the draft and contact lookup workflows to their reply; the backend stores one row per service in `api_usage`. Only requests that really answered are counted, and runs that failed before replying are not.
+**The workflows must be deployed again** (`tools/deploy-workflows.sh`, then restart n8n) before they report anything; until a first report arrives the Overview shows "Not tracked yet". Tests of this code: `node --test workflow-src/meter.test.js`.
+The Overview also shows, per service, when it last answered. A service counts as **silent** (an orange notice appears) when work that needs it was done in the last 24 hours, after the workflows began reporting, and it answered nothing: Serper after a finished search or contact lookup, Geoapify after a finished city search (a drawn area needs no geocoding), Gemini after a message was written. It usually means the key expired or the credits ran out. The keys themselves stay in n8n (Credentials) and cannot be seen or changed from the app.
 
 ## How duplicates are detected
 

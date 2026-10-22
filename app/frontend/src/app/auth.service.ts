@@ -32,10 +32,15 @@ export class AuthService {
   readonly isDemo = signal<boolean>(read('lf_is_demo') === 'true');
   readonly loggedIn = computed(() => this.token() !== null);
   readonly isGuest = computed(() => this.role() === 'GUEST');
+  /** Only decides what is shown: the API checks the role itself. */
+  readonly isAdmin = computed(() => this.role() === 'ADMIN');
   readonly onboarded = signal<boolean>(read('lf_onboarded') !== 'false');
 
   /** Where to go after signing in: the first-run picker once, then the leads. */
   home(): string { return this.onboarded() ? '/leads' : '/welcome'; }
+
+  /** After the admin changed the email: the account menu shows the new one. */
+  setEmail(email: string) { this.email.set(email); write('lf_email', email); }
 
   markOnboarded() { this.onboarded.set(true); write('lf_onboarded', 'true'); }
 

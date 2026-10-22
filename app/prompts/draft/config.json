@@ -28,15 +28,30 @@
   "languages": {
     "en": {
       "name": "English",
-      "tone": "Warm, professional and plain."
+      "tone": "Warm, professional and plain.",
+      "closings": [
+        "Sincerely,",
+        "Cordially,",
+        "Kind regards,"
+      ]
     },
     "fr": {
       "name": "French",
-      "tone": "Courteous and simple, with \"vous\". Natural everyday French, not stiff."
+      "tone": "Courteous and simple, with \"vous\". Natural everyday French, not stiff.",
+      "closings": [
+        "Cordialement,",
+        "Bien cordialement,",
+        "Très cordialement,"
+      ]
     },
     "ar": {
       "name": "Arabic",
-      "tone": "Modern Standard Arabic, simple, polite and natural to read. No dialect."
+      "tone": "Modern Standard Arabic, simple, polite and natural to read. No dialect.",
+      "closings": [
+        "مع خالص التحية،",
+        "مع أطيب التحيات،",
+        "مع فائق التقدير،"
+      ]
     }
   },
   "channels": {
@@ -49,7 +64,7 @@
     "email": {
       "words": 100,
       "subjectWords": 8,
-      "line": "CHANNEL: email. A subject of at most {{subjectWords}} words and a body of at most {{words}} words.",
+      "line": "CHANNEL: email. A subject of at most {{subjectWords}} words and a body of at most {{words}} words. The body ends with one of these closings alone on its last line: {{closings}}. Never write the sender's name after the closing.",
       "example": "Subject: {{subject}}\n\n{{body}}"
     }
   },
@@ -92,7 +107,8 @@
       "words",
       "subjectWords",
       "subject",
-      "body"
+      "body",
+      "closings"
     ]
   }
 }

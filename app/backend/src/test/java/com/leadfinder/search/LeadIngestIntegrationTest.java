@@ -193,7 +193,7 @@ class LeadIngestIntegrationTest extends IntegrationTestBase {
 
         LeadService.EnrichOutcome out = service.applyEnrichment(l, new N8nClient.Enrichment(
                 "https://other-site.tn", List.of("owner@gmail.com", "info@salon.tn", "noreply@salon.tn"),
-                List.of("+216 99 999 999"), List.of("https://facebook.com/salon.nour"), List.of(), "ok"));
+                List.of("+216 99 999 999"), List.of("https://facebook.com/salon.nour"), List.of(), "ok", null));
 
         assertEquals("https://salon.tn", l.getWebsite(), "an existing website is never replaced");
         assertEquals("+216 71 111 111", l.getPhone(), "an existing phone is never replaced");
@@ -210,7 +210,7 @@ class LeadIngestIntegrationTest extends IntegrationTestBase {
         Lead l = leads.findFirstByUserIdAndPlaceId(u.getId(), "p1").orElseThrow();
 
         LeadService.EnrichOutcome out = service.applyEnrichment(l, new N8nClient.Enrichment(
-                "https://salon.tn", List.of(), List.of("+216 98 111 222"), List.of(), List.of(), "ok"));
+                "https://salon.tn", List.of(), List.of("+216 98 111 222"), List.of(), List.of(), "ok", null));
 
         assertEquals("https://salon.tn", l.getWebsite());
         assertEquals("salon.tn", l.getWebsiteHost());
@@ -224,7 +224,7 @@ class LeadIngestIntegrationTest extends IntegrationTestBase {
         AppUser u = newUser("m@x.tn", true);
         service.ingest(newJob(u, "n"), List.of(lead("p1", "Salon", "Rue 1", null, null, List.of(), List.of(), 7)));
         Lead l = leads.findFirstByUserIdAndPlaceId(u.getId(), "p1").orElseThrow();
-        service.applyEnrichment(l, new N8nClient.Enrichment("javascript:alert(1)", List.of(), List.of(), List.of(), List.of(), "x"));
+        service.applyEnrichment(l, new N8nClient.Enrichment("javascript:alert(1)", List.of(), List.of(), List.of(), List.of(), "x", null));
         assertNull(l.getWebsite());
     }
 }

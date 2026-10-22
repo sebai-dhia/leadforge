@@ -20,7 +20,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +64,7 @@ public class LeadController {
     private final UsageService usage;
     private final LeadService leadService;
     private final AiGate aiGate;
+    private final com.leadfinder.usage.ApiUsageService apiUsage;
 
     /** Every lead of the caller across all searches, with optional filters. */
     @GetMapping
@@ -95,22 +95,23 @@ public class LeadController {
                 leads.countByUserIdAndHiddenAtIsNotNull(uid));
     }
 
-    /** Same filters as the list, as a spreadsheet file. */
-    @GetMapping("/export.csv")
+    /** Same filters as the list, as an Excel file with readable labels in the asked language. */
+    @GetMapping("/export.xlsx")
     public ResponseEntity<byte[]> export(@AuthenticationPrincipal Jwt jwt,
                                          @RequestParam(defaultValue = "") String status,
                                          @RequestParam(defaultValue = "false") boolean reachable,
                                          @RequestParam(defaultValue = "") String signal,
                                          @RequestParam(defaultValue = "") String q,
                                          @RequestParam(defaultValue = "0") long searchId,
-                                         @RequestParam(defaultValue = "score") String sort) {
+                                         @RequestParam(defaultValue = "score") String sort,
+                                         @RequestParam(defaultValue = "en") String lang) {
         List<Lead> rows = leads.search(userId(jwt), false, validStatus(status), reachable, signalPattern(signal), likePattern(q), searchId,
                 PageRequest.of(0, MAX_EXPORT, sortFor(sort))).getContent();
         return ResponseEntity.ok()
-                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .contentType(MediaType.parseMediaType(LeadExport.CONTENT_TYPE))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename("leads.csv").build().toString())
-                .body(LeadCsv.build(rows));
+                        ContentDisposition.attachment().filename(LeadExport.fileName(rows, java.time.LocalDate.now(java.time.ZoneOffset.UTC))).build().toString())
+                .body(LeadExport.build(rows, lang));
     }
 
     /** Hides a lead from the lists, or brings it back. A hidden lead stays known, so a new search does not offer it as new. */
@@ -154,6 +155,9 @@ public class LeadController {
     public LeadDto setStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
                              @Valid @RequestBody StatusUpdate req) {
         Lead lead = ownedLead(jwt, id);
+        if ("CONTACTED".equals(req.status()) && !"CONTACTED".equals(lead.getStatus())) {
+            lead.setContactedAt(java.time.Instant.now()); // marking it again later starts the count again
+        }
         lead.setStatus(req.status());
         return LeadDto.of(leads.save(lead));
     }
@@ -206,6 +210,7 @@ public class LeadController {
             usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI could not write the message");
         }
+        if (draft != null) apiUsage.record(userId(jwt), "DRAFT", draft.meter()); // the AI was paid for even when the message is empty
         if (draft == null || draft.body() == null || draft.body().isBlank()) {
             usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI returned an empty message");
@@ -251,8 +256,9 @@ public class LeadController {
             usage.refund(usageId);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The contact lookup could not run");
         }
+        apiUsage.record(userId(jwt), "ENRICH", found == null ? null : found.meter());
         if (found == null) {
-            found = new N8nClient.Enrichment(null, List.of(), List.of(), List.of(), List.of(), "Nothing was returned.");
+            found = new N8nClient.Enrichment(null, List.of(), List.of(), List.of(), List.of(), "Nothing was returned.", null);
         }
         LeadService.EnrichOutcome outcome = leadService.applyEnrichment(lead, found);
         Lead saved = leads.save(lead);

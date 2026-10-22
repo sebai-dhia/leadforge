@@ -32,11 +32,20 @@ public abstract class IntegrationTestBase {
     @MockitoBean
     protected com.leadfinder.auth.GoogleTokenVerifier google;
 
+    @MockitoBean
+    protected com.leadfinder.telegram.TelegramBot telegram;
+
     @Autowired
     protected com.leadfinder.auth.ActiveSessionRegistry sessions;
 
     @Autowired
     protected com.leadfinder.auth.AuthThrottle throttle;
+
+    @Autowired
+    protected com.leadfinder.auth.LastSeen lastSeen;
+
+    @Autowired
+    protected com.leadfinder.settings.RuntimeSettings settings;
 
     @Autowired
     protected JdbcTemplate jdbc;
@@ -49,7 +58,9 @@ public abstract class IntegrationTestBase {
     void cleanDatabase() {
         sessions.reset();
         throttle.reset();
-        jdbc.execute("TRUNCATE usage_events, search_leads, leads, search_jobs, users RESTART IDENTITY CASCADE");
+        lastSeen.reset();
+        jdbc.execute("TRUNCATE usage_events, search_leads, leads, search_jobs, users, app_settings RESTART IDENTITY CASCADE");
+        settings.load();
     }
 
     protected AppUser newUser(String email, boolean withProfile) {

@@ -24,6 +24,6 @@ public record AppProperties(String jwtSecret, String corsOrigin, String publicBa
     /** Ceilings for everyone together over a rolling 24 hours, so a busy day cannot use up the free API credits. 0 turns a cap off. */
     public record Caps(int searchesPerDay, int draftsPerDay, int enrichPerDay) {}
 
-    /** Telegram bot that tells the admin when something breaks, and the chat that gets new-lead alerts. Empty turns alerts off. */
+    /** The Leadforge Telegram bot (people connect their own chat to it), and the admin's chat for alerts when something breaks. An empty token turns Telegram off. */
     public record Alerts(String telegramBotToken, String telegramChatId) {}
 }

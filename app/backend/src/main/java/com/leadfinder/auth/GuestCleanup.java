@@ -1,6 +1,6 @@
 package com.leadfinder.auth;
 
-import com.leadfinder.config.AppProperties;
+import com.leadfinder.settings.RuntimeSettings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,11 +19,11 @@ public class GuestCleanup {
 
     private final UserRepository users;
     private final ActiveSessionRegistry sessions;
-    private final AppProperties props;
+    private final RuntimeSettings settings;
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
     public void sweep() {
-        int idle = props.demo() != null ? props.demo().idleMinutes() : 15;
+        int idle = settings.demo() != null ? settings.demo().idleMinutes() : 15;
         Instant cutoff = Instant.now().minus(Duration.ofMinutes(idle));
         Set<Long> active = sessions.activeUserIds();
         List<AppUser> idleGuests = users.findByRoleAndCreatedAtBefore("GUEST", cutoff).stream()

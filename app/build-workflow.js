@@ -500,40 +500,26 @@ if ($('Webhook').first().json.body.bbox) {
   const best = Object.entries(towns).sort((a, b) => b[1] - a[1])[0];
   areaName = best ? best[0].replace(/[\[\]]/g, '') : null;
 }
-return [{ json: { jobId, leads: out, areaName } }];
-`.trim();
-
-const telegramAlertCode = String.raw`
-const webhookBody = $('Webhook').first().json.body || {};
-// The backend sends the admin's chat id only for the admin's own searches; nothing to send otherwise.
-if (!webhookBody.alertChatId) return [];
-const input = $input.first().json || {};
-const leads = input.leads || [];
-
-const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-const niche = esc(webhookBody.niche || 'N/A');
-const location = esc(webhookBody.city || (webhookBody.bbox ? 'Map Bounding Box' : 'N/A'));
-const total = leads.length;
-const reachable = leads.filter(l => Boolean(l.phone || (l.emails && l.emails.length) || (l.social && l.social.length))).length;
-
-let html = '🎯 <b>Leadforge Alert: New Leads Discovered!</b>\n\n';
-html += '📍 <b>Niche:</b> ' + niche + '\n';
-html += '🌍 <b>Location:</b> ' + location + '\n';
-html += '📊 <b>Found:</b> ' + total + ' leads (' + reachable + ' reachable)\n\n';
-
-if (leads.length > 0) {
-  html += '🔥 <b>Top Opportunities:</b>\n';
-  const top = leads.slice(0, 3);
-  top.forEach((l, idx) => {
-    const contact = esc(l.phone || (l.emails && l.emails[0]) || (l.website ? 'Website listed' : 'No contact found'));
-    html += (idx + 1) + '. <b>' + esc(l.name || 'Unnamed') + '</b> (Score: ' + (l.score || 0) + '/10)\n   📞 ' + contact + '\n';
-  });
-} else {
-  html += '⚠️ <i>No leads were found for this search.</i>';
-}
-
-return [{ json: { chatId: String(webhookBody.alertChatId), text: html } }];
+// What this search cost on the outside services, for the admin's statistics. An answer only counts as a request when the
+// service really answered (the nodes that were skipped call an invalid address and return an error), and a node that did
+// not run on this path (a drawn area has no geocoding) counts for nothing.
+const answered = (name, key) => { try { return $(name).all().filter(i => i.json && i.json[key] !== undefined).length; } catch (e) { return 0; } };
+const gemini = { calls: 0, inputTokens: 0, outputTokens: 0 };
+try {
+  for (const i of $('AI Check').all()) {
+    const u = i.json && i.json.usageMetadata;
+    if (!u) continue;
+    gemini.calls += 1;
+    gemini.inputTokens += u.promptTokenCount || 0;
+    gemini.outputTokens += (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
+  }
+} catch (e) { /* no AI check on this path */ }
+const meter = {
+  gemini,
+  serper: { calls: answered('Maps Search', 'searchParameters') + answered('Web Search', 'searchParameters') },
+  geoapify: { calls: answered('Geocode City', 'results') + answered('Geoapify Places', 'features') },
+};
+return [{ json: { jobId, leads: out, areaName, meter } }];
 `.trim();
 
 const callbackUrl = "={{ $('Webhook').first().json.body.callbackUrl }}";
@@ -687,21 +673,6 @@ const workflow = {
         jsonBody: '={{ JSON.stringify($json) }}'
       },
       id: 'n8', name: 'Send Results to Backend', type: 'n8n-nodes-base.httpRequest', typeVersion: 4.2, position: [2440, 0]
-    },
-    {
-      parameters: { jsCode: telegramAlertCode },
-      id: 'n13', name: 'Build Telegram Alert', type: 'n8n-nodes-base.code', typeVersion: 2, position: [2440, 160]
-    },
-    {
-      parameters: {
-        chatId: '={{ $json.chatId }}',
-        text: '={{ $json.text }}',
-        additionalFields: {
-          parse_mode: 'HTML'
-        }
-      },
-      id: 'n14', name: 'Telegram Alert', type: 'n8n-nodes-base.telegram', typeVersion: 1.2, position: [2680, 160],
-      onError: 'continueRegularOutput'
     }
   ],
   connections: {
@@ -726,21 +697,8 @@ const workflow = {
     'AI Prompt': { main: [[{ node: 'AI Check', type: 'main', index: 0 }]] },
     'AI Check': { main: [[{ node: 'Apply AI', type: 'main', index: 0 }]] },
     'Apply AI': { main: [[{ node: 'Format', type: 'main', index: 0 }]] },
-    'Format': {
-      main: [
-        [
-          { node: 'Send Results to Backend', type: 'main', index: 0 },
-          { node: 'Build Telegram Alert', type: 'main', index: 0 }
-        ]
-      ]
-    },
-    'Build Telegram Alert': {
-      main: [
-        [
-          { node: 'Telegram Alert', type: 'main', index: 0 }
-        ]
-      ]
-    }
+    // The backend tells the owner on Telegram when the results arrive (SearchNotifier), so n8n holds no Telegram token.
+    'Format': { main: [[{ node: 'Send Results to Backend', type: 'main', index: 0 }]] }
   },
   settings: { executionOrder: 'v1' }
 };

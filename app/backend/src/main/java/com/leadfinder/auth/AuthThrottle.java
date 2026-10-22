@@ -1,6 +1,6 @@
 package com.leadfinder.auth;
 
-import com.leadfinder.config.AppProperties;
+import com.leadfinder.settings.RuntimeSettings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,12 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @RequiredArgsConstructor
 public class AuthThrottle {
-    private final AppProperties props;
+    private final RuntimeSettings settings;
     private final Map<String, Deque<Instant>> events = new ConcurrentHashMap<>();
 
     public void checkLogin(String ip, String email) {
-        Duration window = Duration.ofMinutes(props.limits().loginWindowMinutes());
-        int max = props.limits().loginFailures();
+        Duration window = Duration.ofMinutes(settings.limits().loginWindowMinutes());
+        int max = settings.limits().loginFailures();
         if (count("lf-ip:" + ip, window) >= max * 6 || count("lf:" + ip + "|" + email, window) >= max) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Too many failed logins. Try again in " + window.toMinutes() + " minutes.");
@@ -46,7 +46,7 @@ public class AuthThrottle {
     /** Counts every sign-up attempt, successful or not. */
     public void checkAndRecordRegister(String ip) {
         Duration window = Duration.ofHours(1);
-        if (count("reg:" + ip, window) >= props.limits().registerPerHour()) {
+        if (count("reg:" + ip, window) >= settings.limits().registerPerHour()) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Too many sign-ups from this address. Try again later.");
         }
@@ -56,7 +56,7 @@ public class AuthThrottle {
     /** Counts every guest account created from an address. */
     public void checkAndRecordGuest(String ip) {
         Duration window = Duration.ofHours(1);
-        if (count("guest:" + ip, window) >= props.guest().perIpPerHour()) {
+        if (count("guest:" + ip, window) >= settings.guest().perIpPerHour()) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Too many guest sessions from this address. Try again later or sign in with Google.");
         }

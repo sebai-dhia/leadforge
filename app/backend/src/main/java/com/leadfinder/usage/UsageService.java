@@ -1,6 +1,7 @@
 package com.leadfinder.usage;
 
 import com.leadfinder.config.AppProperties;
+import com.leadfinder.settings.RuntimeSettings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,12 +35,12 @@ public class UsageService {
     private static final Duration WINDOW = Duration.ofHours(24);
 
     private final UsageEventRepository events;
-    private final AppProperties props;
+    private final RuntimeSettings settings;
     private final com.leadfinder.auth.UserRepository users;
     private final com.leadfinder.alert.AlertService alerts;
 
     public int limit(Kind kind) {
-        AppProperties.Limits l = props.limits();
+        AppProperties.Limits l = settings.limits();
         return switch (kind) {
             case SEARCH -> l.searchesPerDay();
             case DRAFT -> l.draftsPerDay();
@@ -49,9 +50,13 @@ public class UsageService {
 
     /** Guests get smaller limits than real accounts. */
     public int limit(Long userId, Kind kind) {
-        AppProperties.Guest g = props.guest();
-        boolean guest = g != null && users.findById(userId).map(u -> "GUEST".equals(u.getRole())).orElse(false);
-        if (!guest) return limit(kind);
+        return limitFor(users.findById(userId).map(com.leadfinder.auth.AppUser::getRole).orElse(null), kind);
+    }
+
+    /** The daily limit of an account with this role. */
+    public int limitFor(String role, Kind kind) {
+        AppProperties.Guest g = settings.guest();
+        if (g == null || !"GUEST".equals(role)) return limit(kind);
         return switch (kind) {
             case SEARCH -> g.searchesPerDay();
             case DRAFT -> g.draftsPerDay();
@@ -60,7 +65,7 @@ public class UsageService {
     }
 
     public Usage usage(Long userId, Kind kind) {
-        long used = events.countByUserIdAndKindAndCreatedAtAfter(userId, kind.name(), Instant.now().minus(WINDOW));
+        long used = events.countByUserIdAndKindAndRefundedFalseAndCreatedAtAfter(userId, kind.name(), Instant.now().minus(WINDOW));
         return new Usage((int) used, limit(userId, kind));
     }
 
@@ -88,7 +93,7 @@ public class UsageService {
 
     /** The ceiling for all users together. The admin is never blocked by it. */
     private void checkGlobalCap(Long userId, Kind kind) {
-        AppProperties.Caps c = props.caps();
+        AppProperties.Caps c = settings.caps();
         if (c == null) return;
         int cap = switch (kind) {
             case SEARCH -> c.searchesPerDay();
@@ -96,17 +101,19 @@ public class UsageService {
             case ENRICH -> c.enrichPerDay();
         };
         if (cap <= 0) return;
-        if (events.countByKindAndCreatedAtAfter(kind.name(), Instant.now().minus(WINDOW)) < cap) return;
+        if (events.countByKindAndRefundedFalseAndCreatedAtAfter(kind.name(), Instant.now().minus(WINDOW)) < cap) return;
         if (users.findById(userId).map(com.leadfinder.auth.AppUser::isAdmin).orElse(false)) return;
         alerts.send("cap-" + kind.name(), "The daily cap of " + cap + " " + kind.label + " for all users is reached.");
         throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                 "The demo has reached its daily limit of " + kind.label + ". Please try again tomorrow.");
     }
 
-    /** Gives a use back when the action failed through no fault of the user. */
+    /** Gives a use back when the action failed through no fault of the user. The event stays, marked, for the admin. */
     public void refund(Long eventId) {
-        if (eventId != null) {
-            events.deleteById(eventId);
-        }
+        if (eventId == null) return;
+        events.findById(eventId).ifPresent(e -> {
+            e.setRefunded(true);
+            events.save(e);
+        });
     }
 }

@@ -11,7 +11,8 @@ const D = C.delimiters;
 
 // Everything that is copied from outside (profile text, business data, web pages) loses the characters
 // that could pass for markup and is cut short.
-const clean = (s, n = 300) => String(s == null ? '' : s).replace(/[\r\n\t]+/g, ' ').replace(/[<>{}\[\]`]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+// Emojis and other symbols (Maps listings are full of them) are dropped too: the AI would copy them into the message.
+const clean = (s, n = 300) => String(s == null ? '' : s).replace(/[\r\n\t]+/g, ' ').replace(/[<>{}\[\]`]/g, ' ').replace(/[\p{Extended_Pictographic}\p{So}\p{Sk}\u200d\ufe0f]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 const list = a => (Array.isArray(a) ? a : []).map(x => clean(x, L.listItem)).filter(Boolean);
 /** One line of facts from its template in prompts/draft/facts.json. */
 const line = (template, value) => render(template, { value, open: D.open, close: D.close });
@@ -50,6 +51,8 @@ const lang = C.languages[b.language] ? b.language : 'en';
 const channel = b.channel === 'whatsapp' ? 'whatsapp' : 'email';
 const wa = channel === 'whatsapp';
 const limits = { words: C.channels[channel].words, subjectWords: C.channels[channel].subjectWords };
+// how an email ends: one of these on its own last line, never the sender's name
+const closings = C.languages[lang].closings || [];
 // the example matches the situation: a business without a website, or one that has a website (then only a question)
 const host = String(b.website || '').replace(/^https?:\/\//i, '').split('/')[0];
 // does the sender sell websites or anything built on them? Only then is a missing website a reason to write
@@ -96,7 +99,8 @@ const aiNote = aiAt >= 0 ? reason.slice(aiAt + 5) : '';
 // Latin for French and English, Arabic for Arabic. The AI is never asked to choose between two spellings.
 const ARABIC_RUN = /[-–—|:\/]?[ \t]*[؀-ۿݐ-ݿ][؀-ۿݐ-ݿ \t.,،()]*/g;
 const LATIN_RUN = /[-–—|:\/]?[ \t]*[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'’.& \t]*/g;
-let fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ');
+// "Name A /Name B" and "Name A/ Name B" are two names, "24/7" is not: a slash with a space on one side is a separator
+let fullName = clean(b.leadName, L.leadName).replace(/_/g, ' ').replace(/\s+\/\s*|\s*\/\s+/g, ' / ');
 // Letters from any other alphabet (Cyrillic, Hebrew, Chinese, Berber...) cannot be written in these messages: they are cut like the other language of a name.
 const FOREIGN_RUN = /[-–—|:\/]?[ \t]*(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L})(?:(?![\p{Script=Latin}\p{Script=Arabic}])\p{L}|[ \t.,()\p{M}])*/gu;
 let foreignOnly = false;
@@ -162,11 +166,11 @@ const prompt = render(PROMPTS.templates.user, {
   business,
   language_name: C.languages[lang].name,
   language_tone: C.languages[lang].tone,
-  channel_line: render(C.channels[channel].line, { words: limits.words, subjectWords: limits.subjectWords }),
+  channel_line: render(C.channels[channel].line, { words: limits.words, subjectWords: limits.subjectWords, closings: closings.map(c => '"' + c + '"').join(' or ') }),
   example: exampleText,
 });
 
 return [{ json: {
   system, prompt, knowledgeNew, linksHash: b.linksHash || '', lang, channel, limits, senderName,
-  businessName, nameBilingual, hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version,
+  businessName, nameBilingual, hasWebsite: !!host, webOffer, promptVersion: PROMPTS.version, closings,
 } }];

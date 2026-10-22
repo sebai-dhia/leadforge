@@ -50,6 +50,14 @@ function lint(o, ctx) {
   if (!wa) {
     if (!o.subject) problems.push('the email needs a subject');
     else if (words(o.subject) > ctx.limits.subjectWords + 1) problems.push('the subject is too long (at most ' + ctx.limits.subjectWords + ' words)');
+    // the subject is read first and cannot look like an advert: plain words, in the language of the message
+    if (o.subject) {
+      const subject = o.subject;
+      if (!/^[\p{L}\p{M}\p{N}\s'’\-,.?؟،]+$/u.test(subject)) problems.push('the subject must be plain words: no emojis, symbols, slashes, ampersands, colons or exclamation marks');
+      if (subject.length > 70) problems.push('the subject is too long (at most 70 characters)');
+      if (/(?![\p{Script=Latin}\p{Script=Arabic}\u0640])\p{L}/u.test(subject)) problems.push('the subject contains letters from another alphabet');
+      if (ctx.lang !== 'ar' && /[؀-ۿ]/.test(subject)) problems.push('the subject must be written in the language of the message');
+    }
   }
   if (/\d/.test(plain)) problems.push('it contains numbers; use none');
   if (/(https?:\/\/|www\.|\S+@\S+\.\S+)/i.test(body)) problems.push('it contains a web or email address');
@@ -90,10 +98,13 @@ function lint(o, ctx) {
   if (words(firstLine) > 4) problems.push('the greeting must be a single short line, such as "Bonjour,"');
   if (ctx.businessName && ctx.businessName.length >= 3 && norm(firstLine).includes(norm(ctx.businessName))) problems.push('the greeting contains the business name');
   const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
-  // in Arabic the name is written in Arabic letters, so only the shape is checked there: a short last line
   const last = lines[lines.length - 1] || '';
-  const signed = ctx.lang === 'ar' ? words(last) <= 4 : norm(last).includes(norm(ctx.senderName));
-  if (ctx.senderName && !wa && !signed) problems.push('it must end with the sender name on its own line');
+  // an email ends with a courtesy closing on its own last line (one of those of its language), never with the sender's name
+  const closings = Array.isArray(ctx.closings) ? ctx.closings : [];
+  const bare = s => norm(s).replace(/[,،.;:\s]+$/g, '');
+  if (!wa && closings.length && !closings.some(c => bare(c) === bare(last))) {
+    problems.push('an email must end with a closing alone on its last line, one of: ' + closings.join(' ') + ' (never the sender name)');
+  }
   // a WhatsApp message ends with its question: a last line that is only a name is a signature block
   const nameLine = ctx.lang === 'ar' ? words(last) <= 3 && !/[?؟.!]$/.test(last) : norm(last).includes(norm(ctx.senderName)) && words(last) <= 5;
   if (ctx.senderName && wa && lines.length > 1 && nameLine) problems.push('a WhatsApp message does not end with a name line: end with the question');

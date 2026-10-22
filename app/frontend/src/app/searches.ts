@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { AreaPipe } from './area.pipe';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,6 +11,10 @@ import { I18n, I18nKey } from './i18n';
   styles: `    :host { display: block; }
     .finder { padding: 24px; border-radius: 20px; }
     .big { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 10px; }
+    .combo { position: relative; display: block; }
+    .combo-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); margin: 0; padding: 4px; list-style: none; max-height: min(320px, 50vh); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--mute) transparent; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-strong), 0 16px 40px rgb(0 0 0 / .35); }
+    .combo-list li { display: flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 15px; font-weight: 400; color: var(--ink); cursor: pointer; }
+    .combo-list li.on { background: var(--accent-soft); color: var(--accent); }
     .big input { min-height: 56px; font-size: 18px; border-radius: 14px; padding: 0 18px; }
     .sugg { margin-bottom: 18px; }
     .sugg-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -58,8 +62,21 @@ import { I18n, I18nKey } from './i18n';
 
     <form class="card finder" (ngSubmit)="submit()">
       <label for="niche" class="big">{{ t('find.nicheLabel') }}
-        <input id="niche" name="niche" required list="niches" autocomplete="off" maxlength="120"
-          [placeholder]="t('find.nichePh')" [(ngModel)]="niche">
+        <span class="combo">
+          <input id="niche" name="niche" required autocomplete="off" maxlength="120" role="combobox" aria-autocomplete="list"
+            aria-controls="niche-list" [attr.aria-expanded]="comboOpen() && options().length > 0"
+            [attr.aria-activedescendant]="activeOpt() >= 0 ? 'niche-opt-' + activeOpt() : null"
+            [placeholder]="t('find.nichePh')" [(ngModel)]="niche"
+            (focus)="comboOpen.set(true)" (blur)="closeCombo()" (input)="comboOpen.set(true); activeOpt.set(-1)" (keydown)="comboKey($event)">
+          @if (comboOpen() && options().length) {
+            <ul class="combo-list" id="niche-list" role="listbox">
+              @for (n of options(); track n; let i = $index) {
+                <li role="option" [id]="'niche-opt-' + i" [class.on]="i === activeOpt()" [attr.aria-selected]="i === activeOpt()"
+                  (mousedown)="$event.preventDefault(); pickNiche(n)" (mousemove)="activeOpt.set(i)">{{ n }}</li>
+              }
+            </ul>
+          }
+        </span>
       </label>
 
       @if (suggested().length) {
@@ -95,10 +112,6 @@ import { I18n, I18nKey } from './i18n';
       } @else {
         <app-area-map-selector (bboxChange)="onBboxChange($event)"></app-area-map-selector>
       }
-
-      <datalist id="niches">
-        @for (n of niches; track n) { <option [value]="n"></option> }
-      </datalist>
 
       <div class="go-row">
         @if (usage(); as u) {
@@ -158,7 +171,29 @@ export class Searches {
   protected readonly usage = signal<Usage | null>(null);
   protected readonly suggested = signal<string[]>([]);
 
-  protected niche = '';
+  protected readonly nicheText = signal('');
+  protected get niche(): string { return this.nicheText(); }
+  protected set niche(v: string) { this.nicheText.set(v ?? ''); }
+
+  protected readonly comboOpen = signal(false);
+  protected readonly activeOpt = signal(-1);
+  /** The suggestions that contain what was typed; none once the text is exactly one of them. */
+  protected readonly options = computed(() => {
+    const q = this.nicheText().trim().toLowerCase();
+    if (this.niches.some(n => n === q)) return [];
+    return this.niches.filter(n => n.includes(q));
+  });
+
+  protected pickNiche(n: string): void { this.niche = n; this.comboOpen.set(false); this.activeOpt.set(-1); }
+  protected closeCombo(): void { this.comboOpen.set(false); this.activeOpt.set(-1); }
+  protected comboKey(e: KeyboardEvent): void {
+    const n = this.options().length;
+    if (e.key === 'Escape') { this.closeCombo(); return; }
+    if (!n) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); this.comboOpen.set(true); this.activeOpt.set((this.activeOpt() + 1) % n); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); this.comboOpen.set(true); this.activeOpt.set((this.activeOpt() - 1 + n) % n); }
+    else if (e.key === 'Enter' && this.comboOpen() && this.activeOpt() >= 0) { e.preventDefault(); this.pickNiche(this.options()[this.activeOpt()]); }
+  }
   protected city = 'Tunis';
   protected selectedBbox = '';
 

@@ -379,7 +379,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl', 'audit', 'lookedUp', 'siteText', 'aiCheck']) delete r[k];\n  return r;\n});\nout.sort((a, b) => {\n  const aReachable = Boolean(a.phone || (a.emails && a.emails.length) || (a.social && a.social.length));\n  const bReachable = Boolean(b.phone || (b.emails && b.emails.length) || (b.social && b.social.length));\n  if (aReachable !== bReachable) return bReachable ? 1 : -1;\n  return b.score - a.score;\n});\n// A drawn rectangle has no name: use the town that appears most in the addresses (\"..., Tunis 2092, Tunisia\").\nlet areaName = null;\nif ($('Webhook').first().json.body.bbox) {\n  const towns = {};\n  for (const l of out) {\n    const parts = String(l.address || '').split(',').map(x => x.replace(/\\d+/g, '').trim()).filter(Boolean);\n    const town = parts.length >= 2 ? parts[parts.length - 2] : null;\n    if (town && town.length <= 40) towns[town] = (towns[town] || 0) + 1;\n  }\n  const best = Object.entries(towns).sort((a, b) => b[1] - a[1])[0];\n  areaName = best ? best[0].replace(/[\\[\\]]/g, '') : null;\n}\nreturn [{ json: { jobId, leads: out, areaName } }];"
+        "jsCode": "const jobId = $('Webhook').first().json.body.jobId;\nconst out = $input.all().map(i => i.json).filter(l => !l._empty).map(l => {\n  const r = { ...l, subject: '', emailBody: '' };\n  for (const k of ['niche', 'city', 'service', 'sender', 'hasBooking', 'siteChecked', 'fetchUrl', 'audit', 'lookedUp', 'siteText', 'aiCheck']) delete r[k];\n  return r;\n});\nout.sort((a, b) => {\n  const aReachable = Boolean(a.phone || (a.emails && a.emails.length) || (a.social && a.social.length));\n  const bReachable = Boolean(b.phone || (b.emails && b.emails.length) || (b.social && b.social.length));\n  if (aReachable !== bReachable) return bReachable ? 1 : -1;\n  return b.score - a.score;\n});\n// A drawn rectangle has no name: use the town that appears most in the addresses (\"..., Tunis 2092, Tunisia\").\nlet areaName = null;\nif ($('Webhook').first().json.body.bbox) {\n  const towns = {};\n  for (const l of out) {\n    const parts = String(l.address || '').split(',').map(x => x.replace(/\\d+/g, '').trim()).filter(Boolean);\n    const town = parts.length >= 2 ? parts[parts.length - 2] : null;\n    if (town && town.length <= 40) towns[town] = (towns[town] || 0) + 1;\n  }\n  const best = Object.entries(towns).sort((a, b) => b[1] - a[1])[0];\n  areaName = best ? best[0].replace(/[\\[\\]]/g, '') : null;\n}\n// What this search cost on the outside services, for the admin's statistics. An answer only counts as a request when the\n// service really answered (the nodes that were skipped call an invalid address and return an error), and a node that did\n// not run on this path (a drawn area has no geocoding) counts for nothing.\nconst answered = (name, key) => { try { return $(name).all().filter(i => i.json && i.json[key] !== undefined).length; } catch (e) { return 0; } };\nconst gemini = { calls: 0, inputTokens: 0, outputTokens: 0 };\ntry {\n  for (const i of $('AI Check').all()) {\n    const u = i.json && i.json.usageMetadata;\n    if (!u) continue;\n    gemini.calls += 1;\n    gemini.inputTokens += u.promptTokenCount || 0;\n    gemini.outputTokens += (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);\n  }\n} catch (e) { /* no AI check on this path */ }\nconst meter = {\n  gemini,\n  serper: { calls: answered('Maps Search', 'searchParameters') + answered('Web Search', 'searchParameters') },\n  geoapify: { calls: answered('Geocode City', 'results') + answered('Geoapify Places', 'features') },\n};\nreturn [{ json: { jobId, leads: out, areaName, meter } }];"
       },
       "id": "n7",
       "name": "Format",
@@ -412,43 +412,6 @@
         "httpHeaderAuth": {
           "id": "qKkJSgmCjRN1FSKZ",
           "name": "Header Auth account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const webhookBody = $('Webhook').first().json.body || {};\n// The backend sends the admin's chat id only for the admin's own searches; nothing to send otherwise.\nif (!webhookBody.alertChatId) return [];\nconst input = $input.first().json || {};\nconst leads = input.leads || [];\n\nconst esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst niche = esc(webhookBody.niche || 'N/A');\nconst location = esc(webhookBody.city || (webhookBody.bbox ? 'Map Bounding Box' : 'N/A'));\nconst total = leads.length;\nconst reachable = leads.filter(l => Boolean(l.phone || (l.emails && l.emails.length) || (l.social && l.social.length))).length;\n\nlet html = '🎯 <b>Leadforge Alert: New Leads Discovered!</b>\\n\\n';\nhtml += '📍 <b>Niche:</b> ' + niche + '\\n';\nhtml += '🌍 <b>Location:</b> ' + location + '\\n';\nhtml += '📊 <b>Found:</b> ' + total + ' leads (' + reachable + ' reachable)\\n\\n';\n\nif (leads.length > 0) {\n  html += '🔥 <b>Top Opportunities:</b>\\n';\n  const top = leads.slice(0, 3);\n  top.forEach((l, idx) => {\n    const contact = esc(l.phone || (l.emails && l.emails[0]) || (l.website ? 'Website listed' : 'No contact found'));\n    html += (idx + 1) + '. <b>' + esc(l.name || 'Unnamed') + '</b> (Score: ' + (l.score || 0) + '/10)\\n   📞 ' + contact + '\\n';\n  });\n} else {\n  html += '⚠️ <i>No leads were found for this search.</i>';\n}\n\nreturn [{ json: { chatId: String(webhookBody.alertChatId), text: html } }];"
-      },
-      "id": "n13",
-      "name": "Build Telegram Alert",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2440,
-        160
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.text }}",
-        "additionalFields": {
-          "parse_mode": "HTML"
-        }
-      },
-      "id": "n14",
-      "name": "Telegram Alert",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        2680,
-        160
-      ],
-      "onError": "continueRegularOutput",
-      "credentials": {
-        "telegramApi": {
-          "id": "MF2BrWxZhkIxsVfR",
-          "name": "Telegram account"
         }
       }
     }
@@ -664,22 +627,6 @@
         [
           {
             "node": "Send Results to Backend",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Build Telegram Alert",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Telegram Alert": {
-      "main": [
-        [
-          {
-            "node": "Telegram Alert",
             "type": "main",
             "index": 0
           }

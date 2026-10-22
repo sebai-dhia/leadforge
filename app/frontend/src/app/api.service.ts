@@ -35,6 +35,9 @@ export interface Profile {
 }
 export type ProfileUpdate = Partial<Pick<Profile, 'offer' | 'displayName' | 'headline' | 'city' | 'about' | 'services' | 'targets' | 'links' | 'language' | 'onboarded'>>;
 export interface ProfileStats { leads: number; drafted: number; contacted: number; replied: number; }
+/** available: the server has a bot and this account may connect (not a guest or shared demo account). */
+export interface TelegramStatus { available: boolean; connected: boolean; notifications: boolean; }
+export interface TelegramLink { url: string; expiresAt: string; }
 
 export interface NewSearch {
   niche: string;
@@ -58,6 +61,50 @@ export interface LeadPage {
   counts: Record<LeadStatus, number>;
 }
 
+export type UsageKind = 'search' | 'draft' | 'enrich';
+export interface ApiProvider {
+  calls24h: number; callsPrev24h: number; calls30d: number;
+  inputTokens24h: number; outputTokens24h: number; inputTokens30d: number; outputTokens30d: number; tokensPrev24h: number;
+  /** When the service last answered (null: never). silent: work that needs it was done in the last 24 h but it answered nothing. */
+  lastAnswered: string | null; silent: boolean;
+}
+export interface AdminOverview {
+  users: { total: number; byRole: Record<string, number>; new7Days: number; new30Days: number; seats: { active: number; max: number } };
+  /** cap 0 means no cap; refunded are attempts that failed and were given back. */
+  usage24h: Record<UsageKind, { used: number; refunded: number; cap: number }>;
+  searches: { last24h: number; failed24h: number; pending: number };
+  /** The last 30 days (UTC), oldest first. */
+  daily: ({ day: string } & Record<UsageKind, number>)[];
+  /** Registered accounts only (guests are counted apart). */
+  active: { now: number; last24h: number; last7d: number; last30d: number; registered: number; guests: number; registeredNew30d: number; registeredPrev30d: number };
+  /** What the workflows reported spending. tracked is false until a deployed workflow has reported once. */
+  api: {
+    tracked: boolean; gemini: ApiProvider; serper: ApiProvider; geoapify: ApiProvider;
+    daily: { day: string; gemini: number; geminiTokens: number; serper: number; geoapify: number }[];
+  };
+}
+export interface AdminUser {
+  id: number; email: string; displayName: string; role: string; demo: boolean; google: boolean;
+  createdAt: string; lastSeenAt: string | null; searches: number;
+  usage24h: Record<UsageKind, Usage>;
+}
+/** How a search ran, not what it was about. userEmail is empty when the account was deleted (idle guests). */
+export interface AdminSearch {
+  id: number; createdAt: string; status: JobStatus; failureReason: string | null;
+  foundCount: number | null; userId: number | null; userEmail: string | null; userRole: string | null;
+}
+export interface AdminPage<T> { items: T[]; total: number; page: number; size: number; }
+
+/** One editable setting. value is what applies now; defaultValue is what .env says; overridden means the admin saved another value. */
+export interface SettingEntry {
+  key: string; group: 'limits' | 'caps' | 'guests' | 'demo' | 'throttle'; type: 'INT' | 'BOOL';
+  min: number; max: number; value: string; defaultValue: string; overridden: boolean;
+}
+export interface AdminConfig {
+  settings: SettingEntry[];
+}
+export interface AccountChange { currentPassword: string; email?: string; newPassword?: string; }
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
@@ -78,13 +125,17 @@ export class ApiService {
   saveProfile(p: ProfileUpdate) { return this.http.put<Profile>(`${API}/profile`, p); }
   setSpecialization(specialization: string) { return this.http.put<Profile>(`${API}/profile/specialization`, { specialization }); }
   profileStats() { return this.http.get<ProfileStats>(`${API}/profile/stats`); }
+  telegram() { return this.http.get<TelegramStatus>(`${API}/profile/telegram`); }
+  telegramLink(lang: string, timeZone: string) { return this.http.post<TelegramLink>(`${API}/profile/telegram/link`, { lang, timeZone }); }
+  setTelegramNotifications(notifications: boolean) { return this.http.put<TelegramStatus>(`${API}/profile/telegram`, { notifications }); }
+  disconnectTelegram() { return this.http.delete<TelegramStatus>(`${API}/profile/telegram`); }
 
   leads(f: LeadFilters, page: number, size = 40) {
     return this.http.get<LeadPage>(`${API}/leads`, { params: this.params(f).set('page', page).set('size', size) });
   }
-  /** The file the user would download: same filters as the list, as a spreadsheet. */
-  exportCsv(f: LeadFilters) {
-    return this.http.get(`${API}/leads/export.csv`, { params: this.params(f), responseType: 'blob' });
+  /** The file the user would download: same filters as the list, as an Excel file in the user's language. */
+  exportLeads(f: LeadFilters, lang: string) {
+    return this.http.get(`${API}/leads/export.xlsx`, { params: this.params(f).set('lang', lang), responseType: 'blob', observe: 'response' });
   }
 
   usage() { return this.http.get<UsageMap>(`${API}/usage`); }
@@ -115,6 +166,25 @@ export class ApiService {
   draft(leadId: number, language: Lang, channel: Channel, approach: Approach = 'auto', note = '') {
     return this.http.post<Lead>(`${API}/leads/${leadId}/draft`, { language, channel, approach, note: note.trim() });
   }
+
+  adminOverview() { return this.http.get<AdminOverview>(`${API}/admin/overview`); }
+  adminUsers(q: string, role: string, page: number, size = 25) {
+    return this.http.get<AdminPage<AdminUser>>(`${API}/admin/users`, { params: { q: q.trim(), role, page, size } });
+  }
+  adminSearches(status: JobStatus | '', page: number, size = 25) {
+    return this.http.get<AdminPage<AdminSearch>>(`${API}/admin/searches`, { params: { status, page, size } });
+  }
+
+  /** generatedPassword is only set when no password was given; it is shown once. */
+  adminCreateUser(body: { email: string; displayName?: string; password?: string }) {
+    return this.http.post<{ id: number; email: string; generatedPassword: string | null }>(`${API}/admin/users`, body);
+  }
+  adminDeleteUser(id: number) { return this.http.delete<void>(`${API}/admin/users/${id}`); }
+  adminConfig() { return this.http.get<AdminConfig>(`${API}/admin/settings`); }
+  /** A value sets the setting; null goes back to the .env value. */
+  saveAdminConfig(values: Record<string, string | null>) { return this.http.put<AdminConfig>(`${API}/admin/settings`, { values }); }
+  adminAccount() { return this.http.get<{ email: string }>(`${API}/admin/account`); }
+  changeAdminAccount(change: AccountChange) { return this.http.put<{ email: string }>(`${API}/admin/account`, change); }
 
   private params(f: LeadFilters): HttpParams {
     return new HttpParams()

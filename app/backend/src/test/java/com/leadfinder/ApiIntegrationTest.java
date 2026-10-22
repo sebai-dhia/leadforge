@@ -64,7 +64,7 @@ class ApiIntegrationTest extends IntegrationTestBase {
     @Test
     void everyApiEndpointNeedsALogin() throws Exception {
         mvc.perform(get("/api/leads")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/leads/export.csv")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/leads/export.xlsx")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/usage")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/profile")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/searches").contentType(MediaType.APPLICATION_JSON).content(SEARCH)).andExpect(status().isUnauthorized());
@@ -159,7 +159,7 @@ class ApiIntegrationTest extends IntegrationTestBase {
         }
         mvc.perform(get("/api/usage").with(as(u))).andExpect(jsonPath("$.draft.used").value(0));
 
-        doReturn(new N8nClient.Draft("Sujet", "Bonjour", null, null, "draft-test0001")).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("Sujet", "Bonjour", null, null, "draft-test0001", null)).when(n8n).draft(any());
         for (int i = 0; i < 2; i++) {
             mvc.perform(post("/api/leads/" + id + "/draft").with(as(u)).contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isOk())
@@ -175,7 +175,7 @@ class ApiIntegrationTest extends IntegrationTestBase {
         AppUser u = newUser("e1@x.tn", true);
         Long id = firstLeadOf(u, newJob(u, "n"), IntegrationTestBase.lead("p1", "Salon"));
         when(n8n.enrich(any())).thenReturn(new N8nClient.Enrichment("https://salon.tn", List.of("info@salon.tn", "noreply@salon.tn"),
-                List.of("+216 98 111 222"), List.of("https://facebook.com/salon.nour"), List.of("salon.tn"), "Checked the website."));
+                List.of("+216 98 111 222"), List.of("https://facebook.com/salon.nour"), List.of("salon.tn"), "Checked the website.", null));
 
         mvc.perform(post("/api/leads/" + id + "/enrich").with(as(u)))
                 .andExpect(status().isOk())
@@ -280,14 +280,13 @@ class ApiIntegrationTest extends IntegrationTestBase {
         userWithLeads();
         AppUser other = newUser("o@x.tn", true);
         mvc.perform(get("/api/leads").with(as(other))).andExpect(jsonPath("$.total").value(0));
-        mvc.perform(get("/api/leads/export.csv").with(as(other)))
+        mvc.perform(get("/api/leads/export.xlsx").with(as(other)))
                 .andExpect(status().isOk())
-                .andExpect(result -> assertEquals(1, new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)
-                        .split("\r\n").length, "header only"));
+                .andExpect(result -> assertEquals(1, sheet(result.getResponse().getContentAsByteArray()).split("<row ").length - 1, "header only"));
     }
 
     @Test
-    void theCsvExportIsSafeToOpenInASpreadsheet() throws Exception {
+    void theExportIsAnExcelFileThatIsSafeToOpen() throws Exception {
         AppUser u = newUser("csv@x.tn", true);
         SearchJob s = newJob(u, "dentists");
         leadService.ingest(s, List.of(
@@ -295,22 +294,31 @@ class ApiIntegrationTest extends IntegrationTestBase {
                         List.of("a@x.tn", "b@x.tn"), List.of(), 9),
                 IntegrationTestBase.lead("b", "عيادة", "تونس", null, null, List.of(), List.of(), 5)));
 
-        mvc.perform(get("/api/leads/export.csv").with(as(u)))
+        mvc.perform(get("/api/leads/export.xlsx").param("lang", "fr").with(as(u)))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(content().contentTypeCompatibleWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .andExpect(result -> {
-                    byte[] bytes = result.getResponse().getContentAsByteArray();
-                    assertEquals((byte) 0xEF, bytes[0]);
-                    assertEquals((byte) 0xBB, bytes[1]);
-                    assertEquals((byte) 0xBF, bytes[2]);
-                    String csv = new String(bytes, StandardCharsets.UTF_8);
-                    assertTrue(csv.contains("'=HYPERLINK"), "formula neutralised");
-                    assertTrue(csv.contains("+216 71 111 111"), "real phone number kept intact");
-                    assertTrue(csv.contains("a@x.tn; b@x.tn"));
-                    assertTrue(csv.contains("\"12, Rue \"\"A\"\"\""), "quotes and commas escaped");
-                    assertTrue(csv.contains("عيادة"));
+                    String xml = sheet(result.getResponse().getContentAsByteArray());
+                    assertTrue(xml.contains("&quot;http://evil.example&quot;") && !xml.contains("<f>"), "a formula-looking name is text, not a formula");
+                    assertTrue(xml.contains("+216 71 111 111"), "real phone number kept intact");
+                    assertTrue(xml.contains("a@x.tn; b@x.tn"));
+                    assertTrue(xml.contains("12, Rue &quot;A&quot;"), "quotes escaped");
+                    assertTrue(xml.contains("عيادة"));
+                    assertTrue(xml.contains("Nouveau"), "status in the asked language, not the raw code");
+                    assertTrue(xml.contains("Téléphone"), "header in the asked language");
                 })
-                .andExpect(result -> assertTrue(result.getResponse().getHeader("Content-Disposition").contains("leads.csv")));
+                .andExpect(result -> assertTrue(result.getResponse().getHeader("Content-Disposition")
+                        .matches(".*\\d{4}-\\d{2}-\\d{2}-leadforge-dentists.*\\.xlsx.*")));
+    }
+
+    /** The text of the one sheet inside the .xlsx (a zip file). */
+    private static String sheet(byte[] xlsx) throws java.io.IOException {
+        try (java.util.zip.ZipInputStream zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(xlsx))) {
+            for (java.util.zip.ZipEntry e; (e = zip.getNextEntry()) != null; ) {
+                if (e.getName().equals("xl/worksheets/sheet1.xml")) return new String(zip.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        }
+        throw new AssertionError("no sheet in the file");
     }
 
     // ---------------------------------------------------------------- sign in and sign up

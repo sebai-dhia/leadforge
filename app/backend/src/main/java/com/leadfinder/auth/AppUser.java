@@ -76,13 +76,45 @@ public class AppUser {
     private boolean onboarded = false;
 
     @Column(nullable = false)
-    private String role = "DEMO_USER";
+    private String role = "USER";
 
     @Column(name = "is_demo", nullable = false)
     private boolean isDemo = false;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
+
+    /** Written by LastSeen, at most every few minutes. Read-only here so saving a user never overwrites it. */
+    @Column(name = "last_seen_at", insertable = false, updatable = false)
+    private Instant lastSeenAt;
+
+    /** The connected Telegram chat, and its settings. Written only by UserRepository's telegram queries, so saving a user never overwrites them. */
+    @Column(name = "telegram_chat_id", insertable = false, updatable = false)
+    private Long telegramChatId;
+
+    @Column(name = "telegram_notify", insertable = false, updatable = false)
+    private boolean telegramNotify = true;
+
+    @Column(name = "telegram_language", insertable = false, updatable = false)
+    private String telegramLanguage = "en";
+
+    @Column(name = "telegram_link_code", insertable = false, updatable = false)
+    private String telegramLinkCode;
+
+    @Column(name = "telegram_link_expires_at", insertable = false, updatable = false)
+    private Instant telegramLinkExpiresAt;
+
+    /** An IANA zone such as Africa/Tunis: the follow-up reminder goes out in the person's morning. */
+    @Column(name = "telegram_timezone", insertable = false, updatable = false)
+    private String telegramTimezone = "UTC";
+
+    @Column(name = "telegram_reminded_on", insertable = false, updatable = false)
+    private java.time.LocalDate telegramRemindedOn;
+
+    /** Shared demo accounts and guests cannot connect a chat: someone else would get the messages. */
+    public boolean canUseTelegram() {
+        return !isDemo && !"GUEST".equalsIgnoreCase(role);
+    }
 
     public boolean isAdmin() {
         return "ADMIN".equalsIgnoreCase(role);

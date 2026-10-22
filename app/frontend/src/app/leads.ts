@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
 import { AreaPipe } from './area.pipe';
 import { I18n } from './i18n';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService, Job, Lang, Lead, LeadFilters, LeadSort, LeadStatus } from './api.service';
 import { Toasts } from './toast';
 import { I18nKey } from './i18n';
@@ -189,6 +189,8 @@ export class LeadsPage {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.debounce));
+    const wanted = inject(ActivatedRoute).snapshot.queryParamMap.get('status');
+    if (this.statusFilters.some(f => f.value === wanted)) this.status.set(wanted as StatusFilter);
     this.api.list().subscribe({ next: j => this.jobs.set(j.filter(x => x.status === 'DONE')), error: () => { /* filter simply stays empty */ } });
     this.api.profile().subscribe({ next: p => this.lang.set(p.language), error: () => { /* defaults to English */ } });
     this.fetch(true);
@@ -306,12 +308,13 @@ export class LeadsPage {
 
   protected download() {
     this.exporting.set(true);
-    this.api.exportCsv(this.filters()).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
+    this.api.exportLeads(this.filters(), this.i18n.lang()).subscribe({
+      next: res => {
+        const url = URL.createObjectURL(res.body as Blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'leads.csv';
+        // the server names the file after what is inside (business type, place, date)
+        a.download = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? new Date().toISOString().slice(0, 10) + '-leadforge-leads.xlsx';
         a.click();
         URL.revokeObjectURL(url);
         this.exporting.set(false);

@@ -75,6 +75,10 @@ public class Lead {
     @Column(name = "hidden_at")
     private Instant hiddenAt;
 
+    /** When the lead was last marked Contacted: the follow-up reminder counts the days from here. */
+    @Column(name = "contacted_at")
+    private Instant contactedAt;
+
     /** The reason without the French copy of the AI sentence that the web app uses for its French view. */
     public String getReasonText() {
         return reason == null ? null : reason.replaceAll("\\s*\\[\\[fr:.*?]]\\s*$", "");

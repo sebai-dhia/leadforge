@@ -78,6 +78,8 @@ test('"looked, nothing readable" is remembered so the pages are not read again',
 const ctx = { channel: 'whatsapp', lang: 'fr', limits: { words: 65, subjectWords: 0 }, senderName: 'Test Sender', businessName: 'Café 24 Exemple' };
 const answer = body => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ angle: 'no site', subject: '', body }) }] } }] });
 const check = (body, c = ctx) => run('Check', { body: {}, outputs: { 'Build Prompt': [{ ...c, prompt: 'P' }] }, input: [answer(body)] })[0].json;
+/** An email: it ends with one of the closings of its language, not with the sender's name. */
+const EMAIL = { channel: 'email', limits: { words: 100, subjectWords: 8 }, closings: ['Cordialement,', 'Bien cordialement,'] };
 
 const good = "Bonjour,\n\nJe suis Test Sender, développeur web à Testville. Je crée des sites simples avec réservation pour les cafés.\n\nJe n'ai pas trouvé de site pour Café 24 Exemple. Avez-vous déjà un endroit où vos clients peuvent consulter le menu ?";
 
@@ -93,7 +95,8 @@ test('each broken rule is named in the second try', () => {
     ["Bonjour,\n\nVous n'avez pas de site web. Écrivons-nous sur https://portfolio.example.com ?\n\nTest Sender", /web or email address/],
     ["Bonjour,\n\nNous avons 3 offres pour vous !\n\nTest Sender", /numbers/],
     ["Bonjour Café 24 Exemple,\n\nUn site vous intéresse ?\n\nTest Sender", /greeting contains the business name/],
-    ["Bonjour,\n\nUn site vous intéresse ?\n\nMerci", /end with the sender name/, { channel: 'email', limits: { words: 100, subjectWords: 8 } }],
+    ["Bonjour,\n\nUn site vous intéresse ?\n\nMerci", /end with a closing/, EMAIL],
+    ["Bonjour,\n\nUn site vous intéresse ?\n\nTest Sender", /end with a closing/, EMAIL],
     ["Bonjour,\n\nUn site vous intéresse ?\n\nTest Sender", /does not end with a name line/],
     ['Hello,\n\nI could not find your website and I would like to help you with the menu and the booking and the design.\n\nDo you have one?\n\nTest Sender', /not written in French/],
   ];
@@ -159,10 +162,117 @@ test('our internal notes are not repeated to the business', () => {
   assert.ok(r.problems.some(p => /internal note/.test(p)));
 });
 
-test('an Arabic message signed with the name in Arabic letters is fine; a long last line is not a signature', () => {
-  const arCtx = { ...ctx, lang: 'ar', senderName: 'Test Sender', businessName: 'Salon Exemple' };
-  const signed = 'مرحباً،\n\nأنا مرسل تجريبي، مطور ويب في تونس. أبني مواقع بسيطة وأدوات حجز.\n\nلم أجد موقعاً إلكترونياً لـ Salon Exemple. هل تفكرون في إنشاء موقع؟\n\nمرسل تجريبي';
-  assert.deepEqual(check(signed, arCtx).problems, []);
-  const unsigned = signed.replace('\n\nمرسل تجريبي', '\n\nأتمنى أن تردوا علي في أقرب وقت ممكن لنتحدث عن الموضوع');
-  assert.ok(check(unsigned, arCtx).problems.some(p => /end with the sender name/.test(p)));
+test('an email ends with one of its closings and never with the sender name', () => {
+  const body = last => "Bonjour,\n\nJe suis Test Sender, développeur web à Testville. Je crée des sites simples avec réservation pour les cafés.\n\nAvez-vous déjà un endroit où vos clients peuvent consulter le menu ?\n\n" + last;
+  const closing = p => /closing/.test(p);
+  assert.ok(!check(body('Cordialement,'), EMAIL).problems.some(closing));
+  assert.ok(!check(body('Bien cordialement'), EMAIL).problems.some(closing), 'the comma and the capitals do not matter');
+  assert.ok(check(body('Test Sender'), EMAIL).problems.some(closing));
+  assert.ok(check(body('Merci beaucoup'), EMAIL).problems.some(closing));
+  // WhatsApp has neither a closing nor a name line
+  assert.ok(!check(body('Cordialement,')).problems.some(closing));
+});
+
+test('an Arabic email ends with an Arabic closing', () => {
+  const arEmail = { ...EMAIL, lang: 'ar', businessName: 'صالون التجربة', closings: ['مع خالص التحية،', 'مع أطيب التحيات،'] };
+  const body = last => 'مرحباً،\n\nأنا مرسل تجريبي، مطور ويب في تونس. أبني مواقع بسيطة وأدوات حجز.\n\nلم أجد موقعاً إلكترونياً لصالون التجربة. هل تفكرون في إنشاء موقع يسهل الحجز؟\n\n' + last;
+  assert.ok(!check(body('مع خالص التحية،'), arEmail).problems.some(p => /closing/.test(p)));
+  assert.ok(check(body('مرسل تجريبي'), arEmail).problems.some(p => /closing/.test(p)));
+});
+
+test('the last guard replaces a name at the end of an email with a closing, and adds one when it is missing', () => {
+  const emailCtx = { ...ctx, ...EMAIL, prompt: 'P' };
+  const finish = text => run('Finalize', {
+    body: {}, input: [{ error: 'x' }],
+    outputs: { 'Build Prompt': [emailCtx], Check: [{ retryPrompt: null, problems: [] }], 'AI Write Message': [answer(text)] },
+  })[0].json.body;
+  const base = "Bonjour,\n\nJe suis Test Sender, développeur web à Testville.\n\nAvez-vous déjà un endroit où vos clients peuvent consulter le menu ?";
+  assert.equal(finish(base + '\n\nTest Sender'), base + '\n\nCordialement,');
+  assert.equal(finish(base), base + '\n\nCordialement,');
+  assert.equal(finish(base + '\n\nBien cordialement,'), base + '\n\nBien cordialement,');
+  // WhatsApp is left alone
+  const wa = run('Finalize', {
+    body: {}, input: [{ error: 'x' }],
+    outputs: { 'Build Prompt': [{ ...ctx, prompt: 'P' }], Check: [{ retryPrompt: null, problems: [] }], 'AI Write Message': [answer(base)] },
+  })[0].json.body;
+  assert.equal(wa, base);
+});
+
+test('the email prompt lists the closings and its example ends with one; WhatsApp does not mention them', () => {
+  const [{ json: p }] = run('Build Prompt', { body: { ...lead, language: 'en', channel: 'email' }, outputs: { 'Plan Fetch': [{ kind: 'none', url: null }] }, input: [{ error: 'x' }] });
+  assert.deepEqual(p.closings, ['Sincerely,', 'Cordially,', 'Kind regards,']);
+  assert.match(p.prompt, /ends with one of these closings alone on its last line: "Sincerely," or "Cordially," or "Kind regards,"/);
+  assert.match(p.prompt, /\n\n(Sincerely|Cordially|Kind regards),\s*$/m, 'the example ends with a closing');
+  const [{ json: w }] = run('Build Prompt', { body: { ...lead, language: 'fr', channel: 'whatsapp' }, outputs: { 'Plan Fetch': [{ kind: 'none', url: null }] }, input: [{ error: 'x' }] });
+  assert.doesNotMatch(w.prompt, /closings/);
+});
+
+test('the reply carries what the AI calls used, for every model that answered', () => {
+  const used = (obj, u) => ({ ...obj, usageMetadata: u });
+  const first = used(answer(good), { promptTokenCount: 2000, candidatesTokenCount: 150, thoughtsTokenCount: 30 });
+  const out = run('Finalize', {
+    body: {}, input: [{ error: 'skipped' }],
+    outputs: { 'Build Prompt': [{ ...ctx, prompt: 'P' }], Check: [{ retryPrompt: null, problems: [] }], 'AI Write Message': [first], 'AI Write B': [{ error: 'skipped' }] },
+  })[0].json;
+  assert.deepEqual(out.meter, { gemini: { calls: 1, inputTokens: 2000, outputTokens: 180 } });
+
+  // a second try is another call, and a failed answer has no tokens to count
+  const bad = "Bonjour,\n\nJ'ai vu votre café !\n\nTest Sender";
+  const retry = used(answer(good), { promptTokenCount: 2500, candidatesTokenCount: 160 });
+  const two = run('Finalize', {
+    body: {}, input: [retry],
+    outputs: { 'Build Prompt': [{ ...ctx, prompt: 'P' }], Check: [check(bad)], 'AI Write Message': [used(answer(bad), { promptTokenCount: 2000, candidatesTokenCount: 100 })] },
+  })[0].json;
+  assert.deepEqual(two.meter, { gemini: { calls: 2, inputTokens: 4500, outputTokens: 260 } });
+
+  // even when nothing usable came back, what was spent is reported
+  const none = run('Finalize', {
+    body: {}, input: [{ error: 'x' }],
+    outputs: { 'Build Prompt': [{ ...ctx, prompt: 'P' }], Check: [{ retryPrompt: 'again', problems: ['x'] }], 'AI Write Message': [{ error: 'down' }] },
+  })[0].json;
+  assert.equal(none.error, true);
+  assert.deepEqual(none.meter, { gemini: { calls: 0, inputTokens: 0, outputTokens: 0 } });
+});
+
+const answerWith = (body, subject) => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ angle: 'a', subject, body }) }] } }] });
+const checkWith = (body, subject, c = EMAIL) => run('Check', { body: {}, outputs: { 'Build Prompt': [{ ...ctx, ...c, prompt: 'P' }] }, input: [answerWith(body, subject)] })[0].json;
+const emailBody = "Bonjour,\n\nJe suis Test Sender, développeur web à Testville. Je crée des sites simples avec réservation pour les cafés.\n\nAvez-vous déjà un endroit où vos clients peuvent consulter le menu ?\n\nCordialement,";
+
+test('the email subject must be plain short words in the language of the message', () => {
+  const subjectProblems = subject => checkWith(emailBody, subject).problems.filter(p => /subject/.test(p));
+  assert.deepEqual(subjectProblems('Un menu en ligne pour Café 24 ?'), []);
+  assert.deepEqual(subjectProblems("Présenter l'activité d'un cabinet, simplement"), []);
+  assert.ok(subjectProblems('Un menu pour Café ⚖️ en ligne').some(p => /plain words/.test(p)), 'emoji');
+  assert.ok(subjectProblems("Cabinet D'avocat & Consultation Juridique").some(p => /plain words/.test(p)), 'ampersand');
+  assert.ok(subjectProblems('Services juridiques / Maître Lotfi').some(p => /plain words/.test(p)), 'slash');
+  assert.ok(subjectProblems('Un menu en ligne !').some(p => /plain words/.test(p)), 'exclamation mark');
+  assert.ok(subjectProblems('Un menu en ligne pour votre café afin de présenter vos plats, vos horaires et vos tarifs').some(p => /too long/.test(p)));
+  assert.ok(subjectProblems('Меню для кафе').some(p => /another alphabet/.test(p)));
+  assert.ok(subjectProblems('قائمة إلكترونية للمقهى').some(p => /language of the message/.test(p)), 'Arabic letters in a French message');
+  // the same subject is fine in an Arabic message
+  const ar = { ...EMAIL, lang: 'ar', businessName: 'صالون التجربة', closings: ['مع خالص التحية،'] };
+  const arBody = 'مرحباً،\n\nأنا مرسل تجريبي، مطور ويب في تونس. أبني مواقع بسيطة وأدوات حجز.\n\nهل لديكم مكان يجد فيه الزبائن القائمة على الإنترنت؟\n\nمع خالص التحية،';
+  assert.deepEqual(checkWith(arBody, 'قائمة إلكترونية للمقهى', ar).problems.filter(p => /subject/.test(p)), []);
+});
+
+test('the last guard removes emojis and symbols from the subject and keeps it within the word limit', () => {
+  const emailCtx = { ...ctx, ...EMAIL, prompt: 'P' };
+  const finish = subject => run('Finalize', {
+    body: {}, input: [{ error: 'x' }],
+    outputs: { 'Build Prompt': [emailCtx], Check: [{ retryPrompt: null, problems: [] }], 'AI Write Message': [answerWith(emailBody, subject)] },
+  })[0].json.subject;
+  const cleaned = finish("Clear copywriting for Cabinet D'avocat⚖️ & Consultation Juridique 📄 📂 /Maître Ould Hammou Lotfi");
+  assert.doesNotMatch(cleaned, /[&\/⚖📄📂]/u);
+  assert.ok(cleaned.split(' ').length <= 8, cleaned);
+  assert.equal(finish('Un menu en ligne pour Café 24 ?'), 'Un menu en ligne pour Café 24 ?');
+});
+
+test('a business name copied from a map listing loses its emojis and is split at a slash', () => {
+  const build = leadName => run('Build Prompt', { body: { ...lead, leadName, language: 'en', channel: 'email' }, outputs: { 'Plan Fetch': [{ kind: 'none', url: null }] }, input: [{ error: 'x' }] })[0].json;
+  const messy = build("Cabinet D'avocat⚖️ & Consultation Juridique 📄 📂 📁 ⏳ /Maître Ould Hammou Lotfi");
+  assert.doesNotMatch(messy.prompt, /\p{Extended_Pictographic}/u);
+  assert.doesNotMatch(messy.businessName, /\p{Extended_Pictographic}|\//u);
+  assert.match(messy.system, /The email subject is a short, plain and professional line/);
+  // a slash inside a name stays: it is not a separator
+  assert.match(build('Fitness 24/7 Club').businessName, /24\/7/);
 });

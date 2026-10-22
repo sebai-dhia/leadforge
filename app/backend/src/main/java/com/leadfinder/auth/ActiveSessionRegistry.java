@@ -1,6 +1,6 @@
 package com.leadfinder.auth;
 
-import com.leadfinder.config.AppProperties;
+import com.leadfinder.settings.RuntimeSettings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +20,14 @@ public class ActiveSessionRegistry {
 
     public record DemoStatus(boolean demoFull, int activeSessions, int maxSessions, int idleMinutes) {}
 
-    private final AppProperties props;
+    private final RuntimeSettings settings;
     private final Map<String, Instant> demoSessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUsers = new ConcurrentHashMap<>();
 
     public boolean canAcceptVisitor() {
         if (!isDemoEnabled()) return true;
         cleanIdleSessions();
-        return demoSessions.size() < props.demo().maxSessions();
+        return demoSessions.size() < settings.demo().maxSessions();
     }
 
     public void registerSession(String sessionId, Long userId) {
@@ -64,20 +64,30 @@ public class ActiveSessionRegistry {
         }
     }
 
+    /** Frees the seats of a person whose account was removed. */
+    public void removeUser(Long userId) {
+        if (userId == null) return;
+        sessionUsers.entrySet().removeIf(e -> {
+            boolean theirs = userId.equals(e.getValue());
+            if (theirs) demoSessions.remove(e.getKey());
+            return theirs;
+        });
+    }
+
     public DemoStatus getStatus() {
         cleanIdleSessions();
         int active = demoSessions.size();
-        int max = isDemoEnabled() ? props.demo().maxSessions() : 5;
-        int idle = isDemoEnabled() ? props.demo().idleMinutes() : 15;
+        int max = isDemoEnabled() ? settings.demo().maxSessions() : 5;
+        int idle = isDemoEnabled() ? settings.demo().idleMinutes() : 15;
         return new DemoStatus(active >= max, active, max, idle);
     }
 
     private boolean isDemoEnabled() {
-        return props.demo() != null && props.demo().enabled();
+        return settings.demo() != null && settings.demo().enabled();
     }
 
     private void cleanIdleSessions() {
-        int idleMinutes = isDemoEnabled() ? props.demo().idleMinutes() : 15;
+        int idleMinutes = isDemoEnabled() ? settings.demo().idleMinutes() : 15;
         Instant cutoff = Instant.now().minus(Duration.ofMinutes(idleMinutes));
         demoSessions.entrySet().removeIf(entry -> {
             boolean idle = entry.getValue().isBefore(cutoff);

@@ -17,11 +17,12 @@ import java.util.List;
 public class N8nCallbackController {
 
     /** areaName: for a drawn rectangle, the town most of the results are in (optional). */
-    public record Results(Long jobId, List<IncomingLead> leads, String areaName) {}
+    public record Results(Long jobId, List<IncomingLead> leads, String areaName, com.leadfinder.usage.ApiMeter meter) {}
 
     private final SearchJobRepository jobs;
     private final LeadService leadService;
     private final AppProperties props;
+    private final com.leadfinder.usage.ApiUsageService apiUsage;
 
     @PostMapping("/results")
     @Transactional
@@ -36,6 +37,10 @@ public class N8nCallbackController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (job.getStatus() == SearchJob.Status.DONE) {
             return; // idempotent: ignore duplicate callbacks
+        }
+        apiUsage.record(job.getUserId(), "SEARCH", body.meter()); // the services were used whoever the leads end up with
+        if (job.getUserId() == null) {
+            return; // the guest who started it was deleted: nobody to give the leads to
         }
         nameDrawnArea(job, body.areaName());
         LeadService.IngestResult result = leadService.ingest(job, body.leads() == null ? List.of() : body.leads());

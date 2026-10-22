@@ -11,6 +11,11 @@ export const notGuestGuard: CanActivateFn = () => {
   return inject(AuthService).isGuest() ? inject(Router).createUrlTree(['/leads']) : true;
 };
 
+/** The admin pages; anyone else goes to their leads. */
+export const adminGuard: CanActivateFn = () => {
+  return inject(AuthService).isAdmin() ? true : inject(Router).createUrlTree(['/leads']);
+};
+
 /** The landing page is for visitors; people who are signed in go straight to their leads. */
 export const landingGuard: CanActivateFn = () => {
   return inject(AuthService).loggedIn() ? inject(Router).createUrlTree(['/leads']) : true;

@@ -21,7 +21,8 @@ class GlobalCapTest {
     private final AppProperties props = new AppProperties("secret-must-be-at-least-32-chars-long", "http://x", "http://x",
             null, new AppProperties.Limits(20, 100, 50, 5, 15, 10), null, null, null,
             new AppProperties.Caps(3, 0, 0), new AppProperties.Alerts("", ""));
-    private final UsageService usage = new UsageService(events, props, users, alerts);
+    private final UsageService usage = new UsageService(events,
+            new com.leadfinder.settings.RuntimeSettings(props, mock(com.leadfinder.settings.AppSettingRepository.class)), users, alerts);
 
     private void user(long id, String role) {
         AppUser u = new AppUser();
@@ -33,7 +34,7 @@ class GlobalCapTest {
     void blocksEveryoneButTheAdminOnceTheDemoCapIsReached() {
         user(1, "USER");
         user(2, "ADMIN");
-        when(events.countByKindAndCreatedAtAfter(eq("SEARCH"), any())).thenReturn(3L);
+        when(events.countByKindAndRefundedFalseAndCreatedAtAfter(eq("SEARCH"), any())).thenReturn(3L);
         when(events.save(any())).thenAnswer(i -> i.getArgument(0));
 
         assertThatThrownBy(() -> usage.consume(1L, UsageService.Kind.SEARCH))
@@ -48,7 +49,7 @@ class GlobalCapTest {
     @Test
     void aCapOfZeroIsOff() {
         user(1, "USER");
-        when(events.countByKindAndCreatedAtAfter(eq("DRAFT"), any())).thenReturn(10_000L);
+        when(events.countByKindAndRefundedFalseAndCreatedAtAfter(eq("DRAFT"), any())).thenReturn(10_000L);
         when(events.save(any())).thenAnswer(i -> i.getArgument(0));
 
         usage.consume(1L, UsageService.Kind.DRAFT);

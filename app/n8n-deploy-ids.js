@@ -64,14 +64,6 @@ const DEPLOY = {
             "name": "Header Auth account 2"
           }
         }
-      },
-      "Telegram Alert": {
-        "credentials": {
-          "telegramApi": {
-            "id": "MF2BrWxZhkIxsVfR",
-            "name": "Telegram account"
-          }
-        }
       }
     }
   },

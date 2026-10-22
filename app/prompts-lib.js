@@ -74,6 +74,18 @@ const validators = {
         }
       }
     }
+    // an email ends with a closing, so every language needs some, and its email examples must end with one of them
+    for (const [lang, l] of Object.entries(languages)) {
+      if (!Array.isArray(l.closings) || l.closings.length < 2 || l.closings.some(c => typeof c !== 'string' || !c.trim())) {
+        errors.push(`draft/config.json: the language ${lang} needs at least two closings`);
+        continue;
+      }
+      for (const situation of ['nosite', 'website', 'other']) {
+        const ex = data.examples[lang] && data.examples[lang].email && data.examples[lang].email[situation];
+        const last = ex && ex.body ? ex.body.trim().split('\n').pop().trim() : '';
+        if (ex && !l.closings.includes(last)) errors.push(`draft/examples.json: the ${lang} email example for ${situation} must end with one of its closings, not "${last}"`);
+      }
+    }
     for (const [ch, c] of Object.entries(channels)) {
       if (!Number.isInteger(c.words) || c.words < 20 || c.words > 300) errors.push(`draft: words for ${ch} must be a whole number from 20 to 300`);
     }

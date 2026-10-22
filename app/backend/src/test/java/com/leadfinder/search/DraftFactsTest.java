@@ -71,7 +71,7 @@ class DraftFactsTest extends IntegrationTestBase {
     void theWholeProfileAndTheLeadFactsReachTheWorkflow() throws Exception {
         AppUser u = profiled("d1@x.tn");
         Long id = leadOf(u);
-        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001")).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001", null)).when(n8n).draft(any());
         draft(u, id);
 
         Map<String, Object> p = lastPayload(1);
@@ -94,7 +94,7 @@ class DraftFactsTest extends IntegrationTestBase {
         AppUser u = profiled("d2@x.tn");
         Long id = leadOf(u);
         String hash = SenderKnowledge.hashOf(users.findById(u.getId()).orElseThrow());
-        doReturn(new N8nClient.Draft("S", "Bonjour", "Portfolio: websites for cafes", hash, "draft-test0001")).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", "Portfolio: websites for cafes", hash, "draft-test0001", null)).when(n8n).draft(any());
         draft(u, id);
         assertEquals("Portfolio: websites for cafes", users.findById(u.getId()).orElseThrow().getLinksKnowledge());
 
@@ -127,7 +127,7 @@ class DraftFactsTest extends IntegrationTestBase {
         u.setDisplayName("Guest");
         users.save(u);
         Long id = leadOf(u);
-        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001")).when(n8n).draft(any());
+        doReturn(new N8nClient.Draft("S", "Bonjour", null, null, "draft-test0001", null)).when(n8n).draft(any());
         draft(u, id);
         assertEquals("", lastPayload(1).get("senderName"));
     }

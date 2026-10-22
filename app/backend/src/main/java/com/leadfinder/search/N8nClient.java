@@ -14,12 +14,13 @@ import java.util.function.Supplier;
 
 @Component
 public class N8nClient {
-    /** promptVersion: the version of the prompt files that wrote the message. linksKnowledge and linksHash: what was read on the sender's own links, to be cached (null when not read this time). */
-    public record Draft(String subject, String body, String linksKnowledge, String linksHash, String promptVersion) {}
+    /** promptVersion: the version of the prompt files that wrote the message. linksKnowledge and linksHash: what was read on the sender's own links, to be cached (null when not read this time). meter: what the AI calls cost (null from an older workflow). */
+    public record Draft(String subject, String body, String linksKnowledge, String linksHash, String promptVersion,
+                        com.leadfinder.usage.ApiMeter meter) {}
 
     /** Contact details found for one business by the on-demand lookup. */
     public record Enrichment(String website, List<String> emails, List<String> phones, List<String> social,
-                             List<String> sources, String note) {}
+                             List<String> sources, String note, com.leadfinder.usage.ApiMeter meter) {}
 
     private final AppProperties props;
     private final RestClient trigger;
@@ -54,8 +55,6 @@ public class N8nClient {
         payload.put("service", job.getService());
         payload.put("sender", job.getSender());
         payload.put("lookupLimit", job.getLookupLimit());
-        AppProperties.Alerts alerts = props.alerts();
-        payload.put("alertChatId", job.isAlertOwner() && alerts != null && alerts.telegramChatId() != null ? alerts.telegramChatId() : "");
         payload.put("callbackUrl", props.publicBaseUrl() + "/api/internal/n8n/results");
 
         retryOnStaleConnection(() -> trigger.post()
