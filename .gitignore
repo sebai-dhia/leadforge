@@ -10,3 +10,6 @@ target/
 n8n-credentials*.json
 draft-compare-*.json
 eval-results/
+backups/
+.claude/
+app/n8n/*.local.workflow.json

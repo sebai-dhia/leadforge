@@ -1,0 +1,41 @@
+# Nightly dump of both Supabase databases (the app and n8n), kept 14 days as a downloadable artifact of the run.
+# Needs the repository secrets BACKUP_APP_DB_URL and BACKUP_N8N_DB_URL (Supabase session pooler URIs, see
+# app/deploy/hf/FREE-HOSTING.md). Restore steps are there too.
+name: Database backup
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-18
+      - name: Dump
+        env:
+          APP_DB: ${{ secrets.BACKUP_APP_DB_URL }}
+          N8N_DB: ${{ secrets.BACKUP_N8N_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir dumps
+          ts="$(date -u +%Y%m%d-%H%M)"
+          # only the public schema: the rest of a Supabase database is Supabase's own
+          pg=/usr/lib/postgresql/18/bin/pg_dump
+          $pg "$APP_DB" -Fc -n public --no-owner --no-privileges -f "dumps/leadfinder-$ts.dump"
+          $pg "$N8N_DB" -Fc -n public --no-owner --no-privileges -f "dumps/n8n-$ts.dump"
+          for f in dumps/*; do
+            [ "$(stat -c %s "$f")" -gt 1000 ] || { echo "$f is too small: the dump failed"; exit 1; }
+          done
+          ls -l dumps
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}
+          path: dumps
+          retention-days: 14

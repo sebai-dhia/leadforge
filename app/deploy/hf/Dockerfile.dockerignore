@@ -1,0 +1,10 @@
+# Local builds only (docker build --build-arg SRC=local -f deploy/hf/Dockerfile .): keep the context small and secret-free
+**/node_modules
+**/target
+**/dist
+**/.angular
+**/.env
+**/.env.prod
+backups
+eval-results
+n8n-credentials*.json
