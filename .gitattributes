@@ -1,2 +1,7 @@
-# Shell scripts run on Linux servers: always LF, even in a Windows checkout
+# Text files are stored and checked out with LF, also in a Windows checkout
+* text=auto eol=lf
+# Shell scripts run on Linux servers: always LF
 *.sh text eol=lf
+# Windows scripts need CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
