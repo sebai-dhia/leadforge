@@ -1,0 +1,22 @@
+# Development on your machine (profile "local": ./mvnw spring-boot:run turns it on, see pom.xml; in an IDE, set the
+# active profile to "local"). The stack from app/docker-compose.yml; app/.env and environment variables still win.
+# Never used in production: there, a missing setting stops the backend instead of falling back to these values.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/leadfinder}
+    username: ${DB_USER:leadfinder}
+    password: ${DB_PASSWORD:leadfinder}
+
+app:
+  jwt-secret: ${JWT_SECRET:dev-only-secret-change-me-please-32chars}
+  cors-origin: ${CORS_ORIGIN:http://localhost:4200}
+  # host.docker.internal when n8n runs in Docker
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8081}
+  n8n:
+    webhook-url: ${N8N_WEBHOOK_URL:http://localhost:5678/webhook/find-leads}
+    draft-url: ${N8N_DRAFT_URL:http://localhost:5678/webhook/draft-message}
+    enrich-url: ${N8N_ENRICH_URL:http://localhost:5678/webhook/enrich-contact}
+    webhook-secret: ${N8N_WEBHOOK_SECRET:dev-webhook-secret}
+    callback-secret: ${N8N_CALLBACK_SECRET:dev-callback-secret}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:605376343630-5bt8rvi8dhvdjvlj2tu3sauv34dou3j2.apps.googleusercontent.com}

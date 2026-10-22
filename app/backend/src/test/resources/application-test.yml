@@ -1,0 +1,51 @@
+# Integration tests run against their own database in the same Postgres as development
+# (docker compose up -d). TestDatabase creates it on first use.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/leadfinder_test
+    username: leadfinder
+    password: leadfinder
+
+app:
+  # starts like the old development secret, so the admin tests can check it is never returned
+  jwt-secret: dev-only-secret-for-tests-32-characters
+  cors-origin: http://localhost:4200
+  public-base-url: http://localhost:8081
+  n8n:
+    webhook-url: http://localhost:1/never
+    draft-url: http://localhost:1/never
+    enrich-url: http://localhost:1/never
+    webhook-secret: test-webhook-secret
+    callback-secret: test-callback-secret
+  google:
+    client-id: test-client.apps.googleusercontent.com
+
+  # Small limits so the tests can reach them quickly
+  limits:
+    searches-per-day: 2
+    drafts-per-day: 2
+    enrich-per-day: 2
+    login-failures: 3
+    login-window-minutes: 15
+    register-per-hour: 3
+
+  demo:
+    enabled: true
+    max-sessions: 5
+    idle-minutes: 15
+    allow-registration: true
+
+  guest:
+    enabled: true
+    searches-per-day: 1
+    drafts-per-day: 1
+    enrich-per-day: 1
+    per-ip-per-hour: 3
+
+  # Never talk to the real Telegram bot from the tests, even when app/.env has a token
+  alerts:
+    telegram-bot-token: ""
+    telegram-chat-id: ""
+  telegram:
+    polling: false
+    reminder-cron: "-"

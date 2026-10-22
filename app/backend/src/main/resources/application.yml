@@ -1,0 +1,85 @@
+# Settings for every environment. Addresses and secrets have no default here: they come from environment variables,
+# and the backend refuses to start when one is missing. On your machine they come from application-local.yml
+# (profile "local", turned on by ./mvnw spring-boot:run). Tests use application-test.yml.
+spring:
+  application:
+    name: backend
+  config:
+    # Local secrets: app/.env (git-ignored) is read when it exists. Real environment variables still win.
+    import: "optional:file:../.env[.properties],optional:file:.env[.properties]"
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+server:
+  port: ${PORT:8081}
+
+app:
+  # Must be at least 32 characters
+  jwt-secret: ${JWT_SECRET}
+  cors-origin: ${CORS_ORIGIN}
+  # URL n8n uses to reach this backend
+  public-base-url: ${PUBLIC_BASE_URL}
+  n8n:
+    webhook-url: ${N8N_WEBHOOK_URL}
+    draft-url: ${N8N_DRAFT_URL}
+    enrich-url: ${N8N_ENRICH_URL}
+    webhook-secret: ${N8N_WEBHOOK_SECRET}
+    callback-secret: ${N8N_CALLBACK_SECRET}
+
+  # Usage limits. Daily limits are per user over a rolling 24 hours.
+  limits:
+    searches-per-day: ${LIMIT_SEARCHES_PER_DAY:20}
+    drafts-per-day: ${LIMIT_DRAFTS_PER_DAY:100}
+    enrich-per-day: ${LIMIT_ENRICH_PER_DAY:50}
+    # After this many failed logins from one address (or one address and email) the address is blocked for the window.
+    login-failures: ${LIMIT_LOGIN_FAILURES:5}
+    login-window-minutes: ${LIMIT_LOGIN_WINDOW_MINUTES:15}
+    register-per-hour: ${LIMIT_REGISTER_PER_HOUR:10}
+
+  # Global daily caps for all users together (rolling 24 hours). 0 turns a cap off. The admin is never blocked.
+  # A search costs about 6 Serper credits for Google Maps plus up to 10 for lookups.
+  caps:
+    searches-per-day: ${CAP_SEARCHES_PER_DAY:60}
+    drafts-per-day: ${CAP_DRAFTS_PER_DAY:300}
+    enrich-per-day: ${CAP_ENRICH_PER_DAY:100}
+
+  # Telegram: the bot that people connect their own chat to (messages when a search finishes), and the admin's chat for
+  # alerts when something breaks. One bot per environment: only one running backend can read a bot's messages
+  # (TELEGRAM_POLLING=false turns reading off, for example on a second machine).
+  alerts:
+    telegram-bot-token: ${TELEGRAM_BOT_TOKEN:}
+    telegram-chat-id: ${TELEGRAM_CHAT_ID:}
+  telegram:
+    polling: ${TELEGRAM_POLLING:true}
+
+  # Admin account: ADMIN_EMAIL and ADMIN_PASSWORD are used only to create it on the first start. After that the admin
+  # changes them in the app. ADMIN_PASSWORD_RESET=true applies them again at startup (when the password is lost).
+  admin:
+    email: ${ADMIN_EMAIL:}
+    name: ${ADMIN_NAME:}
+    password: ${ADMIN_PASSWORD:}
+    password-reset: ${ADMIN_PASSWORD_RESET:false}
+
+  demo:
+    enabled: ${DEMO_ENABLED:true}
+    max-sessions: ${DEMO_MAX_SESSIONS:5}
+    idle-minutes: ${DEMO_IDLE_MINUTES:15}
+    allow-registration: ${DEMO_ALLOW_REGISTRATION:false}
+
+  # One-click guest accounts: deleted after the demo idle time; smaller daily limits than a real account.
+  guest:
+    enabled: ${GUEST_ENABLED:true}
+    searches-per-day: ${GUEST_SEARCHES_PER_DAY:2}
+    drafts-per-day: ${GUEST_DRAFTS_PER_DAY:5}
+    enrich-per-day: ${GUEST_ENRICH_PER_DAY:2}
+    per-ip-per-hour: ${GUEST_PER_IP_PER_HOUR:5}
+
+  # Google sign-in: the client ID is public. Empty turns Google sign-in off.
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}

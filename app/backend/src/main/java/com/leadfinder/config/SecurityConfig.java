@@ -70,11 +70,30 @@ public class SecurityConfig {
 
     @Bean
     SecretKey jwtKey(AppProperties props) {
+        requireSet("JWT_SECRET", props.jwtSecret());
+        requireSet("CORS_ORIGIN", props.corsOrigin());
+        requireSet("PUBLIC_BASE_URL", props.publicBaseUrl());
+        requireSet("N8N_WEBHOOK_URL", props.n8n().webhookUrl());
+        requireSet("N8N_DRAFT_URL", props.n8n().draftUrl());
+        requireSet("N8N_ENRICH_URL", props.n8n().enrichUrl());
+        requireSet("N8N_WEBHOOK_SECRET", props.n8n().webhookSecret());
+        requireSet("N8N_CALLBACK_SECRET", props.n8n().callbackSecret());
         byte[] bytes = props.jwtSecret().getBytes(StandardCharsets.UTF_8);
         if (bytes.length < 32) {
             throw new IllegalStateException("app.jwt-secret must be at least 32 bytes");
         }
         return new SecretKeySpec(bytes, "HmacSHA256");
+    }
+
+    /**
+     * Fails startup when a required setting is missing. application.yml gives no default, so Spring passes the literal
+     * text "${NAME}" through, and that text must never be used as a secret.
+     */
+    private static void requireSet(String variable, String value) {
+        if (value == null || value.isBlank() || value.contains("${")) {
+            throw new IllegalStateException("Set the environment variable " + variable
+                    + " (on your machine, run with the \"local\" profile: ./mvnw spring-boot:run)");
+        }
     }
 
     @Bean

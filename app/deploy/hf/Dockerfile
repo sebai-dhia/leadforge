@@ -1,7 +1,7 @@
 # The whole app in one container for a free Hugging Face Space: Caddy on port 7860 (the web app and /api),
 # the backend and n8n on the container's loopback. The databases are on Supabase.
 # On Hugging Face the source comes from the GitHub repo (GITHUB_REPO variable, GIT_REF set by
-# .github/workflows/deploy-space.yml, GITHUB_TOKEN build secret only for a private repo); the Space holds only this file.
+# .github/workflows/deploy-space.yml, optional GITHUB_TOKEN build secret, only for a private fork); the Space holds only this file.
 # Locally, from app/:  docker build --build-arg SRC=local -f deploy/hf/Dockerfile -t leadforge-hf .
 ARG SRC=clone
 
@@ -9,7 +9,7 @@ FROM alpine:3.22 AS clone
 ARG GITHUB_REPO
 ARG GIT_REF=main
 RUN apk add --no-cache git
-# the token is only needed while the repository is private
+# optional: only a private fork of the repository needs the token
 RUN --mount=type=secret,id=GITHUB_TOKEN,mode=0444,required=false \
     auth=""; if [ -s /run/secrets/GITHUB_TOKEN ]; then auth="x-access-token:$(cat /run/secrets/GITHUB_TOKEN)@"; fi \
     && git clone --quiet "https://${auth}github.com/${GITHUB_REPO}.git" /repo \
@@ -81,6 +81,7 @@ ENV DOMAIN=:7860 \
 # It ends early on the first database query; the classes loaded until then are archived. Optional: no archive, normal start.
 USER root
 RUN cd /app && /opt/java/openjdk/bin/java -Xmx1g -XX:ArchiveClassesAtExit=app.jsa -Dspring.context.exit=onRefresh \
+      -Dspring.profiles.active=local \
       -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:1/none -Dspring.flyway.enabled=false \
       -Dspring.jpa.hibernate.ddl-auto=none -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
       -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false -Dapp.telegram.polling=false \
