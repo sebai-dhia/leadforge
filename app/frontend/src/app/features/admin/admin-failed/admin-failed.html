@@ -1,0 +1,48 @@
+<div class="filters">
+  <div class="seg" role="group" [attr.aria-label]="t('admin.fStatusAria')">
+    @for (s of statuses; track s.id) {
+      <button type="button" class="seg-btn" [class.on]="fstatus() === s.id" [attr.aria-pressed]="fstatus() === s.id" (click)="setStatus(s.id)">{{ t(s.label) }}</button>
+    }
+  </div>
+  @if (failed(); as p) { <span class="total">{{ t('admin.searchesCount', { n: p.total }) }}</span> }
+</div>
+
+<div class="card panel list searches" [attr.aria-busy]="failedLoading()">
+  @for (s of failed()?.items ?? []; track s.id) {
+    <div class="lrow">
+      <span class="st" [class]="'st ' + s.status" aria-hidden="true">
+        @switch (s.status) {
+          @case ('FAILED') { <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg> }
+          @case ('PENDING') { <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> }
+          @default { <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> }
+        }
+      </span>
+      <div class="s-main">
+        <div class="s-title"><strong>{{ t('admin.searchNo', { n: s.id }) }}</strong></div>
+        <div class="s-meta">
+          @if (s.userEmail) { <span>{{ s.userEmail }}</span> } @else { <span class="deleted">{{ t('admin.deletedGuest') }}</span> }
+          @if (s.status === 'DONE' && s.foundCount !== null) { <span>{{ t('admin.found', { n: s.foundCount }) }}</span> }
+        </div>
+        @if (s.status === 'FAILED') {
+          @let w = why(s);
+          <div class="why">
+            <strong>{{ w.title }}</strong>
+            @if (w.hint) { <span class="hint">{{ t(w.hint) }}</span> }
+            @if (w.raw) { <code>{{ w.raw }}</code> }
+          </div>
+        }
+      </div>
+      <div class="s-side">
+        <span class="pill" [class]="'pill ' + s.status">{{ t(statusKey(s.status)) }}</span>
+        <span [attr.title]="i18n.date(s.createdAt, 'long')">{{ i18n.ago(s.createdAt) }}</span>
+      </div>
+    </div>
+  } @empty {
+    @if (!failedLoading()) { <p class="empty-row">{{ t(fstatus() === 'FAILED' ? 'admin.noFailed' : 'admin.noneHere') }}</p> }
+  }
+</div>
+@if (failed(); as p) {
+  @if (p.total > p.size) {
+    <app-admin-pager [page]="p" (pageChange)="loadFailed($event)" />
+  }
+}

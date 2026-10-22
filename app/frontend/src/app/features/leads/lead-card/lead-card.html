@@ -1,0 +1,306 @@
+<article class="card lead" [class.dim]="current().status === 'NOT_INTERESTED' || current().hidden" [class.compact]="collapsible()" [class.open]="showBody()">
+  @if (collapsible()) {
+    <div class="lead-row">
+      <button type="button" class="lead-main" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
+        <span class="ring" [attr.data-level]="fit().level" [style.--p]="(current().score ?? 0) * 10"
+          [title]="t(fit().key) + ' · ' + t('card.scoreTitle', { s: current().score ?? 0 })"><span class="num">{{ current().score }}</span></span>
+        <span class="lead-title">
+          <bdi class="lead-name">{{ current().name }}</bdi>
+          @if (current().niche) { <span class="mute">{{ i18n.niche(current().niche) }} · {{ current().city | area }}@if (current().firstSeenAt) { · <span [title]="i18n.date(current().firstSeenAt, 'long')">{{ t('card.foundAgo', { when: i18n.ago(current().firstSeenAt) }) }}</span> }</span> }
+        </span>
+      </button>
+      <div class="lead-actions">
+        @if (!expanded()) {
+          @if (telHref(); as tel) {
+            <a class="qa" [href]="tel" [attr.aria-label]="t('card.call', { phone: current().phone ?? '' })" [title]="current().phone ?? ''">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+            </a>
+          }
+          @if (waHref(); as wa) {
+            <a class="qa" [href]="wa" target="_blank" rel="noopener" [attr.aria-label]="t('card.whatsapp')" [title]="t('card.whatsapp')">
+              <svg class="wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </a>
+          }
+          @if (mailHref(); as mail) {
+            <a class="qa" [href]="mail" [attr.aria-label]="t('card.email', { email: current().emails[0] })" [title]="current().emails[0]">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
+            </a>
+          }
+          @if (!reach().length) { <span class="reach none">{{ t('reach.none') }}</span> }
+        }
+        @if (!expanded()) { <span class="pill" [attr.data-status]="current().hidden ? 'HIDDEN' : current().status">{{ current().hidden ? t('card.hiddenPill') : t(statusKey()) }}</span> }
+        <ng-container *ngTemplateOutlet="menu" />
+        <button type="button" class="chev-btn" [attr.aria-expanded]="expanded()" [attr.aria-label]="t('card.details', { name: current().name })"
+          (click)="expanded.set(!expanded())"><span class="chev" [class.open]="expanded()" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  } @else {
+    <div class="row">
+      <h3 dir="auto">{{ current().name }}</h3>
+      <span class="head-end">
+        <span class="fit" [attr.data-level]="fit().level" [title]="t('card.scoreTitle', { s: current().score ?? 0 })">
+          {{ t(fit().key) }} <span class="num">{{ current().score }}/10</span>
+        </span>
+        <ng-container *ngTemplateOutlet="menu" />
+      </span>
+    </div>
+    @if (seenBefore()) { <span class="tag">{{ t('card.alreadyIn') }}</span> }
+  }
+
+  @if (showBody()) {
+  @if (current().hidden) {
+    <div class="hidden-note" role="status">
+      <span>{{ t('card.hiddenNote') }}</span>
+      <button type="button" class="ghost" (click)="setHidden(false)" [disabled]="busy()">{{ t('card.restoreLead') }}</button>
+    </div>
+  }
+
+  <p class="mute meta">
+    <bdi>{{ current().address }}</bdi>
+    @if (current().rating) { · {{ t('card.rated', { r: current().rating ?? 0, n: current().reviews ?? 0 }) }} }
+    @if (current().firstSeenAt) { · <span [title]="i18n.date(current().firstSeenAt, 'long')">{{ t('card.foundAgo', { when: i18n.ago(current().firstSeenAt) }) }}</span> }
+  </p>
+
+  @if (why(); as w) {
+    <section class="why" [attr.aria-label]="t('card.whyAria')">
+      @if (w.kind) { <span class="why-kind">{{ w.kind }}</span> }
+      <div class="rtags">
+        @for (tag of w.tags; track tag.text) { <span class="rtag" [attr.data-level]="tag.level">{{ tag.text }}</span> }
+        @if (w.signal) {
+          <span class="rtag ai-tag" [title]="t('leads.signalHint')">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+            <span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ t(signalKey[w.signal]) }}
+          </span>
+        }
+        @if (w.ai && w.ai.length <= 90) {
+          <span class="rtag ai-tag" [title]="t('card.aiNote')">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+            <span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ w.ai }}
+          </span>
+        }
+      </div>
+    </section>
+  }
+
+
+
+
+
+  <div class="contacts" [attr.aria-label]="t('card.contactAria')">
+    @if (telHref(); as tel) {
+      <a class="btn ghost" [href]="tel" (click)="reached()">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+        {{ t('card.call', { phone: current().phone ?? '' }) }}</a>
+    }
+    @if (waHref(); as wa) {
+      <a class="btn ghost" [href]="wa" target="_blank" rel="noopener" (click)="reached()">
+        <svg class="ic wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        {{ t('card.whatsapp') }}</a>
+    }
+    @if (mailHref(); as mail) {
+      <a class="btn ghost" [href]="mail" (click)="reached()">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
+        {{ t('card.email', { email: current().emails[0] }) }}</a>
+    }
+    @if (current().website; as site) {
+      <a class="btn ghost" [href]="site" target="_blank" rel="noopener">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        {{ t('card.website') }}</a>
+    }
+    @for (s of socialLinks(); track s.url) {
+      <a class="btn ghost" [href]="s.url" target="_blank" rel="noopener" [title]="t('card.socialNote')">
+        @if (s.label === 'Instagram') {
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg>
+        } @else {
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+        }
+        {{ s.label }}</a>
+    }
+    @if (canEnrich()) {
+      <button type="button" class="ghost quiet" (click)="enrich()" [disabled]="enriching()">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+        {{ enriching() ? t('card.looking') : (current().contactCheckedAt ? t('card.lookAgain') : t('card.findContact')) }}
+      </button>
+    }
+    @if (!telHref() && !current().emails.length && !current().website && !current().social.length) {
+      <span class="warn">{{ t('card.noneFound') }}</span>
+    }
+  </div>
+  @if (enrichResult(); as r) {
+    <p class="help" role="status">
+      @if (r.found.length) { <strong>{{ t('card.found', { list: foundList(r.found) }) }}</strong> } @else { <strong>{{ t('card.nothingNew') }}</strong> }
+      {{ i18n.note(r.note) }}
+    </p>
+  }
+  @if (enrichError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+
+  <div class="field-row">
+    <span class="sec-label" [id]="'st' + current().id">{{ t('card.statusLabel') }}</span>
+    <div class="seg" role="group" [attr.aria-labelledby]="'st' + current().id">
+      @for (s of statuses; track s.value) {
+        <button type="button" class="seg-btn" [class.on]="current().status === s.value"
+          [attr.aria-pressed]="current().status === s.value" (click)="setStatus(s.value)">{{ t(s.key) }}</button>
+      }
+    </div>
+  <button type="button" class="msg-toggle" [class.primary]="!current().emailBody" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="msg-title">{{ open() ? t('card.hide') : (current().emailBody ? t('card.show') : t('card.write')) }}</span>
+      @if (current().emailBody && current().draftLanguage) {
+      <span class="msg-meta">{{ current().draftLanguage?.toUpperCase() }} · {{ t(current().draftChannel === 'whatsapp' ? 'channel.whatsapp' : 'channel.email') }}</span>
+      }
+      <span class="chev" [class.open]="open()" aria-hidden="true"></span>
+      </button>
+  </div>
+  @if (sentAsk() && current().status === 'NEW') {
+    <div class="sent" role="status">
+      <span>{{ t('card.sentAsk') }}</span>
+      <button type="button" (click)="markContacted()">{{ t('card.markContacted') }}</button>
+      <button type="button" class="ghost" (click)="sentAsk.set(false)">{{ t('card.notNow') }}</button>
+    </div>
+  }
+  @if (statusError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+  @if (actionError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+
+  @if (open()) {
+    <div class="composer">
+      <div class="brief-bar">
+        <button type="button" class="brief-toggle" (click)="toggleSettings()" [attr.aria-expanded]="showSettings()">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>
+          <span class="brief-title">{{ t('card.settings') }}</span>
+          <span class="brief-sum">{{ summary() }}</span>
+          <span class="chev" [class.open]="showSettings()" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="write-btn" [class.ghost]="!!current().emailBody" [class.quiet]="!!current().emailBody" (click)="generate()" [disabled]="generating()" [attr.aria-busy]="generating()">
+          @if (generating()) {
+            <svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>
+          } @else if (current().emailBody) {
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          } @else {
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          }
+          {{ generating() ? t('card.writing') : (current().emailBody ? t('card.writeAgain') : t('card.writeBtn')) }}
+        </button>
+      </div>
+
+      @if (showSettings()) {
+        <div class="brief-panel">
+          <div class="brief-row">
+            <div class="ctl">
+              <span class="ctl-label">{{ t('card.langAria') }}</span>
+              <div class="seg" role="group" [attr.aria-label]="t('card.langAria')">
+                @for (l of languages; track l.value) {
+                  <button type="button" class="seg-btn" [class.on]="language() === l.value" [attr.aria-label]="t(l.nameKey)"
+                    [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.short }}</button>
+                }
+              </div>
+            </div>
+            <div class="ctl">
+              <span class="ctl-label">{{ t('card.channelAria') }}</span>
+              <div class="seg" role="group" [attr.aria-label]="t('card.channelAria')">
+                <button type="button" class="seg-btn" [class.on]="channel() === 'email'"
+                  [attr.aria-pressed]="channel() === 'email'" (click)="channel.set('email')">{{ t('channel.email') }}</button>
+                <button type="button" class="seg-btn" [class.on]="channel() === 'whatsapp'"
+                  [attr.aria-pressed]="channel() === 'whatsapp'" (click)="channel.set('whatsapp')">{{ t('channel.whatsapp') }}</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctl">
+            <span class="ctl-label">{{ t('card.approach') }}</span>
+            <div class="approach-grid" role="radiogroup" [attr.aria-label]="t('card.approach')">
+              @for (o of approaches; track o) {
+                <button type="button" class="approach-opt" role="radio" [attr.aria-checked]="approach() === o" (click)="approach.set(o)">
+                  <strong>{{ t(approachKey[o]) }}</strong>
+                  <span>{{ t(approachHint[o]) }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <label class="ctl note-field">
+          <span class="ctl-label">{{ t('card.noteLabel') }}</span>
+          <input type="text" maxlength="200" [placeholder]="t('card.notePh')" [value]="note()" (input)="note.set($any($event.target).value)">
+          <span class="note-meta"><span>{{ t('card.noteHelp') }}</span><span class="num">{{ note().length }}/200</span></span>
+          </label>
+        </div>
+      }
+
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+
+      @if (generating()) {
+        <div class="skeleton-card" aria-busy="true" [attr.aria-label]="t('card.writingAria')"><span></span><span></span><span></span></div>
+        @if (slowWrite()) { <p class="mute slow-hint" role="status">{{ t('card.writingSlow') }}</p> }
+      } @else if (current().emailBody) {
+        <p class="to">
+          <span class="to-label">{{ t('card.to') }}</span>
+          @if (recipient(); as r) { <bdi class="to-who">{{ r }}</bdi> } @else { <span class="warn">{{ t(channel() === 'email' ? 'card.noEmailTo' : 'card.noPhoneTo') }}</span> }
+        </p>
+        @if (channel() === 'email') {
+          <label [attr.for]="'s' + current().id">{{ t('card.subject') }}
+            <input [id]="'s' + current().id" dir="auto" [ngModel]="subject()" (ngModelChange)="subject.set($event); onEdit()" (blur)="saveNow()">
+          </label>
+        }
+        <label [attr.for]="'b' + current().id">{{ t('card.message') }}
+          <textarea [id]="'b' + current().id" dir="auto" [attr.rows]="rows()" [ngModel]="body()" (ngModelChange)="body.set($event); onEdit()" (blur)="saveNow()"></textarea>
+        </label>
+        <div class="msg-foot">
+          <p class="ai-note"><svg class="ic ai-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span class="sr-only">{{ t('card.aiBadge') }}: </span>{{ t('card.aiNote') }}</p>
+          <span class="save-state" role="status" [attr.data-state]="saveState()">
+            @switch (saveState()) {
+              @case ('saving') { {{ t('card.saving') }} }
+              @case ('saved') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> {{ t('card.saved') }} }
+              @case ('error') { {{ t('card.saveErr') }} }
+            }
+          </span>
+        </div>
+        <div class="actions">
+          <button type="button" class="ghost" (click)="copy()">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+              @if (copied()) { <path d="M20 6 9 17l-5-5"/> } @else { <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/> }
+            </svg>
+            {{ copied() ? t('card.copied') : t('card.copy') }}</button>
+          @if (channel() === 'email' && mailHref()) {
+            <a class="btn" [href]="sendMail()" (click)="reached()">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              {{ t('card.openMail') }}</a>
+          }
+          @if (channel() === 'whatsapp' && waHref()) {
+            <a class="btn" [href]="waHref()" target="_blank" rel="noopener" (click)="reached()">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              {{ t('card.sendWa') }}</a>
+          }
+        </div>
+      } @else {
+        <p class="mute">{{ t('card.chooseHint') }}</p>
+      }
+    </div>
+  }
+  }
+</article>
+
+<ng-template #menu>
+  <span class="menu-wrap" (keydown.escape)="menuOpen.set(false)">
+    <button type="button" class="menu-btn" aria-haspopup="menu" [attr.aria-expanded]="menuOpen()" [attr.aria-label]="t('card.more')"
+      (click)="toggleMenu($event)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+    </button>
+    @if (menuOpen()) {
+      <div class="menu" role="menu">
+        @if (current().emailBody) {
+          <button type="button" role="menuitem" (click)="clearMessage()">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+            {{ t('card.clearMessage') }}</button>
+        }
+        @if (current().hidden) {
+          <button type="button" role="menuitem" (click)="setHidden(false)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ t('card.restoreLead') }}</button>
+        } @else {
+          <button type="button" role="menuitem" class="danger" (click)="setHidden(true)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+            {{ t('card.hideLead') }}</button>
+        }
+      </div>
+    }
+  </span>
+</ng-template>

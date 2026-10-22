@@ -1,0 +1,120 @@
+<div class="page-head">
+  <h1>{{ t('leads.title') }}</h1>
+  <button type="button" class="ghost" (click)="download()" [disabled]="exporting() || total() === 0">
+    {{ exporting() ? t('leads.preparing') : t('leads.export') }}
+  </button>
+</div>
+
+@if (!loaded()) {
+  <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('leads.loadingAria')"><span></span><span></span><span></span></div>
+  <div class="card skeleton-card"><span></span><span></span><span></span></div>
+} @else if (everything() === 0 && hiddenCount() === 0 && !error()) {
+  <div class="empty">
+    <p><strong>{{ t('leads.emptyTitle') }}</strong></p>
+    <p>{{ t('leads.emptyText') }}</p>
+    <a class="btn" routerLink="/searches">{{ t('leads.emptyCta') }}</a>
+  </div>
+} @else {
+  <div class="toolbar">
+    <label class="grow search" for="q">{{ t('leads.searchLabel') }}
+      <span class="field">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input id="q" type="search" [placeholder]="t('leads.searchPh')" autocomplete="off" [ngModel]="q()" (ngModelChange)="onQuery($event)">
+      </span>
+    </label>
+    <label for="search">{{ t('leads.fromSearch') }}
+      <select id="search" [ngModel]="searchId()" (ngModelChange)="setSearch($event)">
+        <option [ngValue]="0">{{ t('leads.allSearches') }}</option>
+        @for (j of jobs(); track j.id) {
+          <option [ngValue]="j.id">{{ t('leads.searchOption', { niche: i18n.niche(j.niche), city: (j.city | area), date: i18n.date(j.createdAt) }) }}</option>
+        }
+      </select>
+    </label>
+    <label for="sort">{{ t('leads.sortBy') }}
+      <select id="sort" [ngModel]="sort()" (ngModelChange)="setSort($event)">
+        <option value="score">{{ t('leads.sortScore') }}</option>
+        <option value="recent">{{ t('leads.sortRecent') }}</option>
+        <option value="oldest">{{ t('leads.sortOldest') }}</option>
+        <option value="name">{{ t('leads.sortName') }}</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="chips" role="group" [attr.aria-label]="t('status.filterAria')">
+    @if (items().length) {
+      <label class="check all-check" [title]="t('leads.selectAll')">
+        <input type="checkbox" [checked]="allSelected()" [indeterminate]="someSelected()" (change)="toggleAll($event)" [attr.aria-label]="t('leads.selectAll')">
+      </label>
+    }
+    @for (f of statusFilters; track f.value) {
+      <button type="button" class="chip" [class.on]="status() === f.value" [attr.aria-pressed]="status() === f.value"
+        (click)="setStatus(f.value)">{{ t(f.key) }} <span class="num">{{ countFor(f.value) }}</span></button>
+    }
+    <span class="sp sel-inline">
+      @if (selectedCount() > 0) {
+        <span class="sr-only" role="status">{{ t('leads.selected', { n: selectedCount() }) }}</span>
+        @if (hidden()) {
+          <button type="button" class="ghost small" (click)="bulk('restore')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> {{ t('leads.bulkRestoreN', { n: selectedCount() }) }}</button>
+          <button type="button" class="danger-btn small" (click)="askDelete()" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg> {{ t('leads.bulkDeleteN', { n: selectedCount() }) }}</button>
+        } @else {
+          <button type="button" class="danger-btn small" (click)="bulk('hide')" [disabled]="working()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg> {{ t('leads.bulkHideN', { n: selectedCount() }) }}</button>
+        }
+      }
+    </span>
+    @if (hiddenCount() > 0 || hidden()) {
+      <button type="button" class="chip hidden-chip" [class.on]="hidden()" [attr.aria-pressed]="hidden()"
+        (click)="toggleHidden()">{{ t('leads.hiddenChip') }} <span class="num">{{ hiddenCount() }}</span></button>
+    }
+    <button type="button" class="chip reach-chip" [class.on]="reachable()" [attr.aria-pressed]="reachable()"
+      (click)="toggleReachable()">{{ t('leads.reachable') }}</button>
+
+  </div>
+
+  @if (error(); as e) { <p class="err" role="alert">{{ t(e) }} <button type="button" class="ghost" (click)="reload()">{{ t('leads.tryAgain') }}</button></p> }
+
+  <p class="mute" role="status">
+    @if (loading()) { {{ t('leads.updating') }} }
+    @else { {{ t(total() === 1 ? 'leads.showingOne' : 'leads.showing', { n: items().length, total: total() }) }} }
+  </p>
+
+  @for (l of items(); track l.id; let i = $index) {
+    <div class="pick-row">
+      <label class="check pick">
+        <input type="checkbox" [checked]="isSelected(l.id)" (click)="trackShift($event)" (change)="pick($event, l.id, i)" [attr.aria-label]="t('leads.select', { name: l.name })">
+      </label>
+      <app-lead-card class="enter" [style.--i]="i % 12" [lead]="l" [defaultLanguage]="lang()" [collapsible]="true" (changed)="onChanged($event)" />
+    </div>
+  } @empty {
+    @if (!loading()) {
+      <div class="empty">
+        <p>{{ t('leads.noMatch') }}</p>
+        <button type="button" class="ghost" (click)="clearFilters()">{{ t('leads.clear') }}</button>
+      </div>
+    }
+  }
+
+  @if (confirming()) {
+    <div class="del-back" (click)="confirming.set(false)">
+      <div class="del-box" role="alertdialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-text" (click)="$event.stopPropagation()" (keydown.escape)="confirming.set(false)">
+        <h2 id="del-title">{{ t(selectedCount() === 1 ? 'leads.delTitleOne' : 'leads.delTitle', { n: selectedCount() }) }}</h2>
+        <p id="del-text">{{ t('leads.delText') }}</p>
+        @if (valuable() > 0) {
+          <p class="warn">{{ t('leads.delValuable', { n: valuable() }) }}</p>
+          <label class="ack"><input type="checkbox" [checked]="ack()" (change)="ack.set(!ack())"> {{ t('leads.delAck') }}</label>
+        }
+        <div class="actions">
+          <button type="button" class="danger-btn" (click)="doDelete()" [disabled]="working() || (valuable() > 0 && !ack())">{{ t(selectedCount() === 1 ? 'leads.delBtnOne' : 'leads.delBtn', { n: selectedCount() }) }}</button>
+          <button type="button" class="ghost" id="del-cancel" (click)="confirming.set(false)">{{ t('leads.cancelSel') }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (items().length < total()) {
+    <div class="more">
+      <button type="button" class="ghost" (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? t('leads.loadingMore') : t('leads.loadMore', { n: remaining() }) }}
+      </button>
+    </div>
+  }
+}

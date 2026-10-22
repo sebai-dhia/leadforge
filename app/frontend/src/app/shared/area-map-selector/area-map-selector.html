@@ -1,0 +1,16 @@
+<div class="map-wrapper">
+  <div class="map-toolbar">
+    <span class="mute">{{ drawing() ? t('map.drawHint') : drawn() ? t('map.drawnHint') : t('map.hint') }}</span>
+    <span class="tools">
+      <button type="button" class="btn ghost small" [class.on]="drawing()" [attr.aria-pressed]="drawing()" (click)="toggleDraw()">{{ t('map.draw') }}</button>
+      @if (drawn()) { <button type="button" class="btn ghost small" (click)="clearDrawn()">{{ t('map.clearDraw') }}</button> }
+      <button type="button" class="btn ghost small" (click)="locateDefault()">{{ t('map.reset') }}</button>
+    </span>
+  </div>
+  <div #mapContainer class="leaflet-container-view" [class.drawing]="drawing()" [attr.aria-label]="t('map.aria')"></div>
+  @if (tooBig()) { <p class="big" role="status">{{ t(drawn() ? 'map.bigDrawn' : 'map.bigView', { w: sizeKm().w, h: sizeKm().h }) }}</p> }
+  <div class="bbox-readout">
+    <span class="label">{{ t('map.coords') }}</span>
+    <code>{{ currentBbox() || t('map.positioning') }}</code>
+  </div>
+</div>

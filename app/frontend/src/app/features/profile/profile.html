@@ -1,0 +1,125 @@
+@if (loading()) {
+  <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('profile.loadingAria')"><span></span><span></span><span></span></div>
+} @else if (profile(); as p) {
+  <section class="identity">
+    <div class="banner"></div>
+    <div class="id-body">
+      <div class="avatar" aria-hidden="true">{{ initials() }}</div>
+      <div class="who">
+        <h1>{{ shownName(p) }}</h1>
+        <p class="headline">{{ p.headline ? i18n.chip(p.headline) : (auth.isGuest() ? '' : t('profile.addHeadline')) }}</p>
+        <div class="facts">
+          @if (p.city) { <span>{{ p.city }}</span> }
+          <span>{{ t('profile.writesIn', { lang: langName(p.language) }) }}</span>
+          @if (auth.isGuest()) { <span class="guest">{{ t('profile.guestAccount') }}</span> }
+        </div>
+      </div>
+      @if (!editing() && !auth.isGuest()) { <button type="button" class="ghost" (click)="startEdit()">{{ t('profile.edit') }}</button> }
+    </div>
+  </section>
+
+  @if (auth.isGuest()) {
+    <div class="notice guest-note" role="note">
+      <span>{{ t('profile.guestLocked') }}</span>
+      <button type="button" (click)="signInToEdit()">{{ t('profile.guestSignIn') }}</button>
+    </div>
+  }
+
+  @if (auth.isGuest()) {
+    <section class="card block spec">
+      <h2>{{ t('spec.my') }}</h2>
+      <p class="mute note">{{ t('spec.sub') }}</p>
+      <app-specialization-picker [selected]="p.specialization ?? null" [disabled]="savingSpec()" (picked)="pickSpec($event)" />
+      @if (specError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+    </section>
+  }
+
+  @if (editing() && !auth.isGuest()) {
+    <form class="card edit" (ngSubmit)="save()">
+      <h2>{{ t('profile.edit') }}</h2>
+      <div class="two">
+        <label>{{ t('profile.fieldName') }} <input name="displayName" required maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
+        <label>{{ t('profile.fieldCity') }} <input name="city" maxlength="120" [placeholder]="t('ob.basedPh')" [(ngModel)]="city"></label>
+      </div>
+      <label>{{ t('profile.fieldHeadline') }}
+        <input name="headline" maxlength="160" [(ngModel)]="headline">
+      </label>
+      <label>{{ t('profile.fieldAbout') }}
+        <textarea name="about" rows="3" maxlength="500" [(ngModel)]="about"
+          placeholder="I design and build simple websites and booking tools for small local businesses."></textarea>
+        <span class="help">{{ t('profile.aboutHelp') }}</span>
+      </label>
+      <fieldset>
+        <legend>{{ t('profile.msgLang') }}</legend>
+        <div class="seg" role="group" [attr.aria-label]="t('profile.msgLang')">
+          @for (l of languages; track l.value) {
+            <button type="button" class="seg-btn" [class.on]="language() === l.value"
+              [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.label }}</button>
+          }
+        </div>
+      </fieldset>
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+      <div class="actions">
+        <button type="submit" [disabled]="saving()">{{ saving() ? t('profile.saving') : t('profile.save') }}</button>
+        <button type="button" class="ghost" (click)="editing.set(false)">{{ t('profile.cancel') }}</button>
+      </div>
+    </form>
+  }
+
+  <div class="cols">
+    <div class="col main-col">
+      <section class="card block">
+        <div class="block-head"><h2>{{ t('profile.offer') }}</h2>@if (!auth.isGuest()) { <a routerLink="/welcome" [queryParams]="{ edit: 1, step: 1 }" class="btn ghost small">{{ t('profile.change') }}</a> }</div>
+        @if (p.services.length) {
+          <div class="chips">@for (s of p.services; track s) { <span class="chip on">{{ i18n.chip(s) }}</span> }</div>
+        } @else if (auth.isGuest()) { <p class="mute">{{ p.offer }}</p> } @else { <p class="mute">{{ t('profile.offerEmpty') }}</p> }
+      </section>
+
+      @if (!auth.isGuest() || p.targets.length) {
+      <section class="card block">
+        <div class="block-head"><h2>{{ t('profile.reach') }}</h2>@if (!auth.isGuest()) { <a routerLink="/welcome" [queryParams]="{ edit: 1, step: 2 }" class="btn ghost small">{{ t('profile.change') }}</a> }</div>
+        @if (p.targets.length) {
+          <div class="chips">@for (tg of p.targets; track tg) { <span class="chip">{{ i18n.chip(tg) }}</span> }</div>
+          <p class="mute note">{{ t('profile.reachNote') }}</p>
+        } @else { <p class="mute">{{ t('profile.reachEmpty') }}</p> }
+      </section>
+      }
+
+      @if (!auth.isGuest() || p.about) {
+      <section class="card block">
+        <h2>{{ t('profile.about') }}</h2>
+        @if (p.about) { <div class="about">{{ p.about }}</div> }
+        @else { <p class="mute">{{ t('profile.aboutEmpty') }}</p> }
+      </section>
+      }
+    </div>
+
+    <div class="col side-col">
+      <app-profile-links [profile]="p" (saved)="profile.set($event)" />
+
+      <app-telegram-card />
+
+      <section class="card block">
+        <h2>{{ t('profile.activity') }}</h2>
+        <div class="stats">
+          @for (s of statList(); track s.key) {
+            <div class="stat"><div class="num big">{{ s.value }}</div><div class="mute">{{ t(s.key) }}</div></div>
+          }
+        </div>
+      </section>
+
+      <section class="card block">
+        <h2>{{ t('menu.allowance') }}</h2>
+        <p class="mute note">{{ t('menu.frees') }}</p>
+        @for (u of usageList(); track u.key) {
+          <div class="use">
+            <div class="use-row"><span>{{ t(u.key) }}</span><span class="mute">{{ t('menu.left', { left: u.left, limit: u.limit }) }}</span></div>
+            <div class="meter" role="img" [attr.aria-label]="t(u.key) + ': ' + t('menu.left', { left: u.left, limit: u.limit })"><div class="fill" [style.width.%]="u.pct"></div></div>
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+} @else {
+  <p class="err" role="alert">{{ error() ? t(error()!) : '' }}</p>
+}

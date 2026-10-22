@@ -1,0 +1,164 @@
+@if (overview(); as o) {
+  @if (alerts().length) {
+    <div class="alerts">
+      @for (a of alerts(); track a.id) {
+        @if (a.go; as go) {
+          <button type="button" class="alert" [class.bad]="a.bad" (click)="navigate.emit(go)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg>
+            <span>{{ a.text }}</span>
+            <span class="alert-go">{{ t(a.goLabel!) }} &rarr;</span>
+          </button>
+        } @else {
+          <div class="alert static" [class.bad]="a.bad" role="alert">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg>
+            <span>{{ a.text }}</span>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <div class="kpis">
+    @for (k of kpis(); track k.id) {
+      <article class="card kpi">
+        <div class="kpi-top">
+          <div class="kpi-num" [class.dim]="k.dim">{{ k.value }}</div>
+          @if (k.tag) { <span class="kpi-tag">{{ k.tag }}</span> }
+        </div>
+        <span class="kpi-label">{{ k.label }}</span>
+        @if (k.stats.length) {
+          <dl class="kpi-stats">
+            @for (st of k.stats; track st.caption) {
+              <div><dt>{{ st.caption }}</dt><dd [class.up]="st.up">{{ st.value }}</dd></div>
+            }
+          </dl>
+        } @else {
+          <p class="kpi-note">{{ k.note }}</p>
+        }
+      </article>
+    }
+  </div>
+  @if (!o.api.tracked) { <p class="mute kpi-hint">{{ t('admin.notTrackedHint') }}</p> }
+
+  <div class="cols">
+    <section class="card panel" aria-labelledby="h-use">
+      <header class="ph"><h2 id="h-use">{{ t('admin.last24') }}</h2><p class="mute">{{ t('admin.last24Sub') }}</p></header>
+      @for (r of usageRows(); track r.kind) {
+        <div class="use" [class.hot]="r.hot">
+          <div class="use-top">
+            <span class="use-label">{{ t(r.label) }}</span>
+            <span class="use-num">{{ r.used }}<small>{{ r.cap > 0 ? t('admin.ofCap', { cap: r.cap }) : t('admin.noCapShort') }}</small></span>
+          </div>
+          <div class="track" aria-hidden="true"><span [style.width.%]="r.pct"></span></div>
+          @if (r.refunded) { <span class="use-note">{{ t('admin.refunded', { n: r.refunded }) }}</span> }
+        </div>
+      }
+      <p class="runline">
+        {{ t('admin.runLine') }}
+        <b>{{ o.searches.last24h }}</b> {{ t('admin.runStarted') }} ·
+        <b [class.bad]="o.searches.failed24h > 0">{{ o.searches.failed24h }}</b> {{ t('admin.runFailed') }} ·
+        <b>{{ o.searches.pending }}</b> {{ t('admin.runRunning') }}
+      </p>
+    </section>
+
+    <section class="card panel" aria-labelledby="h-people">
+      <header class="ph"><h2 id="h-people">{{ t('admin.people') }}</h2><p class="mute">{{ t('admin.peopleSub') }}</p></header>
+      <div class="seg-bar" role="img" [attr.aria-label]="t('admin.people')">
+        @for (r of roleSegments(); track r.role) { <span [attr.data-role]="r.role" [style.flex-grow]="r.n" [attr.title]="t(roleKey(r.role)) + ' ' + r.n"></span> }
+      </div>
+      <ul class="legend">
+        @for (r of roleSegments(); track r.role) {
+          <li [attr.data-role]="r.role"><span class="sw" aria-hidden="true"></span>{{ t(roleKey(r.role)) }}<b>{{ r.n }}</b></li>
+        }
+      </ul>
+    </section>
+  </div>
+
+  <section class="card panel block" aria-labelledby="h-daily">
+    <div class="chart-head">
+      <header class="ph">
+        <h2 id="h-daily">{{ t('admin.daily') }}</h2>
+        <p class="mute">{{ t('admin.dailySub') }}</p>
+      </header>
+      <div class="chart-ctl">
+        <!-- always drawn, so the Chart | Table switch never moves; in the table it is hidden and out of the tab order -->
+        <div class="seg" role="group" [attr.aria-label]="t('admin.kindAria')" [class.ghost-ctl]="view() !== 'chart'" [attr.aria-hidden]="view() !== 'chart'" [attr.inert]="view() !== 'chart' ? '' : null">
+          @for (k of kinds; track k.kind) {
+            <button type="button" class="seg-btn" [class.on]="kind() === k.kind" [attr.aria-pressed]="kind() === k.kind" (click)="kind.set(k.kind)">{{ t(k.label) }}</button>
+          }
+        </div>
+        <div class="seg" role="group" [attr.aria-label]="t('admin.viewAria')">
+          <button type="button" class="seg-btn" [class.on]="view() === 'chart'" [attr.aria-pressed]="view() === 'chart'" (click)="view.set('chart')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>{{ t('admin.viewChart') }}</button>
+          <button type="button" class="seg-btn" [class.on]="view() === 'table'" [attr.aria-pressed]="view() === 'table'" (click)="view.set('table')">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>{{ t('admin.viewTable') }}</button>
+        </div>
+      </div>
+    </div>
+
+    @if (view() === 'chart') {
+      <app-day-bars [days]="chart().days" [tip]="dayTip" [ariaLabel]="t('admin.chartAria', { kind: t(kindLabel()), total: chart().total, max: chart().max })"
+        [todayLabel]="t('admin.today')" />
+      <p class="chart-note mute">{{ t('admin.total30', { n: chart().total, kind: t(kindLabel()).toLowerCase() }) }}@if (chart().max > 0) { {{ t('admin.chartPeak', { day: chart().peakDay, n: chart().max }) }} }</p>
+    } @else {
+      @let tb = table();
+      <div class="dt-bar">
+        <button type="button" class="chip" [class.on]="hideEmpty()" [attr.aria-pressed]="hideEmpty()" (click)="hideEmpty.set(!hideEmpty())">{{ t('admin.hideEmpty') }}</button>
+        @if (hideEmpty() && tb.hidden > 0) { <span>{{ t('admin.emptyHidden', { n: tb.hidden }) }}</span> }
+      </div>
+      <table class="dt">
+        <thead><tr><th scope="col">{{ t('admin.day') }}</th>@for (k of kinds; track k.kind) { <th scope="col">{{ t(k.label) }}</th> }</tr></thead>
+        <tbody>
+          @for (d of tb.rows; track d.day) {
+            <tr [class.is-today]="d.today">
+              <td>{{ d.today ? t('admin.today') : dayLabel(d.day) }}</td>
+              <td [class.zero]="!d.search">{{ d.search }}</td><td [class.zero]="!d.draft">{{ d.draft }}</td><td [class.zero]="!d.enrich">{{ d.enrich }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="mute">{{ t('admin.noUseYet') }}</td></tr>
+          }
+        </tbody>
+        <tfoot><tr><td>{{ t('admin.totalRow') }}</td><td>{{ tb.totals.search }}</td><td>{{ tb.totals.draft }}</td><td>{{ tb.totals.enrich }}</td></tr></tfoot>
+      </table>
+    }
+  </section>
+
+  <section class="card panel block" aria-labelledby="h-api">
+    <div class="chart-head">
+      <header class="ph"><h2 id="h-api">{{ t('admin.apiTitle') }}</h2><p class="mute">{{ t('admin.apiSub') }}</p></header>
+    </div>
+    @if (!o.api.tracked) {
+      <div class="api-empty">
+        <strong>{{ t('admin.apiEmptyTitle') }}</strong>
+        <p class="mute">{{ t('admin.apiEmptyHint') }}</p>
+      </div>
+    } @else {
+      <div class="api-body">
+        <table class="dt api-table">
+          <thead><tr><th scope="col"></th><th scope="col">{{ t('admin.apiColNow') }}</th><th scope="col">{{ t('admin.apiColPrev') }}</th><th scope="col">{{ t('admin.apiCol30') }}</th></tr></thead>
+          <tbody>
+            <tr class="pick" [class.on]="apiMetric() === 'tokens'" (click)="apiMetric.set('tokens')">
+              <td><button type="button" class="pick-btn" [attr.aria-pressed]="apiMetric() === 'tokens'" (click)="apiMetric.set('tokens'); $event.stopPropagation()">{{ t('admin.apiRowGeminiTokens') }}</button><small>{{ t('admin.apiInOut', { input: num(o.api.gemini.inputTokens24h), output: num(o.api.gemini.outputTokens24h) }) }}</small></td>
+              <td class="n">{{ num(o.api.gemini.inputTokens24h + o.api.gemini.outputTokens24h) }}</td><td class="n">{{ num(o.api.gemini.tokensPrev24h) }}</td><td class="n">{{ num(o.api.gemini.inputTokens30d + o.api.gemini.outputTokens30d) }}</td></tr>
+            <tr class="pick" [class.on]="apiMetric() === 'gemini'" (click)="apiMetric.set('gemini')">
+              <td><button type="button" class="pick-btn" [attr.aria-pressed]="apiMetric() === 'gemini'" (click)="apiMetric.set('gemini'); $event.stopPropagation()">{{ t('admin.apiRowGemini') }}</button><small>{{ t('admin.apiNoteGemini') }} · <span [class.badge-warn]="o.api.gemini.silent">{{ answered(o.api.gemini) }}</span></small></td>
+              <td class="n">{{ num(o.api.gemini.calls24h) }}</td><td class="n">{{ num(o.api.gemini.callsPrev24h) }}</td><td class="n">{{ num(o.api.gemini.calls30d) }}</td></tr>
+            <tr class="pick" [class.on]="apiMetric() === 'serper'" (click)="apiMetric.set('serper')">
+              <td><button type="button" class="pick-btn" [attr.aria-pressed]="apiMetric() === 'serper'" (click)="apiMetric.set('serper'); $event.stopPropagation()">{{ t('admin.apiRowSerper') }}</button><small>{{ t('admin.apiNoteSerper') }} · <span [class.badge-warn]="o.api.serper.silent">{{ answered(o.api.serper) }}</span></small></td>
+              <td class="n">{{ num(o.api.serper.calls24h) }}</td><td class="n">{{ num(o.api.serper.callsPrev24h) }}</td><td class="n">{{ num(o.api.serper.calls30d) }}</td></tr>
+            <tr class="pick" [class.on]="apiMetric() === 'geoapify'" (click)="apiMetric.set('geoapify')">
+              <td><button type="button" class="pick-btn" [attr.aria-pressed]="apiMetric() === 'geoapify'" (click)="apiMetric.set('geoapify'); $event.stopPropagation()">{{ t('admin.apiRowGeoapify') }}</button><small>{{ t('admin.apiNoteGeoapify') }} · <span [class.badge-warn]="o.api.geoapify.silent">{{ answered(o.api.geoapify) }}</span></small></td>
+              <td class="n">{{ num(o.api.geoapify.calls24h) }}</td><td class="n">{{ num(o.api.geoapify.callsPrev24h) }}</td><td class="n">{{ num(o.api.geoapify.calls30d) }}</td></tr>
+          </tbody>
+        </table>
+        <div class="api-chart">
+          <h3 class="api-chart-title">{{ t(apiMetricLabel()) }} <span class="mute">· {{ t('admin.apiCol30') }}</span></h3>
+          <app-day-bars [days]="apiChart().days" [tip]="apiTip" [format]="compact" [todayLabel]="t('admin.today')"
+            [ariaLabel]="t('admin.chartAria', { kind: t(apiMetricLabel()), total: num(apiChart().total), max: num(apiChart().max) })" />
+        </div>
+      </div>
+    }
+  </section>
+} @else if (!error()) {
+  <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('admin.loadingAria')"><span></span><span></span><span></span></div>
+}

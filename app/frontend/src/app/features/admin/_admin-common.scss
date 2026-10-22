@@ -1,0 +1,18 @@
+/* shared by the admin tabs */
+.panel { margin: 0; padding: 20px; min-width: 0; }
+.ph { margin-bottom: 14px; }
+.ph h2 { margin: 0 0 2px; font-size: 18px; }
+.ph p { margin: 0; }
+.track { height: 6px; border-radius: 999px; background: var(--skeleton); overflow: hidden; }
+.track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .4s ease; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.filters input { flex: 1 1 260px; max-width: 420px; min-height: 44px; margin: 0; }
+.total { margin-left: auto; font-size: 13.5px; color: var(--mute); }
+.list { padding: 0; overflow: hidden; }
+.lhead, .lrow { display: grid; gap: 8px 20px; align-items: center; padding: 14px 20px; }
+.lhead { padding-block: 10px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line-strong); }
+.lrow { border-bottom: 1px solid var(--line); }
+.lrow:last-child { border-bottom: 0; }
+.lrow:hover { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+.empty-row { text-align: center; color: var(--mute); padding: 36px 20px; }
+@media (prefers-reduced-motion: reduce) { .track > span { transition: none; } }

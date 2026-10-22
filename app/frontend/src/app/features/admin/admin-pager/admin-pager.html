@@ -1,0 +1,5 @@
+<div class="pager">
+  <span class="mute">{{ range() }}</span>
+  <button type="button" class="ghost" [disabled]="page().page === 0" (click)="pageChange.emit(page().page - 1)">{{ t('admin.prev') }}</button>
+  <button type="button" class="ghost" [disabled]="(page().page + 1) * page().size >= page().total" (click)="pageChange.emit(page().page + 1)">{{ t('admin.next') }}</button>
+</div>

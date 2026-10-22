@@ -1,0 +1,33 @@
+@use '../profile-card';
+:host { display: contents; }
+/* the links card: rows that read as a premium list, and an editor that lives in the same card */
+.links { display: flex; flex-direction: column; gap: 8px; }
+.link { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); text-decoration: none; color: var(--ink); min-height: 56px; transition: box-shadow .2s ease, background-color .2s ease; }
+.link:hover { box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.link:hover .out { color: var(--accent); transform: translate(2px, -2px); }
+.badge-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--accent); }
+.badge-ic svg.brand { fill: currentColor; stroke: none; }
+.badge-ic svg, .out { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.text strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.host { color: var(--mute); font: 500 12.5px/1.4 var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.out { flex: none; color: var(--mute); transition: transform .2s ease, color .2s ease; }
+.links-empty { text-align: center; padding: 22px 16px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); }
+.links-empty p { margin: 0 0 6px; } .links-empty button { margin-top: 10px; }
+.link-form { display: grid; gap: 10px; }
+.link-edit { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; padding: 10px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.link-edit.bad { box-shadow: inset 0 0 0 1px var(--warn); }
+.link-edit .fields { display: grid; gap: 8px; }
+.link-edit input { margin: 0; min-height: 42px; background: var(--card); }
+.link-edit input.url { font-family: var(--font-mono); font-size: 13.5px; }
+.row-err { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+.drop { min-height: 40px; width: 40px; padding: 0; border-radius: 50%; background: transparent; border: 0; color: var(--mute); }
+.drop:hover { background: var(--accent-soft); color: var(--warn); filter: none; }
+.drop.hide { visibility: hidden; }
+.link-form .actions { margin-top: 6px; display: flex; gap: 10px; }
+.drop svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.add-row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px; background: transparent; color: var(--ink); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); font-weight: 500; }
+.add-row:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); filter: none; }
+.add-row svg { width: 18px; height: 18px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.add-row .count { margin-left: auto; color: var(--mute); font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .link, .out { transition: none; } .link:hover .out { transform: none; } }

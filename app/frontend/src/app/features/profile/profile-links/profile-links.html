@@ -1,0 +1,61 @@
+@if (!auth.isGuest() || profile().links.length) {
+<section class="card block links-card">
+  <div class="block-head">
+    <h2>{{ t('profile.myLinks') }}</h2>
+    @if (!auth.isGuest() && !editingLinks() && profile().links.length) { <button type="button" class="btn ghost small" (click)="startLinks()">{{ t('profile.linksEdit') }}</button> }
+  </div>
+
+  @if (editingLinks()) {
+    <form class="link-form" (ngSubmit)="saveLinks()" novalidate>
+      @for (l of linkDraft(); track $index) {
+        <div class="link-edit" [class.bad]="linkErrors()[$index]">
+          <div class="fields">
+            <input class="label" [attr.aria-label]="t('profile.linkName', { n: $index + 1 })" maxlength="30" [placeholder]="t('profile.linkLabelPh')"
+              [ngModel]="l.label" (ngModelChange)="setLink($index, 'label', $event)" [ngModelOptions]="{ standalone: true }">
+            <input class="url" inputmode="url" autocapitalize="off" spellcheck="false" [attr.aria-label]="t('profile.linkAddr', { n: $index + 1 })" maxlength="300" [placeholder]="t('profile.linkUrlPh')"
+              [ngModel]="l.url" (ngModelChange)="setLink($index, 'url', $event)" (blur)="tidyLink($index)" [ngModelOptions]="{ standalone: true }">
+          </div>
+          <button type="button" class="drop" [class.hide]="linkDraft().length === 1 && !l.label && !l.url" [attr.aria-label]="t('profile.removeLink')" (click)="removeLink($index)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          @if (linkErrors()[$index]; as e) { <p class="err row-err" role="alert">{{ t(e) }}</p> }
+        </div>
+      }
+      @if (linkDraft().length < MAX_LINKS && linkDraft()[linkDraft().length - 1].url.trim()) {
+        <button type="button" class="add-row" (click)="addLink()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          {{ t('profile.addLink') }}<span class="count num">{{ t('profile.linksCount', { n: linkDraft().length }) }}</span>
+        </button>
+      }
+      @if (linksError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+      <div class="actions">
+        <button type="submit" [disabled]="linksSaving()">{{ linksSaving() ? t('profile.saving') : t('profile.linksSave') }}</button>
+        <button type="button" class="ghost" (click)="cancelLinks()" [disabled]="linksSaving()">{{ t('profile.cancel') }}</button>
+      </div>
+    </form>
+  } @else if (profile().links.length) {
+    <p class="mute note">{{ t('profile.linksHint') }}</p>
+    <div class="links">
+      @for (l of profile().links; track l.url) {
+        <a class="link" [href]="l.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="t('profile.openLink', { label: l.label })">
+          <span class="badge-ic">
+            @if (siteOf(l.url); as site) {
+              <svg class="brand" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="site.path"/></svg>
+            } @else {
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            }
+          </span>
+          <span class="text"><strong>{{ l.label }}</strong><span class="host">{{ linkHost(l.url) }}</span></span>
+          <svg class="out" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+        </a>
+      }
+    </div>
+  } @else {
+    <div class="links-empty">
+      <p><strong>{{ t('profile.linksEmptyTitle') }}</strong></p>
+      <p class="mute">{{ t('profile.linksEmptyText') }}</p>
+      @if (!auth.isGuest()) { <button type="button" (click)="startLinks()">{{ t('profile.addLink') }}</button> }
+    </div>
+  }
+</section>
+}

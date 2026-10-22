@@ -1,0 +1,45 @@
+<button #trigger type="button" class="avatar" [attr.aria-label]="t('menu.open')" aria-haspopup="menu"
+  [attr.aria-expanded]="open()" aria-controls="account-menu" (click)="toggle()">{{ initials() }}</button>
+
+@if (open()) {
+  <div id="account-menu" class="menu" role="menu" tabindex="-1" #menu (keydown)="onKey($event)">
+    <div class="who">
+      <div class="who-avatar" aria-hidden="true">{{ initials() }}</div>
+      <div class="who-text">
+        <strong>{{ displayName() }}</strong>
+        <span class="mute">{{ auth.isGuest() ? t('menu.guest') : auth.email() }}</span>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <div class="section" role="group" [attr.aria-label]="t('menu.allowance')">
+      <div class="section-title">{{ t('menu.allowance') }}</div>
+      @for (u of usageList(); track u.key) {
+        <div class="use">
+          <div class="use-row"><span>{{ t(u.key) }}</span><span class="mute">{{ t('menu.left', { left: u.left, limit: u.limit }) }}</span></div>
+          <div class="meter" role="img" [attr.aria-label]="t(u.key) + ': ' + t('menu.left', { left: u.left, limit: u.limit })"><div class="fill" [style.width.%]="u.pct"></div></div>
+        </div>
+      }
+      <p class="mute tiny">{{ t('menu.frees') }}</p>
+    </div>
+
+    <div class="sep"></div>
+    <a role="menuitem" class="item" routerLink="/profile" (click)="close()">{{ t('menu.profile') }}</a>
+
+    <div class="lang" role="group" [attr.aria-label]="t('menu.language')">
+      <span>{{ t('menu.language') }}</span>
+      <div class="seg">
+        @for (l of langs; track l.value) {
+          <button type="button" class="seg-btn" [class.on]="i18n.lang() === l.value" [attr.aria-pressed]="i18n.lang() === l.value"
+            (click)="i18n.set(l.value)">{{ l.label }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    @if (auth.isGuest()) {
+      <button type="button" role="menuitem" class="item" (click)="keep()">{{ t('menu.keep') }}</button>
+    }
+    <button type="button" role="menuitem" class="item" (click)="logout()">{{ t('menu.logout') }}</button>
+  </div>
+}

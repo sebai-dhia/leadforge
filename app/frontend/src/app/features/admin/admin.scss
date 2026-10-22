@@ -1,0 +1,10 @@
+:host { display: block; }
+.head p { margin: 0 0 18px; max-width: 70ch; }
+.tabs { margin-bottom: 20px; }
+.count { display: inline-block; min-width: 20px; margin-left: 8px; padding: 0 6px; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; background: var(--warn); color: var(--bg); }
+.err { color: var(--warn); }
+.load-err { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .tabs { display: flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; width: 100%; }
+  .tabs .seg-btn { flex: none; }
+}

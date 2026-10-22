@@ -1,0 +1,6 @@
+<svg [attr.width]="size()" [attr.height]="size()" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+  <path d="M10 6h16v30h26L40 52H10Z" fill="currentColor" />
+  <circle cx="46" cy="17" r="7" fill="currentColor" />
+</svg>
+@if (wordmark()) { <span class="word">leadforge</span> }
+@if (wordmark() && showBeta) { <span class="beta" [title]="t('beta.hint')">{{ t('beta.label') }}</span> }

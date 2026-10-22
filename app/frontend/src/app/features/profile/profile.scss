@@ -1,0 +1,32 @@
+@use './profile-card';
+:host { display: block; }
+/* the save row is set apart from the fields above it, so the language choice does not read as part of it */
+form:not(.link-form) > .actions { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.identity { background: var(--card); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; margin-bottom: 24px; }
+.banner { height: 96px; background: linear-gradient(120deg, var(--accent-soft), var(--bg) 70%); }
+.id-body { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 0 32px 28px; margin-top: -44px; }
+.avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 38px; border: 4px solid var(--card); flex: none; }
+.who { flex: 1 1 280px; min-width: 0; padding-top: 48px; }
+.who h1 { font-size: 32px; margin: 0; }
+.headline { margin: 6px 0 0; color: var(--ink); opacity: .85; font-size: 17px; }
+.facts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; color: var(--mute); font-size: 14px; }
+.guest { color: var(--warn); }
+.edit { margin-bottom: 24px; }
+.spec { margin-bottom: 24px; }
+.guest-note { display: flex; gap: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; }
+.edit h2 { margin-top: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .two { grid-template-columns: 1fr; } }
+.cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.main-col { flex: 2 1 540px; } .side-col { flex: 1 1 300px; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); font-size: 15px; font-weight: 500; }
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.about { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; font-size: 15.5px; white-space: pre-line; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.1; color: var(--accent); }
+.use { margin-top: 14px; } .use-row { display: flex; justify-content: space-between; gap: 8px; font-size: 14.5px; margin-bottom: 6px; }
+.meter { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.fill { height: 100%; background: var(--accent); border-radius: 6px; }

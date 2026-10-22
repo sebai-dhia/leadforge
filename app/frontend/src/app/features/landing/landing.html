@@ -1,0 +1,138 @@
+<div class="page">
+  <header class="top">
+    <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="30" /></a>
+    <nav [attr.aria-label]="t('landing.siteNav')">
+      <app-lang-switch />
+      <div class="links">
+        <a href="#how" class="plain">{{ t('landing.how') }}</a>
+        <a href="#why" class="plain">{{ t('landing.why') }}</a>
+        <a routerLink="/login" class="btn ghost signin">{{ t('landing.signin') }}</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" appProgress="leave" [settled]="0">
+    <div class="copy">
+      <span class="seats" role="status">
+        <span class="dot" [class.full]="full()"></span>
+        {{ seatsLabel() }}
+      </span>
+      <h1 [appFitLines]="3" [class.booting]="booting()" [attr.aria-label]="t('landing.title')">
+        @for (w of titleWords(); track $index) { <span class="mask" aria-hidden="true"><span class="word" [style.--w]="$index">{{ w }}</span></span>{{ ' ' }} }
+      </h1>
+      <p class="sub">{{ t('landing.sub') }}</p>
+      <div class="cta">
+        <button type="button" class="btn big" [disabled]="busy() || full()" [attr.aria-expanded]="choosing()" (click)="choose()">
+          {{ t('landing.guest') }}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </button>
+        <a routerLink="/login" class="btn ghost big">{{ t('landing.signin') }}</a>
+      </div>
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+      <p class="fine">{{ t('landing.fine') }}</p>
+    </div>
+    <div class="visual" aria-hidden="true"><app-radar /></div>
+  </section>
+
+  <!-- Business types, drifting past -->
+  <section class="ticker" [attr.aria-label]="t('landing.tickerLabel')">
+    <div class="track">
+      @for (pass of [0, 1]; track pass) {
+        <ul [attr.aria-hidden]="pass === 1">
+          @for (k of niches; track k) { <li>{{ i18n.niche(k) }}</li> }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <!-- How it works: a sticky stage that changes with the step being read -->
+  <section id="how" class="story">
+    <div class="story-head" appReveal>
+      <div class="eyebrow">{{ t('landing.howEyebrow') }}</div>
+      <h2>{{ t('landing.howTitle') }}</h2>
+    </div>
+    <div class="story-grid">
+      <ol class="steps" appProgress="through">
+        <span class="thread" aria-hidden="true"><span class="fill"></span></span>
+        @for (s of steps; track s.n; let i = $index) {
+          <li class="step" [class.on]="active() === i" [appStepWatch]="i" (activated)="active.set($event)">
+            <span class="num">0{{ s.n }}</span>
+            <h3>{{ t(s.title) }}</h3>
+            <p>{{ t(s.text) }}</p>
+          </li>
+        }
+      </ol>
+
+      <div class="stage" aria-hidden="true">
+        <div class="frame">
+          <div class="tabs">
+            @for (s of steps; track s.n; let i = $index) { <span [class.on]="active() === i">{{ t(s.stage) }}</span> }
+          </div>
+
+          <div class="layer l1" [class.on]="active() === 0">
+            @for (o of specs; track o.key; let i = $index) {
+              <div class="opt" [style.--i]="i">
+                <span class="check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>
+                <strong>{{ t(o.title) }}</strong>
+                <span>{{ t(o.text) }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="layer l2" [class.on]="active() === 1">
+            <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <pattern id="g2" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="rgba(255,255,255,.06)" /></pattern>
+              </defs>
+              <rect width="400" height="300" fill="url(#g2)" />
+              <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.3" stroke-linecap="round">
+                <path d="M-10 90 C 120 60, 260 130, 410 80" /><path d="M150 -10 C 170 120, 130 200, 190 310" /><path d="M-10 210 L 410 170" />
+              </g>
+              <rect class="draw" x="70" y="52" width="250" height="176" rx="6" pathLength="100" fill="rgba(61,220,151,.05)" stroke="var(--accent)" stroke-width="1.6" />
+              @for (d of stageDots; track $index) {
+                <circle class="sd" [class.hot]="d[2]" [style.--k]="$index" [attr.cx]="d[0]" [attr.cy]="d[1]" r="4.5" />
+              }
+            </svg>
+            <span class="found">{{ t('landing.radarCount', { n: 14, m: 6 }) }}</span>
+          </div>
+
+          <div class="layer l3" [class.on]="active() === 2"><app-dossier [play]="active() === 2" /></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Principles -->
+  <section id="why" class="trust">
+    <h2 class="trust-title" appReveal>{{ t('landing.whyTitle') }}</h2>
+    <ol class="principles">
+      @for (p of principles; track p.n; let i = $index) {
+        <li [appReveal]="i * 120">
+          <span class="idx">0{{ p.n }}</span>
+          <h3>{{ t(p.title) }}</h3>
+          <p>{{ t(p.text) }}</p>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <!-- Closing: the panel zooms in as it arrives -->
+  <section class="final" appProgress="through">
+    <div class="final-card">
+      <h2>{{ t('landing.finalTitle') }}</h2>
+      <p>{{ t('landing.finalText') }}</p>
+      <button type="button" class="btn big" [disabled]="busy() || full()" (click)="choose()">
+        {{ t('landing.guest') }}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="tryDemo($event)" />
+
+  <footer class="foot">
+    <span>{{ t('landing.footDemo') }}</span>
+    <span>{{ t('landing.mapData') }} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{ t('landing.osm') }}</a></span>
+  </footer>
+</div>

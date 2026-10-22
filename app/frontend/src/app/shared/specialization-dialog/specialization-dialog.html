@@ -1,0 +1,10 @@
+<dialog #dlg aria-labelledby="spec-title" (close)="closed.emit()" (click)="onBackdrop($event)">
+  <div class="panel">
+    <button type="button" class="x" [attr.aria-label]="t('spec.close')" (click)="closed.emit()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <h2 id="spec-title">{{ t('spec.title') }}</h2>
+    <p class="sub">{{ t('spec.sub') }}</p>
+    <app-specialization-picker [disabled]="busy()" (picked)="picked.emit($event)" />
+  </div>
+</dialog>

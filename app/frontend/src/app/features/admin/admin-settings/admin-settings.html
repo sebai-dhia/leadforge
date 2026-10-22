@@ -1,0 +1,150 @@
+@if (loadError()) {
+  <div class="notice load-err" role="alert">
+    <span class="err">{{ t('admin.errLoad') }}</span>
+    <button type="button" class="ghost" (click)="load()">{{ t('admin.retry') }}</button>
+  </div>
+}
+
+@if (config()) {
+  <p class="mute intro">{{ t('admin.setIntro') }}</p>
+
+  <div class="layout">
+    <nav class="rail" [attr.aria-label]="t('admin.setNavAria')">
+      @for (s of sections; track s) {
+        <button type="button" [attr.aria-current]="active() === s" (click)="go(s)">
+          {{ t(navKey(s)) }}
+          @if (dirtyIn(s)) { <span class="dot" aria-hidden="true"></span> }
+        </button>
+      }
+    </nav>
+
+    <div class="content">
+      @for (g of groups; track g) {
+        @if (entriesOf(g).length) {
+          <section class="sheet" [id]="'sec-' + g" [attr.aria-labelledby]="'h-' + g">
+            <header class="sheet-head">
+              <h2 [id]="'h-' + g">{{ t(groupKey(g)) }}</h2>
+              <p class="mute">{{ t(groupHelpKey(g)) }}</p>
+            </header>
+
+            @for (e of entriesOf(g); track e.key) {
+              <div class="row" [class.unsaved]="unsaved(e)">
+                <div class="meta">
+                  <span class="name" [id]="'l-' + e.key">
+                    {{ t(labelKey(e.key)) }}
+                    @if (unsaved(e)) { <span class="tag on">{{ t('admin.setUnsaved') }}</span> }
+                    @else if (e.overridden) { <span class="tag">{{ t('admin.setCustom') }}</span> }
+                  </span>
+                  <p class="help">{{ t(helpKey(e.key)) }}</p>
+                  <span class="def">
+                    {{ t('admin.setEnv', { value: e.type === 'BOOL' ? t(e.defaultValue === 'true' ? 'admin.setOn' : 'admin.setOff') : e.defaultValue }) }}
+                    @if (draft()[e.key] !== e.defaultValue) { <button type="button" class="link" (click)="reset(e)">{{ t('admin.setReset') }}</button> }
+                  </span>
+                </div>
+
+                <div class="ctl">
+                  @if (e.type === 'BOOL') {
+                    <button type="button" class="switch" role="switch" [attr.aria-checked]="draft()[e.key] === 'true'" [attr.aria-labelledby]="'l-' + e.key"
+                      (click)="edit(e.key, draft()[e.key] === 'true' ? 'false' : 'true')"><span class="knob"></span></button>
+                    <span class="unit">{{ t(draft()[e.key] === 'true' ? 'admin.setOn' : 'admin.setOff') }}</span>
+                  } @else {
+                    <span class="stepper" [class.bad]="!valid(e)">
+                      <button type="button" class="step" [disabled]="!canStep(e, -1)" [attr.aria-label]="t('admin.setDec')" (click)="bump(e, -1)">&minus;</button>
+                      <input type="text" inputmode="numeric" autocomplete="off" spellcheck="false" [attr.aria-labelledby]="'l-' + e.key" [attr.aria-invalid]="!valid(e)"
+                        [attr.title]="t('admin.setBetween', { min: e.min, max: e.max })" [value]="draft()[e.key]"
+                        (input)="edit(e.key, $any($event.target).value)" (keydown.arrowup)="bump(e, 1); $event.preventDefault()" (keydown.arrowdown)="bump(e, -1); $event.preventDefault()">
+                      <button type="button" class="step" [disabled]="!canStep(e, 1)" [attr.aria-label]="t('admin.setInc')" (click)="bump(e, 1)">+</button>
+                    </span>
+                    <span class="unit">{{ t(unitKey(e.key)) }}</span>
+                  }
+                </div>
+
+                @if (capKind(e.key); as k) {
+                  @if (usage()?.[k]; as u) {
+                    @let cap = capValue(e);
+                    <div class="meter" [class.hot]="cap > 0 && u.used >= cap * 0.9">
+                      <div class="track" aria-hidden="true"><span [style.width.%]="cap > 0 ? Math.min(100, u.used / cap * 100) : 0"></span></div>
+                      <span class="meter-txt">{{ cap > 0 ? t('admin.meterOf', { used: u.used, cap: cap }) : t('admin.meterNoCap', { used: u.used }) }}</span>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+
+      <section class="sheet" id="sec-telegram" aria-labelledby="h-telegram">
+        <header class="sheet-head">
+          <h2 id="h-telegram">{{ t('admin.tgTitle') }}</h2>
+          <p class="mute">{{ t('admin.tgHelp') }}</p>
+        </header>
+        @if (tg(); as s) {
+          <dl class="tg-facts">
+            <div><dt>{{ t('admin.tgBot') }}</dt>
+              <dd [class.bad]="!s.tokenSet || !s.botName">@if (!s.tokenSet) { {{ t('admin.tgNoToken') }} } @else if (!s.botName) { {{ t('admin.tgBadToken') }} } @else { <strong>&#64;{{ s.botName }}</strong> }</dd></div>
+            <div><dt>{{ t('admin.tgPolling') }}</dt>
+              <dd [class.bad]="s.polling === 'FAILING'">{{ t(pollingKey(s.polling)) }}</dd></div>
+            <div><dt>{{ t('admin.tgYourChat') }}</dt>
+              <dd>{{ s.adminConnected ? t('admin.tgYourChatYes') : s.alertChatSet ? t('admin.tgYourChatAlert') : t('admin.tgYourChatNo') }}</dd></div>
+            <div><dt>{{ t('admin.tgPeople') }}</dt>
+              <dd class="num">{{ s.connectedPeople }}</dd></div>
+          </dl>
+        }
+        <div class="tg-test">
+          <button type="button" (click)="testTelegram()" [disabled]="tgTesting()">{{ tgTesting() ? t('admin.tgSending') : t('admin.tgTest') }}</button>
+          <span class="mute">{{ t('admin.tgTestHelp') }}</span>
+        </div>
+        @if (tgResult(); as r) {
+          <p class="tg-result" [class.ok]="r.result === 'SENT'" [class.bad]="r.result !== 'SENT'" role="status">{{ t(resultKey(r)) }}</p>
+        } @else if (tgTestError()) {
+          <p class="tg-result bad" role="alert">{{ t('admin.tgTestErr') }}</p>
+        }
+      </section>
+
+      <section class="sheet" id="sec-account" aria-labelledby="h-account">
+        <header class="sheet-head">
+          <h2 id="h-account">{{ t('admin.acctTitle') }}</h2>
+          <p class="mute">{{ t('admin.acctHelp') }}</p>
+        </header>
+        <div class="acct">
+          <form (ngSubmit)="changeAccount()" autocomplete="off">
+            <label for="acct-email">{{ t('admin.acctEmail') }}
+              <input id="acct-email" name="email" type="email" autocomplete="username" maxlength="255" required [(ngModel)]="email">
+            </label>
+            <label for="acct-new">{{ t('admin.acctNewPw') }}
+              <input id="acct-new" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="100" [(ngModel)]="newPassword">
+              <span class="note">{{ t('admin.acctNewPwHelp') }}</span>
+            </label>
+            @if (newPassword) {
+              <label for="acct-confirm">{{ t('admin.acctConfirmPw') }}
+                <input id="acct-confirm" name="confirmPassword" type="password" autocomplete="new-password" maxlength="100"
+                  [attr.aria-invalid]="confirmMismatch()" aria-describedby="acct-confirm-note" [(ngModel)]="confirmPassword">
+                @if (confirmMismatch()) { <span class="note warn" id="acct-confirm-note" role="alert">{{ t('admin.acctMismatch') }}</span> }
+              </label>
+            }
+            <label for="acct-current">{{ t('admin.acctCurrentPw') }}
+              <input id="acct-current" name="currentPassword" type="password" autocomplete="current-password" maxlength="100" required [(ngModel)]="currentPassword">
+            </label>
+            <div class="acct-actions">
+              <button type="submit" [disabled]="!currentPassword || !email.trim() || accountBusy() || !accountChanged() || (newPassword.length > 0 && newPassword !== confirmPassword)">{{ t('admin.acctSave') }}</button>
+              @if (accountError(); as m) { <span class="err" role="alert">{{ t(m) }}</span> }
+              @if (accountSaved()) { <span class="ok" role="status">{{ t('admin.acctSaved') }}</span> }
+            </div>
+          </form>
+        </div>
+      </section>
+
+      @if (dirty().length) {
+        <div class="savebar" role="region" [attr.aria-label]="t('admin.setSave')">
+          <span class="count">{{ dirty().length === 1 ? t('admin.setDirtyOne') : t('admin.setDirtyMany', { n: dirty().length }) }}</span>
+          @if (saveError(); as m) { <span class="err" role="alert">{{ t(m) }}</span> }
+          <button type="button" class="ghost" (click)="discard()" [disabled]="saving()">{{ t('admin.setDiscard') }}</button>
+          <button type="button" (click)="save()" [disabled]="!allValid() || saving()">{{ saving() ? t('admin.setSaving') : t('admin.setSave') }}</button>
+        </div>
+      }
+    </div>
+  </div>
+} @else if (!loadError()) {
+  <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('admin.loadingAria')"><span></span><span></span><span></span></div>
+}

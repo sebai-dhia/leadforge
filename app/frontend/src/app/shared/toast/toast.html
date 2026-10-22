@@ -1,0 +1,13 @@
+<div class="toasts" role="region" aria-live="polite" [attr.aria-label]="t('toast.region')">
+  @for (item of toasts.items(); track item.id) {
+    <div class="toast" role="status">
+      <span class="msg">{{ item.message }}</span>
+      @if (item.action; as a) {
+        <button type="button" class="act" (click)="run(item, a.run)">{{ a.label }}</button>
+      }
+      <button type="button" class="x" [attr.aria-label]="t('toast.close')" (click)="toasts.dismiss(item.id)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  }
+</div>

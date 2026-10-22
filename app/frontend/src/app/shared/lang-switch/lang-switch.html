@@ -1,0 +1,7 @@
+<div class="switch" role="group" aria-label="Language" [attr.data-lang]="i18n.lang()">
+  <span class="pills">
+  <span class="thumb" aria-hidden="true"></span>
+  <button type="button" [class.on]="i18n.lang() === 'en'" [attr.aria-pressed]="i18n.lang() === 'en'" (click)="i18n.set('en')" lang="en">EN</button>
+  <button type="button" [class.on]="i18n.lang() === 'fr'" [attr.aria-pressed]="i18n.lang() === 'fr'" (click)="i18n.set('fr')" lang="fr">FR</button>
+  </span>
+</div>

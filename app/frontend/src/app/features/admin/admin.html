@@ -1,0 +1,27 @@
+<div class="head">
+  <h1>{{ t('admin.title') }}</h1>
+  <p class="mute">{{ t('admin.sub') }}</p>
+</div>
+
+<div class="seg tabs" role="group" [attr.aria-label]="t('admin.tabsAria')">
+  @for (x of tabs; track x.id) {
+    <button type="button" class="seg-btn" [class.on]="tab() === x.id" [attr.aria-pressed]="tab() === x.id" (click)="open(x.id)">
+      {{ t(x.label) }}
+      @if (x.id === 'failed' && (overview()?.searches?.failed24h ?? 0) > 0) { <span class="count" [attr.aria-label]="t('admin.failedBadge', { n: overview()!.searches.failed24h })">{{ overview()!.searches.failed24h }}</span> }
+    </button>
+  }
+</div>
+
+@if (error()) {
+  <div class="notice load-err" role="alert">
+    <span class="err">{{ t('admin.errLoad') }}</span>
+    <button type="button" class="ghost" (click)="reload()">{{ t('admin.retry') }}</button>
+  </div>
+}
+
+@switch (tab()) {
+  @case ('overview') { <app-admin-overview [overview]="overview()" [error]="error()" (navigate)="open($event)" /> }
+  @case ('users') { <app-admin-users (loadError)="error.set($event)" /> }
+  @case ('failed') { <app-admin-failed (loadError)="error.set($event)" /> }
+  @case ('settings') { <app-admin-settings /> }
+}

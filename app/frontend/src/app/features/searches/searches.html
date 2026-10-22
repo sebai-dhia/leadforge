@@ -1,0 +1,97 @@
+<h1>{{ t('find.title') }}</h1>
+
+@if (profileReady() === false) {
+  <div class="notice" role="status">
+    {{ t('find.profileNotice') }}
+    <a routerLink="/profile">{{ t('find.completeProfile') }}</a>
+  </div>
+}
+
+<form class="card finder" (ngSubmit)="submit()">
+  <label for="niche" class="big">{{ t('find.nicheLabel') }}
+    <span class="combo">
+      <input id="niche" name="niche" required autocomplete="off" maxlength="120" role="combobox" aria-autocomplete="list"
+        aria-controls="niche-list" [attr.aria-expanded]="comboOpen() && options().length > 0"
+        [attr.aria-activedescendant]="activeOpt() >= 0 ? 'niche-opt-' + activeOpt() : null"
+        [placeholder]="t('find.nichePh')" [(ngModel)]="niche"
+        (focus)="comboOpen.set(true)" (blur)="closeCombo()" (input)="comboOpen.set(true); activeOpt.set(-1)" (keydown)="comboKey($event)">
+      @if (comboOpen() && options().length) {
+        <ul class="combo-list" id="niche-list" role="listbox">
+          @for (n of options(); track n; let i = $index) {
+            <li role="option" [id]="'niche-opt-' + i" [class.on]="i === activeOpt()" [attr.aria-selected]="i === activeOpt()"
+              (mousedown)="$event.preventDefault(); pickNiche(n)" (mousemove)="activeOpt.set(i)">{{ n }}</li>
+          }
+        </ul>
+      }
+    </span>
+  </label>
+
+  @if (suggested().length) {
+    <div class="sugg">
+      <span class="help">{{ t('find.recommended') }}</span>
+      <div class="sugg-chips">
+        @for (s of suggested(); track s) {
+          <button type="button" class="chip" (click)="niche = i18n.niche(s)">{{ i18n.niche(s) }}</button>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="where" role="group" [attr.aria-label]="t('find.areaAria')">
+    <span class="step-label">{{ t('find.areaMethod') }}</span>
+    <div class="tiles">
+      <button type="button" class="tile" [class.on]="mode() === 'city'" [attr.aria-pressed]="mode() === 'city'" (click)="mode.set('city')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l6-3v14M10 20V4l10 4v12M3 20h18M13 11h4M13 15h4"/></svg>
+        {{ t('find.modeCity') }}
+      </button>
+      <button type="button" class="tile" [class.on]="mode() === 'map'" [attr.aria-pressed]="mode() === 'map'" (click)="mode.set('map')">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4L3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg>
+        {{ t('find.modeMap') }}
+      </button>
+    </div>
+  </div>
+
+  @if (mode() === 'city') {
+    <label for="city">{{ t('find.citiesLabel') }}
+      <input id="city" name="city" required maxlength="250" [placeholder]="t('find.citiesPh')" [(ngModel)]="city">
+      <span class="help">{{ t('find.citiesHelp') }}</span>
+    </label>
+  } @else {
+    <app-area-map-selector (bboxChange)="onBboxChange($event)"></app-area-map-selector>
+  }
+
+  <div class="go-row">
+    @if (usage(); as u) {
+      <div class="meter" [class.out]="u.used >= u.limit">
+        <span class="bar"><span [style.width.%]="u.limit ? Math.min(100, (u.limit - u.used) / u.limit * 100) : 0"></span></span>
+        <span class="txt">{{ u.used >= u.limit ? t('find.usedAll', { limit: u.limit }) : t('find.left', { left: u.limit - u.used, limit: u.limit }) }}</span>
+      </div>
+    }
+    <button type="submit" class="go" [disabled]="busy() || profileReady() === false || limitReached() || isFormInvalid()">
+      {{ busy() ? t('find.starting') : t('find.go') }}
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+  <p class="help">{{ t('find.source') }}</p>
+  @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+</form>
+
+<h2>{{ t('find.yourSearches') }}</h2>
+@if (loading()) {
+  <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('find.loadingAria')"><span></span><span></span></div>
+} @else {
+  @for (j of jobs(); track j.id) {
+    <a class="card past" [routerLink]="['/searches', j.id]">
+      <span class="past-main">
+        <strong>{{ i18n.niche(j.niche) }}</strong>
+        <span class="mute">{{ t('find.in') }} {{ j.city | area }} · {{ i18n.date(j.createdAt, 'long') }}</span>
+      </span>
+      @if (j.status === 'DONE' && j.foundCount !== null) {
+        <span class="past-count num">{{ t('find.foundNew', { found: j.foundCount, new: j.newCount ?? 0 }) }}</span>
+      }
+      <span class="state" [attr.data-status]="j.status">{{ t(label(j.status)) }}</span>
+    </a>
+  } @empty {
+    <div class="empty"><p>{{ t('find.none') }}</p></div>
+  }
+}

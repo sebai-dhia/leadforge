@@ -1,0 +1,111 @@
+<div class="wrap">
+  <header class="top">
+    <a routerLink="/" class="brand" aria-label="Leadforge home"><app-logo [size]="28" /></a>
+    <button type="button" class="skip" (click)="skip()">{{ editing ? t('ob.cancel') : t('ob.skip') }}</button>
+  </header>
+
+  <main class="main">
+    <div class="progress" role="img" [attr.aria-label]="t('ob.step', { n: step() })">
+      @for (n of [1, 2, 3]; track n) { <span class="bar" [class.on]="n <= step()"></span> }
+      <span class="count">{{ t('ob.step', { n: step() }) }}</span>
+    </div>
+
+    @if (loading()) {
+      <div class="card skeleton-card" aria-busy="true" [attr.aria-label]="t('sd.loadingAria')"><span></span><span></span><span></span></div>
+    } @else {
+      @switch (step()) {
+        @case (1) {
+          <h1>{{ t('ob.s1Title') }}</h1>
+          <p class="sub">{{ t('ob.s1Sub', { max: maxServices }) }}</p>
+          <div class="chips" role="group" [attr.aria-label]="t('ob.servicesAria')">
+            @for (s of serviceChoices(); track s) {
+              <button type="button" class="pick" [class.on]="services().includes(s)"
+                [attr.aria-pressed]="services().includes(s)" [disabled]="locked(services(), s, maxServices)"
+                (click)="toggle(services, s, maxServices)">
+                <span class="mark" aria-hidden="true">{{ services().includes(s) ? '✓' : '+' }}</span>{{ i18n.chip(s) }}
+              </button>
+            }
+          </div>
+          <form class="other" (ngSubmit)="addOther()">
+            <label>{{ t('ob.other') }}
+              <input name="other" maxlength="40" [placeholder]="t('ob.otherPh')" [(ngModel)]="other">
+            </label>
+            <button type="submit" class="ghost" [disabled]="!other.trim() || services().length >= maxServices">{{ t('ob.add') }}</button>
+          </form>
+          <p class="count-note" role="status">{{ t('ob.selected', { n: services().length, max: maxServices }) }}</p>
+          @for (r of readings(); track r.service) { <p class="reading">{{ r.text }}</p> }
+        }
+        @case (2) {
+          <h1>{{ t('ob.s2Title') }}</h1>
+          <p class="sub">{{ suggestedTargets().length ? t('ob.s2SubFor', { services: serviceList(), max: maxTargets }) : t('ob.s2Sub', { max: maxTargets }) }}</p>
+          @if (suggestedTargets().length) {
+            <p class="group-label">{{ t('ob.bestFit') }}</p>
+          }
+          <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
+            @for (tg of suggestedTargets(); track tg) {
+              <button type="button" class="pick" [class.on]="targets().includes(tg)"
+                [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
+                (click)="toggle(targets, tg, maxTargets)">
+                <span class="mark" aria-hidden="true">{{ targets().includes(tg) ? '✓' : '+' }}</span>{{ i18n.chip(tg) }}
+              </button>
+            }
+          </div>
+          @if (suggestedTargets().length && otherTargets().length) {
+            <p class="group-label">{{ t('ob.otherKinds') }}</p>
+          }
+          <div class="chips" role="group" [attr.aria-label]="t('ob.kindsAria')">
+            @for (tg of visibleOthers(); track tg) {
+              <button type="button" class="pick" [class.on]="targets().includes(tg)"
+                [attr.aria-pressed]="targets().includes(tg)" [disabled]="locked(targets(), tg, maxTargets)"
+                (click)="toggle(targets, tg, maxTargets)">
+                <span class="mark" aria-hidden="true">{{ targets().includes(tg) ? '✓' : '+' }}</span>{{ i18n.chip(tg) }}
+              </button>
+            }
+          </div>
+          @if (otherTargets().length > OTHERS_SHOWN) {
+            <button type="button" class="more-kinds" [attr.aria-expanded]="showAllOthers()" (click)="showAllOthers.set(!showAllOthers())">
+              {{ showAllOthers() ? t('ob.showFewer') : t('ob.showAll', { n: otherTargets().length }) }}
+            </button>
+          }
+          <p class="count-note" role="status">{{ t('ob.selected', { n: targets().length, max: maxTargets }) }}</p>
+        }
+        @default {
+          <h1>{{ t('ob.s3Title') }}</h1>
+          <p class="sub">{{ t('ob.s3Sub') }}</p>
+          @if (previewRows().length) {
+            <section class="preview" [attr.aria-label]="t('ob.pvTitle')">
+              <p class="group-label">{{ t('ob.pvTitle') }}</p>
+              <dl class="rows" aria-live="polite">
+                @for (r of previewRows(); track r.label) {
+                  <div class="prow"><dt>{{ t(r.label) }}</dt><dd>{{ r.value }}</dd></div>
+                }
+              </dl>
+              <p class="note">{{ t('ob.pvNote') }}</p>
+            </section>
+          }
+          <div class="fields">
+            <label>{{ t('ob.yourName') }} <input name="name" maxlength="100" autocomplete="name" [(ngModel)]="displayName"></label>
+            <label>{{ t('ob.based') }} <input name="city" maxlength="120" [placeholder]="t('ob.basedPh')" [(ngModel)]="city"></label>
+            <fieldset>
+              <legend>{{ t('ob.msgLang') }}</legend>
+              <div class="seg" role="group" [attr.aria-label]="t('ob.msgLang')">
+                @for (l of languages; track l.value) {
+                  <button type="button" class="seg-btn" [class.on]="language() === l.value"
+                    [attr.aria-pressed]="language() === l.value" (click)="language.set(l.value)">{{ l.label }}</button>
+                }
+              </div>
+            </fieldset>
+          </div>
+        }
+      }
+
+      @if (error(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+      <div class="nav">
+        @if (step() > 1 && !singleStep) { <button type="button" class="ghost" (click)="step.set(step() - 1)">{{ t('ob.back') }}</button> } @else { <span></span> }
+        <button type="button" class="next" [disabled]="saving() || (step() === 1 && !services().length && !editing)" (click)="next()">
+          {{ last() ? (saving() ? t('ob.saving') : (editing ? t('ob.save') : t('ob.finish'))) : t('ob.continue') }}
+        </button>
+      </div>
+    }
+  </main>
+</div>

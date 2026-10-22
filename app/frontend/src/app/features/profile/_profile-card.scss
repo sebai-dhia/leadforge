@@ -1,0 +1,6 @@
+.block { padding: 26px; margin: 0; }
+.block h2 { margin: 0 0 14px; font-size: 20px; }
+.block-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.block-head h2 { margin: 0; }
+.small { min-height: 40px; padding: 0 14px; font-size: 14px; }
+.note { font-size: 14px; margin: 12px 0 0; } .block h2 + .note { margin: -8px 0 14px; }

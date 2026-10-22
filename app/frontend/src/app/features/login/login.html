@@ -1,0 +1,132 @@
+<div class="shell">
+  <aside class="aside">
+    <a routerLink="/" class="brand" [attr.aria-label]="t('landing.home')"><app-logo [size]="30" /></a>
+
+    <svg class="map" viewBox="0 0 560 420" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+      <defs>
+        <pattern id="lg" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,.05)" /></pattern>
+        <radialGradient id="lglow" cx="50%" cy="55%" r="60%"><stop offset="0" stop-color="rgba(61,220,151,.22)" /><stop offset="1" stop-color="rgba(61,220,151,0)" /></radialGradient>
+      </defs>
+      <rect width="560" height="420" fill="url(#lg)" /><rect width="560" height="420" fill="url(#lglow)" />
+      <g fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1.4" stroke-linecap="round">
+        <path d="M-10 70 L 580 130" /><path d="M-10 150 L 580 90" /><path d="M170 -10 L 215 200" /><path d="M390 -10 L 345 200" />
+      </g>
+      <g fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.6" stroke-linecap="round"><path d="M-10 120 C 140 90, 300 160, 580 110" /></g>
+      @for (d of dots; track $index) {
+        <g [attr.transform]="'translate(' + d[0] + ' ' + d[1] + ')'">
+          <circle class="ping" [class.hot]="d[2]" [style.--k]="$index" r="5" />
+          <circle [attr.r]="d[2] ? 5 : 3.6" [attr.fill]="d[2] ? '#3ddc97' : 'rgba(255,255,255,.5)'" />
+        </g>
+      }
+    </svg>
+
+    <div class="aside-body">
+      <h2>{{ t('login.asideTitle') }}</h2>
+      <p>{{ t('login.asideSub') }}</p>
+      <ul class="points">
+        @for (p of points; track p[0]) {
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
+            <span><strong>{{ t(p[0]) }}</strong> {{ t(p[1]) }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <a routerLink="/" class="brand brand-m" [attr.aria-label]="t('landing.home')"><app-logo [size]="28" /></a>
+      <span class="right">
+        <a routerLink="/" class="back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg>
+          {{ t('login.back') }}
+        </a>
+        <app-lang-switch />
+      </span>
+    </div>
+
+    <div class="center">
+      <div class="box">
+        <h1>{{ t('login.title') }}</h1>
+        <p class="lede">{{ t('login.lede') }}</p>
+
+        @if (linkCredential()) {
+          <section class="link" [attr.aria-label]="t('login.linkTitle')">
+            <div class="link-head">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <div>
+                <strong>{{ t('login.linkTitle') }}</strong>
+                @if (linkEmail()) { <span class="who">{{ linkEmail() }}</span> }
+              </div>
+            </div>
+            <p class="link-text">{{ t('login.linkText') }}</p>
+            <form (ngSubmit)="link()" [attr.aria-label]="t('login.linkTitle')">
+              <label>{{ t('login.password') }}
+                <span class="pw">
+                  <input name="linkpw" [type]="showPw() ? 'text' : 'password'" required minlength="8" autocomplete="current-password" [placeholder]="t('login.passwordHint')" [(ngModel)]="linkPassword">
+                  <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
+                    @if (showPw()) {
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                    } @else {
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </span>
+              </label>
+              @if (linkError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+              <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.linkBusy') : t('login.linkBtn') }}</button>
+              <button type="button" class="quiet-link" (click)="cancelLink()" [disabled]="busy()">{{ t('login.linkCancel') }}</button>
+            </form>
+          </section>
+        } @else {
+          <app-google-sign-in (credential)="google($event)" (failed)="googleUnavailable.set(true)" />
+          @if (googleUnavailable()) { <p class="note">{{ t('login.googleUnavailable') }}</p> }
+          @if (googleError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+
+          <div class="or"><span></span>{{ t('login.orEmail') }}<span></span></div>
+
+          <form (ngSubmit)="submit()" [attr.aria-label]="t('login.formLabel')">
+            <label>{{ t('login.email') }}
+              <input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" [(ngModel)]="email">
+            </label>
+            <label>{{ t('login.password') }}
+              <span class="pw">
+                <input name="password" [type]="showPw() ? 'text' : 'password'" required minlength="8" autocomplete="current-password"
+                  [placeholder]="t('login.passwordHint')" [(ngModel)]="password">
+                <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
+                  @if (showPw()) {
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.1 10.1 0 0 1 12 20c-6.5 0-10-8-10-8a18.5 18.5 0 0 1 5.1-5.9"/><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="m2 2 20 20"/></svg>
+                  } @else {
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8-10-8-10-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </span>
+            </label>
+            @if (error(); as e) {
+              <p class="problem" role="alert">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                {{ t(e) }}
+              </p>
+            }
+            <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.signingIn') : t('login.signin') }}</button>
+          </form>
+        }
+
+        @if (!linkCredential()) {
+          <section class="guest" [attr.aria-label]="t('login.newHere')">
+            <strong class="guest-title">{{ t('login.newHere') }}</strong>
+            <p>{{ t('login.guestFine', { m: idleMinutes() }) }}</p>
+            <button type="button" class="btn ghost guest-btn" [disabled]="busy() || demoFull()" [attr.aria-expanded]="choosing()" (click)="choosing.set(true)">
+              {{ t('login.guest') }}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+            </button>
+            @if (demoFull()) { <p class="problem" role="alert">{{ t('login.full') }}</p> }
+          </section>
+        }
+      </div>
+    </div>
+  </main>
+
+  <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="guest($event)" />
+</div>

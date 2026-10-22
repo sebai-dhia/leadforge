@@ -1,0 +1,21 @@
+<div class="plot" role="list" [attr.aria-label]="ariaLabel()">
+  @if (max() > 0) {
+    <div class="grid-line" style="top: 0" aria-hidden="true"><span class="grid-label">{{ format()(max()) }}</span></div>
+    @if (max() > 3) { <div class="grid-line" style="top: 50%" aria-hidden="true"><span class="grid-label">{{ format()(Math.round(max() / 2)) }}</span></div> }
+  }
+  @for (d of cols(); track $index; let i = $index) {
+    <div class="col" [class.today]="i === cols().length - 1" role="listitem" tabindex="0" [attr.aria-label]="tip()(d.label, d.n)"
+      (mouseenter)="hover.set(i)" (mouseleave)="hover.set(null)" (focus)="hover.set(i)" (blur)="hover.set(null)">
+      @if (d.n > 0) { <span class="bar" [style.height.%]="d.pct"></span> }
+    </div>
+  }
+  @if (hover() !== null) {
+    @let h = cols()[hover()!];
+    <span class="tip" aria-hidden="true" [style.left.%]="(hover()! + .5) / cols().length * 100" [style.transform]="tipShift(hover()!)"
+      [style.bottom]="'calc(' + h.pct + '% + 6px)'">{{ tip()(h.label, h.n) }}</span>
+  }
+</div>
+<div class="axis" aria-hidden="true">
+  <span>{{ cols()[0]?.label }}</span>
+  <span>{{ todayLabel() }}</span>
+</div>

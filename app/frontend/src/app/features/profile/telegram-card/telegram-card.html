@@ -1,0 +1,53 @@
+@if (tg()?.available) {
+<section class="card block tg-card">
+  <div class="block-head">
+    <h2 class="tg-title"><svg class="tg-ic" viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="tgIcon"/></svg>{{ t('tg.title') }}</h2>
+    @if (tg()!.connected) { <span class="tg-state"><span class="dot" aria-hidden="true"></span>{{ t('tg.connected') }}</span> }
+  </div>
+  @if (tg()!.connected) {
+    <div class="tg-row">
+      <span id="tg-notify">{{ t('tg.notifyLabel') }}</span>
+      <button type="button" class="switch" role="switch" aria-labelledby="tg-notify" [attr.aria-checked]="tg()!.notifications"
+        [disabled]="tgBusy()" (click)="toggleTg()"><span class="knob"></span></button>
+    </div>
+    @if (tg()!.notifications) {
+      <label class="tg-hour">
+        <span>{{ t('tg.hourLabel') }}</span>
+        <select [disabled]="tgBusy()" (change)="setTgHour($any($event.target).value)">
+          @for (h of tgHours; track h) { <option [value]="h" [selected]="h === tg()!.hour">{{ hourLabel(h) }}</option> }
+        </select>
+      </label>
+      <p class="mute note">{{ t('tg.notifyHelp') }}</p>
+    } @else {
+      <p class="mute note">{{ t('tg.notifyOff') }}</p>
+    }
+    <div class="tg-actions"><button type="button" class="ghost small" [disabled]="tgBusy()" (click)="disconnectTg()">{{ t('tg.disconnect') }}</button></div>
+  } @else if (tgLink(); as url) {
+    @if (tgQr(); as qr) {
+      <!-- on a computer: Telegram is usually on the phone, so the link is a code for the phone's camera -->
+      <div class="tg-qr">
+        <img [src]="qr" width="176" height="176" [alt]="t('tg.qrAlt')">
+        <p><strong>{{ t('tg.scan') }}</strong></p>
+        <p class="mute">{{ t('tg.scanHint') }}</p>
+        <p class="tg-wait" role="status"><span class="pulse" aria-hidden="true"></span>{{ t('tg.waitingStart') }}</p>
+        <div class="tg-quiet">
+          <a class="tg-act" [href]="url" target="_blank" rel="noopener noreferrer">{{ t('tg.desktopLink') }}</a>
+          <span class="sep" aria-hidden="true">·</span>
+          <button type="button" class="tg-act" (click)="stopWaiting()">{{ t('tg.cancel') }}</button>
+        </div>
+        <p class="tg-expiry">{{ t('tg.expiry') }}</p>
+      </div>
+    } @else {
+      <p class="mute tg-text">{{ t('tg.waiting') }}</p>
+      <div class="tg-actions">
+        <a class="btn small" [href]="url" target="_blank" rel="noopener noreferrer">{{ t('tg.openAgain') }}</a>
+        <button type="button" class="ghost small" (click)="stopWaiting()">{{ t('tg.cancel') }}</button>
+      </div>
+    }
+  } @else {
+    <p class="mute tg-text">{{ t('tg.pitch') }}</p>
+    <button type="button" [disabled]="tgBusy()" (click)="connectTg()">{{ tgBusy() ? t('tg.opening') : t('tg.connect') }}</button>
+  }
+  @if (tgError(); as e) { <p class="err" role="alert">{{ t(e) }}</p> }
+</section>
+}
