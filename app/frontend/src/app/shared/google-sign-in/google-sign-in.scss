@@ -1,8 +1,8 @@
 /*
  * Google's button is an iframe. Its page is light, so on this dark page the browser paints it a solid white box unless the
- * two agree: color-scheme light on the slot makes the iframe transparent. The slot is as tall as the taller "Continue as <name>"
- * version (about 54px), so the text around it does not move when Google swaps the plain button for it.
+ * two agree: color-scheme light on the slot makes the iframe transparent. The slot has a fixed height, the height of the taller "Continue as <name>"
+ * version (about 54px), and clips what Google draws inside it, so the text around it cannot move whatever Google does while it builds the button.
  */
-.slot { display: flex; justify-content: center; align-items: center; min-height: 56px; color-scheme: light; opacity: 0; transition: opacity .2s ease; }
+.slot { display: flex; justify-content: center; align-items: center; height: 56px; overflow: hidden; color-scheme: light; opacity: 0; transition: opacity .2s ease; }
 .slot.ready { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .slot { transition: none; } }
