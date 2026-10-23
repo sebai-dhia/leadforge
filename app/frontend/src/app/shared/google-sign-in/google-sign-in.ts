@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, effect, inject, output, viewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, effect, inject, output, signal, viewChild } from '@angular/core';
 import { I18n } from '../../i18n/i18n';
 
 /** Public OAuth client ID. It is not a secret: it is visible in the page by design. */
@@ -32,9 +32,14 @@ export class GoogleSignIn implements OnInit {
   private readonly lang = inject(I18n).lang;
   private started = false;
   private loadedLang = '';
+  private shownLang = '';
+  /** Google draws a plain button first, then swaps it for "Continue as <name>" once it knows the account. The slot stays hidden until then. */
+  protected readonly ready = signal(false);
+  private revealTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    effect(() => { const l = this.lang(); if (this.started) this.show(l); });
+    // only a change of language reloads the script: the first run of this effect must not repeat what ngOnInit already started
+    effect(() => { const l = this.lang(); if (this.started && l !== this.shownLang) this.show(l); });
   }
 
   ngOnInit() {
@@ -43,6 +48,8 @@ export class GoogleSignIn implements OnInit {
   }
 
   private show(lang: string) {
+    this.shownLang = lang;
+    this.ready.set(false);
     this.load(lang).then(() => this.render(lang)).catch(() => this.failed.emit());
   }
 
@@ -67,5 +74,7 @@ export class GoogleSignIn implements OnInit {
     g.accounts.id.renderButton(this.slot().nativeElement, {
       theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', width, logo_alignment: 'left',
     });
+    clearTimeout(this.revealTimer);
+    this.revealTimer = setTimeout(() => this.ready.set(true), 700);
   }
 }

@@ -1,1 +1,3 @@
-.slot { display: flex; justify-content: center; min-height: 44px; }
+.slot { display: flex; justify-content: center; min-height: 44px; opacity: 0; transition: opacity .2s ease; }
+.slot.ready { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .slot { transition: none; } }
