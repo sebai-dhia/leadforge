@@ -118,6 +118,18 @@ are answered at the next wake-up; Telegram keeps them for 24 hours.
 - [ ] Profile > Telegram connects; Admin > Overview shows Gemini, Serper and Geoapify use
 - [ ] Actions > Database backup > Run workflow ends green
 
+## Restoring a backup
+
+Download and unzip the `db-backup-N` artifact of a "Database backup" run (Actions tab). Stop the backend (Render:
+`leadforge-api` > Settings > Suspend), then restore with the connection strings of the two Supabase projects:
+
+```bash
+pg_restore --clean --if-exists --no-owner --no-privileges -d "BACKUP_APP_DB_URL value" leadfinder-YYYYMMDD-HHMM.dump
+pg_restore --clean --if-exists --no-owner --no-privileges -d "BACKUP_N8N_DB_URL value" n8n-YYYYMMDD-HHMM.dump
+```
+
+and resume the backend. Try a restore into a spare Supabase project once, early, to be sure the backups work.
+
 ## Releasing a new version
 
 Push to `main`. Render rebuilds the backend and Cloudflare rebuilds the web app by themselves. When the workflows

@@ -1,6 +1,6 @@
 # DOMAIN is the public address (for example leadforge.example.com); Caddy gets and renews its HTTPS certificate.
 # For a local test, DOMAIN=localhost gives a certificate Caddy trusts only on this machine.
-# Behind a host that already serves HTTPS (Hugging Face), DOMAIN=:7860 serves plain HTTP on that port.
+# Behind a proxy that already serves HTTPS, DOMAIN=:PORT serves plain HTTP on that port.
 {
 	# keep the visitor's address a proxy in front of Caddy reports (per-address limits on guests and logins)
 	servers {

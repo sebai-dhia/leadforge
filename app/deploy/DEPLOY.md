@@ -1,6 +1,6 @@
 # Deploying Leadforge on a server
 
-No bank card? Use [hf/FREE-HOSTING.md](hf/FREE-HOSTING.md) instead (Hugging Face + Supabase, no card needed).
+No bank card? Use [free/README.md](free/README.md) instead (Cloudflare Pages, Render and Supabase, no card needed).
 
 The whole stack ([docker-compose.prod.yml](../docker-compose.prod.yml)) runs on one Oracle Cloud Always Free ARM server,
 with a free DuckDNS address; Caddy gets the HTTPS certificate by itself. Hosting costs nothing. What can cost money

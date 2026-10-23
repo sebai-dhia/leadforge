@@ -57,7 +57,6 @@ outside services. API keys stay in n8n's encrypted credentials, never in the cod
 |---|---|
 | **On your machine** | [app/README.md](app/README.md): Docker for the databases and n8n, then the backend and the frontend |
 | **Free hosting** | [app/deploy/free/README.md](app/deploy/free/README.md): Cloudflare Pages, Render and Supabase, no bank card |
-| **Hugging Face PRO** | [app/deploy/hf/FREE-HOSTING.md](app/deploy/hf/FREE-HOSTING.md): everything in one Space ($9 a month) |
 | **Your own server** | [app/deploy/DEPLOY.md](app/deploy/DEPLOY.md): Docker Compose, Caddy with HTTPS, nightly backups |
 
 ## 📁 Repository

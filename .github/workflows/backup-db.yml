@@ -1,6 +1,6 @@
 # Nightly dump of both Supabase databases (the app and n8n), kept 14 days as a downloadable artifact of the run.
 # Needs the repository secrets BACKUP_APP_DB_URL and BACKUP_N8N_DB_URL (Supabase session pooler URIs, see
-# app/deploy/hf/FREE-HOSTING.md). Restore steps are there too.
+# app/deploy/free/README.md). Restore steps are there too.
 name: Database backup
 
 on:
