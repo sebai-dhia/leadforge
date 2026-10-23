@@ -1,0 +1,21 @@
+name: Wake the backend
+
+# Render's free plan puts the backend to sleep after 15 minutes without traffic. This calls it once an hour so it is awake
+# for the follow-up reminders and the Telegram bot. It is a backup next to the cron-job.org ping (minute 50); either one is enough.
+# GitHub may start a scheduled run several minutes late. Run it by hand from the Actions tab to test it.
+on:
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the backend
+        # A cold start takes about 90 seconds, so the first call may time out; the retry catches the awake service.
+        # The step never fails, so GitHub does not switch the schedule off.
+        run: |
+          curl -sS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" --max-time 120 --retry 2 --retry-all-errors \
+            https://leadforge-api-abst.onrender.com/api/auth/demo-status || echo "No answer yet; the service is probably waking up."
