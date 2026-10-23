@@ -35,7 +35,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminService {
     static final int DAYS = 30;
-    static final int MIN_PASSWORD = 12;
+    static final int MIN_PASSWORD = 8;
     private static final Duration DAY = Duration.ofHours(24);
 
     public record Seats(int active, int max) {}

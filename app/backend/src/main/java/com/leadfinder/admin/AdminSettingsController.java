@@ -28,7 +28,7 @@ import java.util.Map;
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 public class AdminSettingsController {
-    private static final int MIN_PASSWORD = 12;
+    private static final int MIN_PASSWORD = 8;
 
     public record SettingsView(List<RuntimeSettings.Entry> settings) {}
 

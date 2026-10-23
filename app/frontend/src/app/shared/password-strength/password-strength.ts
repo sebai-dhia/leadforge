@@ -23,5 +23,5 @@ export class PasswordStrength {
   protected readonly word: Record<Strength, I18nKey> = { weak: 'pw.strength.weak', medium: 'pw.strength.medium', strong: 'pw.strength.strong' };
   protected readonly level = computed(() => strengthOf(this.password(), this.email()));
   /** How many characters are still missing to reach the minimum. */
-  protected readonly missing = computed(() => Math.max(0, 12 - [...this.password()].length));
+  protected readonly missing = computed(() => Math.max(0, 8 - [...this.password()].length));
 }

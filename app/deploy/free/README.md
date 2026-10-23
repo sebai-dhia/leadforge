@@ -77,7 +77,7 @@ it reads `render.yaml` and creates both services, asking for the values marked t
 | `N8N_DRAFT_URL` | `<n8n address>/webhook/draft-message` |
 | `N8N_ENRICH_URL` | `<n8n address>/webhook/enrich-contact` |
 | `N8N_WEBHOOK_SECRET`, `N8N_CALLBACK_SECRET` | the two secrets from `app/.env` |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | the admin account (password 12+ characters) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | the admin account (password 8+ characters) |
 | `GOOGLE_CLIENT_ID` | your OAuth client ID |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | a new bot from @BotFather, and your chat id |
 

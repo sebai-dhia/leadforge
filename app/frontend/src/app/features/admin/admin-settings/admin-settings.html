@@ -113,7 +113,7 @@
               <input id="acct-email" name="email" type="email" autocomplete="username" maxlength="255" required [(ngModel)]="email">
             </label>
             <label for="acct-new">{{ t('admin.acctNewPw') }}
-              <input id="acct-new" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="100" [(ngModel)]="newPassword">
+              <input id="acct-new" name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="100" [(ngModel)]="newPassword">
               <span class="note">{{ t('admin.acctNewPwHelp') }}</span>
             </label>
             @if (newPassword) {

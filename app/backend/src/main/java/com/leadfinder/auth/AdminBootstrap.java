@@ -24,7 +24,7 @@ public class AdminBootstrap implements ApplicationRunner {
     static final String DEFAULT_ADMIN_EMAIL = "admin@leadforge.dev";
     /** The password the admin was first created with. Never acceptable outside a developer's machine. */
     private static final String OLD_DEFAULT = "admin1234";
-    static final int MIN_PASSWORD = 12;
+    static final int MIN_PASSWORD = 8;
 
     private final UserRepository users;
     private final PasswordEncoder encoder;
@@ -104,7 +104,7 @@ public class AdminBootstrap implements ApplicationRunner {
 
     private void resetAdmin(AppUser admin, String email, String wantedPassword) {
         if (wantedPassword.isEmpty() && email.isEmpty()) {
-            log.warn("ADMIN_PASSWORD_RESET is on but neither ADMIN_PASSWORD (12+ characters) nor ADMIN_EMAIL is set: nothing was changed.");
+            log.warn("ADMIN_PASSWORD_RESET is on but neither ADMIN_PASSWORD (8+ characters) nor ADMIN_EMAIL is set: nothing was changed.");
             return;
         }
         if (!email.isEmpty() && !email.equals(admin.getEmail())) {
