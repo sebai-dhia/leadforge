@@ -6,11 +6,12 @@ import { AuthService } from '../../core/auth.service';
 import { SpecializationKey, SpecializationPicker } from '../../shared/specialization-picker/specialization-picker';
 import { I18n, I18nKey } from '../../i18n/i18n';
 import { ProfileLinks } from './profile-links/profile-links';
+import { PasswordCard } from './password-card/password-card';
 import { TelegramCard } from './telegram-card/telegram-card';
 
 @Component({
   selector: 'app-profile',
-  imports: [FormsModule, RouterLink, SpecializationPicker, ProfileLinks, TelegramCard],
+  imports: [FormsModule, RouterLink, SpecializationPicker, ProfileLinks, TelegramCard, PasswordCard],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })

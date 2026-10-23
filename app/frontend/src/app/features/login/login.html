@@ -51,7 +51,51 @@
         <h1>{{ t('login.title') }}</h1>
         <p class="lede">{{ t('login.lede') }}</p>
 
-        @if (linkCredential()) {
+        @if (pwTicket()) {
+          <section class="link" [attr.aria-label]="pwReset() ? t('login.pwTitleReset') : t('login.pwTitleCreate')">
+            <div class="link-head">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <div>
+                <strong>{{ pwReset() ? t('login.pwTitleReset') : t('login.pwTitleCreate') }}</strong>
+                @if (pwEmail()) { <span class="who">{{ pwEmail() }}</span> }
+              </div>
+            </div>
+            <p class="link-text">{{ pwReset() ? t('login.pwTextReset') : t('login.pwTextCreate') }}</p>
+            <form (ngSubmit)="choosePassword()" [attr.aria-label]="t('login.pwTitleCreate')">
+              <label>{{ t('login.pwNew') }}
+                <span class="pw">
+                  <input name="newpw" [type]="showPw() ? 'text' : 'password'" required minlength="8" maxlength="100" autocomplete="new-password" [placeholder]="t('login.pwHint')" [(ngModel)]="newPassword">
+                  <button type="button" class="eye" [attr.aria-pressed]="showPw()" [attr.aria-label]="showPw() ? t('login.hidePw') : t('login.showPw')" (click)="showPw.set(!showPw())">
+                    @if (showPw()) {
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                    } @else {
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-8 10-8 10 8 10 8-3.6 8-10 8S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </span>
+                <app-password-strength [password]="newPassword" [email]="pwEmail()" />
+              </label>
+              <label>{{ t('login.pwConfirm') }}
+                <input name="confirmpw" [type]="showPw() ? 'text' : 'password'" required minlength="8" maxlength="100" autocomplete="new-password" [(ngModel)]="confirmPassword">
+              </label>
+              @if (pwError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+              <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.pwBusy') : t('login.pwBtn') }}</button>
+              <button type="button" class="quiet-link" (click)="cancelPassword()" [disabled]="busy()">{{ t('login.linkCancel') }}</button>
+            </form>
+          </section>
+        } @else if (forgot()) {
+          <section class="link" [attr.aria-label]="t('login.forgotTitle')">
+            <div class="link-head">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <div><strong>{{ t('login.forgotTitle') }}</strong></div>
+            </div>
+            <p class="link-text">{{ t('login.forgotText') }}</p>
+            <app-google-sign-in (credential)="googleReset($event)" (failed)="googleUnavailable.set(true)" />
+            @if (googleUnavailable()) { <p class="note">{{ t('login.googleUnavailable') }}</p> }
+            @if (googleError(); as e) { <p class="problem" role="alert">{{ t(e) }}</p> }
+            <button type="button" class="quiet-link" (click)="forgot.set(false); googleError.set(null)" [disabled]="busy()">{{ t('login.forgotBack') }}</button>
+          </section>
+        } @else if (linkCredential()) {
           <section class="link" [attr.aria-label]="t('login.linkTitle')">
             <div class="link-head">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -110,10 +154,11 @@
               </p>
             }
             <button type="submit" class="btn submit" [disabled]="busy()">{{ busy() ? t('login.signingIn') : t('login.signin') }}</button>
+            <button type="button" class="quiet-link" (click)="forgot.set(true); googleError.set(null)">{{ t('login.forgot') }}</button>
           </form>
         }
 
-        @if (!linkCredential()) {
+        @if (!linkCredential() && !pwTicket() && !forgot()) {
           <section class="guest" [attr.aria-label]="t('login.newHere')">
             <strong class="guest-title">{{ t('login.newHere') }}</strong>
             <p>{{ t('login.guestFine', { m: idleMinutes() }) }}</p>

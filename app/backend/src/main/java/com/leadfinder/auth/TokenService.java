@@ -31,7 +31,8 @@ public class TokenService {
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         String token = encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-        if (!u.isAdmin()) {
+        // seats are for guests and shared demo accounts; people with their own account never take one
+        if (!u.isAdmin() && (u.isDemo() || "GUEST".equals(u.getRole()))) {
             sessionRegistry.registerSession(sessionId, u.getId());
         }
         return token;

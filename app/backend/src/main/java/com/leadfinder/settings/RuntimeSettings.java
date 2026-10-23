@@ -42,7 +42,6 @@ public class RuntimeSettings {
             num("guest.perIpPerHour", "guests", 1, 10_000),
             num("demo.maxSessions", "demo", 1, 1_000),
             num("demo.idleMinutes", "demo", 1, 1_440),
-            bool("demo.allowRegistration", "demo"),
             num("limits.loginFailures", "throttle", 1, 1_000),
             num("limits.loginWindowMinutes", "throttle", 1, 1_440),
             num("limits.registerPerHour", "throttle", 1, 10_000));
@@ -92,8 +91,7 @@ public class RuntimeSettings {
     public AppProperties.Demo demo() {
         AppProperties.Demo b = props.demo();
         if (b == null) return null;
-        return new AppProperties.Demo(b.enabled(), i("demo.maxSessions", b.maxSessions()), i("demo.idleMinutes", b.idleMinutes()),
-                bool("demo.allowRegistration", b.allowRegistration()));
+        return new AppProperties.Demo(b.enabled(), i("demo.maxSessions", b.maxSessions()), i("demo.idleMinutes", b.idleMinutes()));
     }
 
     /** Every editable setting that the environment defines, with its current and default value. */
@@ -179,7 +177,6 @@ public class RuntimeSettings {
         if (d != null) {
             m.put("demo.maxSessions", s(d.maxSessions()));
             m.put("demo.idleMinutes", s(d.idleMinutes()));
-            m.put("demo.allowRegistration", s(d.allowRegistration()));
         }
         return m;
     }

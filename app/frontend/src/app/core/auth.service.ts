@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { map, tap } from 'rxjs';
 
 /** The API's address when the web app is hosted apart from it (Cloudflare Pages): written into index.html at build time. */
 const hostedApi = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="leadforge-api"]')?.content ?? '';
@@ -11,12 +11,21 @@ export const API = globalThis.location?.port === '4200' ? 'http://localhost:8081
   : hostedApi.startsWith('https://') ? hostedApi : '/api';
 
 interface TokenResponse {
-  token: string;
+  /** Empty when the answer is a passwordTicket instead of a session. */
+  token: string | null;
   email: string;
-  role?: string;
+  role?: string | null;
   isDemo?: boolean;
   onboarded?: boolean;
+  /** After a Google sign-in that needs a password first: what to send with the chosen password. */
+  passwordTicket?: string | null;
 }
+
+/** What a Google step answers: signed in, or a ticket to exchange for a session once a password is chosen. */
+export interface GoogleStep { ticket: string | null; email: string }
+
+/** Why the server refused a new password. */
+export type PasswordProblem = 'TOO_SHORT' | 'TOO_LONG' | 'SAME_AS_EMAIL' | 'LEAKED';
 
 function read(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -48,22 +57,43 @@ export class AuthService {
 
   markOnboarded() { this.onboarded.set(true); write('lf_onboarded', 'true'); }
 
-  login(email: string, password: string) { return this.auth('login', email, password); }
-  register(email: string, password: string) { return this.auth('register', email, password); }
-  /** Signs in with a Google ID token; the backend verifies it and creates the account on first use. */
+  login(email: string, password: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/login`, { email, password })
+      .pipe(tap(r => this.start(r)));
+  }
+  /**
+   * Signs in with a Google ID token. A known account with a password is signed in; a new one (or one without a
+   * password) gets a ticket, and the account only exists once a password is chosen (choosePassword).
+   */
   google(credential: string) {
-    return this.http.post<TokenResponse>(`${API}/auth/google`, { credential })
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
+    return this.http.post<TokenResponse>(`${API}/auth/google`, { credential }).pipe(map(r => this.googleStep(r)));
+  }
+  /** Forgotten password: a Google sign-in with the account's address gives a ticket for a new password. */
+  googleReset(credential: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/google/reset`, { credential }).pipe(map(r => this.googleStep(r)));
+  }
+  /** Ends the Google step with the chosen password: creates the account or replaces the old password, and signs in. */
+  choosePassword(ticket: string, password: string) {
+    return this.http.post<TokenResponse>(`${API}/auth/google/password`, { ticket, password }).pipe(tap(r => this.start(r)));
+  }
+  /** First step of a password change: is this the current password? Answers 204, or 401 when it is not. */
+  verifyPassword(currentPassword: string) {
+    return this.http.post<void>(`${API}/auth/password/verify`, { currentPassword }, { headers: this.bearer() });
+  }
+  /** A signed-in person changes the password (the current one is needed); the other sessions end, this one continues. */
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.put<TokenResponse>(`${API}/auth/password`, { currentPassword, newPassword }, { headers: this.bearer() })
+      .pipe(tap(r => this.start(r)));
   }
   /** Connects Google to an existing password account: needs the Google token and the account's password. */
   googleLink(credential: string, password: string) {
     return this.http.post<TokenResponse>(`${API}/auth/google/link`, { credential, password })
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
+      .pipe(tap(r => this.start(r)));
   }
   /** One click: a private temporary account that is deleted after a short idle time. */
   guest(specialization?: string) {
     return this.http.post<TokenResponse>(`${API}/auth/guest`, specialization ? { specialization } : {})
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
+      .pipe(tap(r => this.start(r)));
   }
 
   /** True from the moment someone logs out until the next page is on screen, so the page does not change shape in between. */
@@ -80,9 +110,18 @@ export class AuthService {
     this.router.navigateByUrl('/').finally(() => this.leaving.set(false));
   }
 
-  private auth(kind: 'login' | 'register', email: string, password: string) {
-    return this.http.post<TokenResponse>(`${API}/auth/${kind}`, { email, password })
-      .pipe(tap(r => this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true)));
+  /** The interceptor leaves /auth/ calls without the token (sign-in must not send an old one); the two that need it add it here. */
+  private bearer() {
+    return { Authorization: `Bearer ${this.token() ?? ''}` };
+  }
+
+  private googleStep(r: TokenResponse): GoogleStep {
+    if (r.token) this.start(r);
+    return { ticket: r.token ? null : (r.passwordTicket ?? null), email: r.email };
+  }
+
+  private start(r: TokenResponse) {
+    if (r.token) this.set(r.token, r.email, r.role ?? null, r.isDemo ?? false, r.onboarded ?? true);
   }
 
   private set(token: string | null, email: string | null, role: string | null, isDemo: boolean, onboarded = true) {

@@ -115,10 +115,6 @@ class AdminSettingsIntegrationTest extends IntegrationTestBase {
 
         mvc.perform(as(admin, put("/api/admin/settings").content(settingsJson("guest.enabled", "true")))).andExpect(status().isOk());
         mvc.perform(post("/api/auth/guest")).andExpect(status().isOk());
-
-        mvc.perform(as(admin, put("/api/admin/settings").content(settingsJson("demo.allowRegistration", "false")))).andExpect(status().isOk());
-        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"new@example.com\",\"password\":\"password-123456\"}")).andExpect(status().isForbidden());
     }
 
     @Test

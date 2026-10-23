@@ -126,13 +126,17 @@
         {{ t('landing.guest') }}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
       </button>
+      @if (full()) {
+        <p class="final-note" role="status"><span class="dot full"></span>{{ t('landing.seatsFull') }}</p>
+      }
     </div>
   </section>
 
   <app-specialization-dialog [open]="choosing()" [busy]="busy()" (closed)="choosing.set(false)" (picked)="tryDemo($event)" />
 
   <footer class="foot">
-    <span>{{ t('landing.footDemo') }}</span>
-    <span>{{ t('landing.mapData') }} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{ t('landing.osm') }}</a></span>
+    <span>© {{ year }} Leadforge</span>
+    <span>{{ t('footer.builtBy') }} <a href="https://sebai-dhiaeddin.netlify.app" target="_blank" rel="noopener">Dhia</a></span>
+    <span>{{ t('footer.placeData') }} <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> {{ t('footer.and') }} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{ t('footer.osm') }}</a></span>
   </footer>
 </div>

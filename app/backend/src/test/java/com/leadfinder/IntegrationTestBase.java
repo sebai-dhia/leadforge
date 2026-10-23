@@ -35,6 +35,16 @@ public abstract class IntegrationTestBase {
     @MockitoBean
     protected com.leadfinder.telegram.TelegramBot telegram;
 
+    /** The leaked-password check calls an outside service: answers "not leaked" unless a test says otherwise. */
+    @MockitoBean
+    protected com.leadfinder.auth.PwnedPasswords pwned;
+
+    @Autowired
+    protected com.leadfinder.auth.PasswordTickets passwordTickets;
+
+    @Autowired
+    protected org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Autowired
     protected com.leadfinder.auth.ActiveSessionRegistry sessions;
 
@@ -58,6 +68,7 @@ public abstract class IntegrationTestBase {
     void cleanDatabase() {
         sessions.reset();
         throttle.reset();
+        passwordTickets.reset();
         lastSeen.reset();
         jdbc.execute("TRUNCATE usage_events, search_leads, leads, search_jobs, users, app_settings RESTART IDENTITY CASCADE");
         settings.load();
@@ -71,6 +82,14 @@ public abstract class IntegrationTestBase {
             u.setOffer("Custom booking systems for small businesses");
             u.setDisplayName("Test Sender");
         }
+        return users.save(u);
+    }
+
+    /** An account that signs in with this password. */
+    protected AppUser accountWithPassword(String email, String password) {
+        AppUser u = new AppUser();
+        u.setEmail(email);
+        u.setPasswordHash(passwordEncoder.encode(password));
         return users.save(u);
     }
 

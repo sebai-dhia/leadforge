@@ -122,7 +122,28 @@ h1 { font-size: clamp(32px, min(4.8vw, 6.8vh), 66px); line-height: 1; letter-spa
   -webkit-mask: radial-gradient(closest-side, #000, transparent); mask: radial-gradient(closest-side, #000, transparent); }
 .final h2 { font-size: clamp(30px, min(4.8vw, 8vh), 56px); line-height: 1; letter-spacing: -.04em; margin: 0 auto 16px; max-width: 880px; text-wrap: balance; }
 .final p { color: var(--mute); font-size: 19px; margin: 0 0 32px; }
-.foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 28px; padding-bottom: 44px; color: var(--mute); font-size: 14px; }
+/* the button is disabled while every seat is taken: say so, instead of a button that only looks dimmed */
+.final .final-note { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 18px 0 0; font-size: 14px; }
+.final-card .btn:disabled { cursor: not-allowed; }
+/*
+ * Three parts, by width:
+ *   wide:    app | built by (truly centred) | map data
+ *   medium:  app ... built by, then the map data credit on its own line
+ *   narrow:  one centred column
+ */
+.foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 6px 32px; border-top: 1px solid var(--line); padding-top: 28px; padding-bottom: 44px; color: var(--mute); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+.foot > :first-child { justify-self: start; }
+.foot > :last-child { justify-self: end; text-align: right; }
+.foot a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.foot a:hover { text-decoration-thickness: 2px; }
+@media (max-width: 960px) {
+  .foot { grid-template-columns: 1fr auto; }
+  .foot > :last-child { grid-column: 1 / -1; justify-self: start; text-align: left; }
+}
+@media (max-width: 560px) {
+  .foot { grid-template-columns: 1fr; justify-items: center; text-align: center; font-size: 13px; padding-top: 22px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  .foot > :first-child, .foot > :last-child { justify-self: center; text-align: center; }
+}
 
 /* ---------- scroll-triggered reveal: a short fade and a 20px rise, once ---------- */
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s var(--d, 0ms) cubic-bezier(.2, .8, .2, 1), transform .7s var(--d, 0ms) cubic-bezier(.2, .8, .2, 1); }

@@ -16,6 +16,7 @@ import { UserMenu } from './shared/user-menu/user-menu';
 export class App {
   protected readonly auth = inject(AuthService);
   protected readonly t = inject(I18n).t;
+  protected readonly year = new Date().getFullYear();
   private readonly router = inject(Router);
 
   /** The first-run picker is a full page with its own header. */

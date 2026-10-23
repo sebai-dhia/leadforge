@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -88,7 +89,10 @@ public class ActiveSessionRegistry implements SmartInitializingSingleton {
         removeSession(sessionId);
     }
 
-    /** Every token of a removed account is refused (user ids are never reused). */
+    /**
+     * Every token of the account issued until now is refused: a removed account (user ids are never reused), or one
+     * whose password was just changed. Tokens issued afterwards work, so the new session stays signed in.
+     */
     public void revokeUser(Long userId) {
         if (userId == null) return;
         pruneRevoked();
@@ -98,8 +102,15 @@ public class ActiveSessionRegistry implements SmartInitializingSingleton {
     }
 
     public boolean isRevoked(String sessionId, Long userId) {
-        return (sessionId != null && revokedSessions.containsKey(sessionId))
-                || (userId != null && revokedUsers.containsKey(userId));
+        return isRevoked(sessionId, userId, null);
+    }
+
+    /** issuedAt: when the token was issued (null: unknown, refused if the account was revoked at any time). */
+    public boolean isRevoked(String sessionId, Long userId, Instant issuedAt) {
+        if (sessionId != null && revokedSessions.containsKey(sessionId)) return true;
+        Instant revokedAt = userId == null ? null : revokedUsers.get(userId);
+        // a token's issue time has whole seconds: one issued in the second of the revocation counts as newer
+        return revokedAt != null && (issuedAt == null || issuedAt.isBefore(revokedAt.truncatedTo(ChronoUnit.SECONDS)));
     }
 
     private void pruneRevoked() {
@@ -120,7 +131,7 @@ public class ActiveSessionRegistry implements SmartInitializingSingleton {
         }
     }
 
-    /** Frees the seats of a person whose account was removed. */
+    /** Frees the seats of a person whose account was removed, or whose other sessions end after a password change. */
     public void removeUser(Long userId) {
         if (userId == null) return;
         revokeUser(userId);

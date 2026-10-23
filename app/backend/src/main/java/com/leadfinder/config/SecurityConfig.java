@@ -108,7 +108,7 @@ public class SecurityConfig {
         OAuth2TokenValidator<Jwt> notRevoked = jwt -> {
             Long userId = null;
             try { userId = Long.valueOf(jwt.getSubject()); } catch (RuntimeException ignored) { /* not one of ours */ }
-            return sessions.isRevoked(jwt.getClaimAsString("sid"), userId)
+            return sessions.isRevoked(jwt.getClaimAsString("sid"), userId, jwt.getIssuedAt())
                     ? OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Session ended", null))
                     : OAuth2TokenValidatorResult.success();
         };

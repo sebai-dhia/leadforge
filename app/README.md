@@ -35,13 +35,12 @@ The browser never talks to n8n.
 
    The AI model is `gemini-flash-lite-latest`. Use a model alias like this one: a specific retired name can return a misleading `401`.
 3. **Backend**: `cd backend && ./mvnw spring-boot:run` (port 8081, because 8080 is often taken; Flyway creates the tables). It runs with the `local` profile, whose development settings are in `application-local.yml`; in an IDE, set the active profile to `local`.
-4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Use quick demo accounts or register (if enabled), fill in your profile, then search.
+4. **Frontend**: `cd frontend && npm install && npm start` (http://localhost:4200). Continue as a guest, or with Google (you then choose a password), fill in your profile, then search.
 
 
 ## Deploy
 
 - Free, no bank card: [deploy/free/README.md](deploy/free/README.md) (web app on Cloudflare Pages, backend and n8n on Render, Supabase databases).
-- Hugging Face PRO: [deploy/hf/FREE-HOSTING.md](deploy/hf/FREE-HOSTING.md) (everything in one Space).
 - On a Linux server: [deploy/DEPLOY.md](deploy/DEPLOY.md) (`docker-compose.prod.yml`, Caddy with HTTPS, nightly backups).
 
 ## Features & Highlights
@@ -50,7 +49,7 @@ The browser never talks to n8n.
 - **Contact-Aware Fit Scoring**: Transparent 1-10 score that prioritizes reachable businesses (phone, direct email, active social) and caps unreachable leads at 3/10.
 - **Service-to-Niche Taxonomy**: Smart recommendation chips on the search page suggest top target niches cached by SHA-256 hash of the freelancer's profile offer.
 - **Follow-up reminders on Telegram**: each person can connect their own Telegram chat on the Profile page (one-time link to the Leadforge bot, then Start). Once a day, from the hour they choose on the card (whole hours from 5:00 to 22:00, 9:00 by default, in their time zone taken from the browser when they connect), the bot lists the businesses they marked Contacted 3 days ago and a week ago that have not replied yet; then those leads are never reminded again. A day with nothing to follow up sends nothing. Marking a lead Contacted records when (`leads.contacted_at`); marking it Contacted again later starts the count over, and leads contacted before this feature start counting from the migration. One switch turns the reminders off, `/stop` in Telegram disconnects. Guests and shared demo accounts cannot connect.
-- **Demo Guardrails**: Public demo mode with 5 concurrent active session cap, 15-minute idle expiry, one-click demo logins (`demo1@leadforge.dev`, `demo2@leadforge.dev`), read-only demo profiles, and separate admin bypass (`admin@leadforge.dev`).
+- **Guest access**: one click gives a private temporary account (no sign-up), with smaller daily limits. Guests use seats: 5 at a time by default, freed after 15 minutes without activity or on log out, and a new guest is asked to try again later when all are taken. People with an account and the admin never take a seat and are never turned away.
 
 ## Config (environment variables)
 
@@ -64,7 +63,7 @@ The browser never talks to n8n.
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/auth/register`, `/login` | Account and JWT |
+| `POST /api/auth/login`, `/google`, `/google/password`, `/google/reset`, `/google/link`; `PUT /api/auth/password` | Accounts are created only through Google: `/google` answers with a short-lived `passwordTicket` for a new account (or one without a password), and `/google/password` creates it once a password is chosen (8+ characters, not leaked, not the email). `/google/reset` is a forgotten password: a Google sign-in with the account's address gives a ticket for a new one, and the other sessions end. `PUT /password` needs the current password. There is no sign-up with only an email and a password |
 | `GET`, `PUT /api/profile` | Offer, name, language. A search returns 422 until the profile is complete |
 | `GET`, `PUT`, `DELETE /api/profile/telegram`; `POST /api/profile/telegram/link` | The caller's Telegram chat: status (`available`, `connected`, `notifications`), turn the follow-up reminders on or off and choose their hour (`PUT` with `notifications` and/or `hour`, 5 to 22; what is left out stays), disconnect. `/link` (`{lang: en\|fr, timeZone}`, the browser's IANA time zone) returns a one-time `t.me` link valid 15 minutes; pressing Start in Telegram connects the chat. 403 for guests and demo accounts, 503 when the server has no bot |
 | `POST /api/searches`, `GET /api/searches`, `GET /api/searches/{id}` | Searches and their leads. A finished search reports `foundCount` and `newCount` (new to this user) |

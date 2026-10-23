@@ -33,6 +33,8 @@ export interface Profile {
   email: string; offer: string; displayName: string; headline: string; city: string; about: string;
   services: string[]; targets: string[]; links: ProfileLink[]; language: Lang; onboarded: boolean; specialization?: string | null;
   role?: string; isDemo?: boolean;
+  /** False for an account that only signs in with Google: it sets a password through a Google confirmation. */
+  hasPassword?: boolean;
 }
 export type ProfileUpdate = Partial<Pick<Profile, 'offer' | 'displayName' | 'headline' | 'city' | 'about' | 'services' | 'targets' | 'links' | 'language' | 'onboarded'>>;
 export interface ProfileStats { leads: number; drafted: number; contacted: number; replied: number; }

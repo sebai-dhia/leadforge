@@ -33,7 +33,6 @@ app:
     enabled: true
     max-sessions: 5
     idle-minutes: 15
-    allow-registration: true
 
   guest:
     enabled: true

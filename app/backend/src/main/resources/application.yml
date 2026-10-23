@@ -72,7 +72,6 @@ app:
     enabled: ${DEMO_ENABLED:true}
     max-sessions: ${DEMO_MAX_SESSIONS:5}
     idle-minutes: ${DEMO_IDLE_MINUTES:15}
-    allow-registration: ${DEMO_ALLOW_REGISTRATION:false}
 
   # One-click guest accounts: deleted after the demo idle time; smaller daily limits than a real account.
   guest:

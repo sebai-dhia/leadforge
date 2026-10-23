@@ -28,13 +28,13 @@ public class ProfileController {
 
     public record ProfileDto(String email, String offer, String displayName, String headline, String city, String about,
                              List<String> services, List<String> targets, List<Link> links, String language,
-                             boolean onboarded, String role, boolean isDemo, String specialization) {
+                             boolean onboarded, String role, boolean isDemo, String specialization, boolean hasPassword) {
         public static ProfileDto of(AppUser u) {
             return new ProfileDto(u.getEmail(), u.getOffer(), u.getDisplayName(), u.getHeadline(), u.getCity(), u.getAbout(),
                     readList(u.getServices(), new TypeReference<List<String>>() {}),
                     readList(u.getTargets(), new TypeReference<List<String>>() {}),
                     readList(u.getLinks(), new TypeReference<List<Link>>() {}),
-                    u.getLanguage(), u.isOnboarded(), u.getRole(), u.isDemo(), u.getSpecialization());
+                    u.getLanguage(), u.isOnboarded(), u.getRole(), u.isDemo(), u.getSpecialization(), u.getPasswordHash() != null);
         }
     }
 

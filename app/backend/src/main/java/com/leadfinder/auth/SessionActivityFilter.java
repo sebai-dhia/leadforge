@@ -40,8 +40,8 @@ public class SessionActivityFilter extends OncePerRequestFilter {
             logger.debug("Could not record last seen", e); // never fails the request
         }
         String sid = jwt.getClaimAsString("sid");
-        if (sid != null && !"ADMIN".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
-            sessionRegistry.touchSession(sid, true);
-        }
+        // only a guest or a shared demo session holds a seat: a request keeps it from going idle
+        boolean holdsSeat = "GUEST".equals(jwt.getClaimAsString("role")) || Boolean.TRUE.equals(jwt.getClaim("isDemo"));
+        if (sid != null) sessionRegistry.touchSession(sid, holdsSeat);
     }
 }

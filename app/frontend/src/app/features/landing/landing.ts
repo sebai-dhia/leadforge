@@ -30,6 +30,7 @@ export class Landing implements OnInit {
   private readonly router = inject(Router);
   protected readonly i18n = inject(I18n);
   protected readonly t = this.i18n.t;
+  protected readonly year = new Date().getFullYear();
 
   readonly busy = signal(false);
   protected readonly choosing = signal(false);

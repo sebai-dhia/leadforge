@@ -13,7 +13,7 @@ public record AppProperties(String jwtSecret, String corsOrigin, String publicBa
                          int loginFailures, int loginWindowMinutes, int registerPerHour) {}
 
     /** Shared demo accounts: whether they are on, how many visitors may be signed in at once, how long a visitor may be idle, and whether registration is open. */
-    public record Demo(boolean enabled, int maxSessions, int idleMinutes, boolean allowRegistration) {}
+    public record Demo(boolean enabled, int maxSessions, int idleMinutes) {}
 
     /** The OAuth client ID is public (it is also in the web page); no client secret is used. */
     public record Google(String clientId) {}
