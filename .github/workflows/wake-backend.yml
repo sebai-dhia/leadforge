@@ -1,7 +1,8 @@
-name: Wake the backend
+name: Wake the backend and n8n
 
-# Render's free plan puts the backend to sleep after 15 minutes without traffic. This calls it once an hour so it is awake
-# for the follow-up reminders and the Telegram bot. It is a backup next to the cron-job.org ping (minute 50); either one is enough.
+# Render's free plan puts both services to sleep after 15 minutes without traffic. This calls them once an hour so the backend is
+# awake for the follow-up reminders and the Telegram bot, and n8n is already running when someone searches. It is a backup next to
+# the cron-job.org ping of the backend (minute 50); either one is enough.
 # GitHub may start a scheduled run several minutes late. Run it by hand from the Actions tab to test it.
 on:
   schedule:
@@ -11,11 +12,15 @@ on:
 jobs:
   wake:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
+      # A cold start takes 90 to 140 seconds, so the first call may time out; the retry catches the awake service.
+      # Neither step fails, so GitHub does not switch the schedule off.
       - name: Call the backend
-        # A cold start takes about 90 seconds, so the first call may time out; the retry catches the awake service.
-        # The step never fails, so GitHub does not switch the schedule off.
         run: |
-          curl -sS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" --max-time 120 --retry 2 --retry-all-errors \
-            https://leadforge-api-abst.onrender.com/api/auth/demo-status || echo "No answer yet; the service is probably waking up."
+          curl -sS -o /dev/null -w "backend: HTTP %{http_code} in %{time_total}s\n" --max-time 150 --retry 2 --retry-all-errors \
+            https://leadforge-api-abst.onrender.com/api/auth/demo-status || echo "backend: no answer yet, it is probably waking up."
+      - name: Call n8n
+        run: |
+          curl -sS -o /dev/null -w "n8n: HTTP %{http_code} in %{time_total}s\n" --max-time 150 --retry 2 --retry-all-errors \
+            https://leadforge-n8n-mm6m.onrender.com/healthz || echo "n8n: no answer yet, it is probably waking up."
