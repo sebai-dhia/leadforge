@@ -19,6 +19,8 @@ services:
         value: -Xmx256m -Xss512k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
       - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
         value: "3"
+      - key: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+        value: "60000"
       - key: SERVER_FORWARD_HEADERS_STRATEGY
         value: native
       # a new Supabase project already has a function in the public schema (rls_auto_enable): let Flyway start
