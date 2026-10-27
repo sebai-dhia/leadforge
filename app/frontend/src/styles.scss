@@ -196,7 +196,7 @@ select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .ring[data-level="high"] { --rc: var(--accent); }
 .ring[data-level="mid"] { --rc: var(--warn); }
 .lead-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.qa { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--ink); transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
+.qa { display: inline-grid; place-items: center; width: 38px; height: 38px; flex: none; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--ink); transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
 .qa:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .qa svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .reach.none { font-size: 12.5px; color: var(--warn); }
@@ -204,7 +204,7 @@ select:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .pill[data-status="CONTACTED"] { background: var(--accent-soft); color: var(--accent); }
 .pill[data-status="REPLIED"] { background: var(--accent); color: var(--on-accent); }
 .pill[data-status="NOT_INTERESTED"] { text-decoration: line-through; }
-.chev-btn { min-height: 38px; width: 38px; padding: 0; background: transparent; border: 0; border-radius: 50%; }
+.chev-btn { min-height: 38px; width: 38px; flex: none; aspect-ratio: 1; padding: 0; background: transparent; border: 0; border-radius: 50%; }
 .chev-btn:hover { background: var(--accent-soft); }
 .chev { width: 8px; height: 8px; border-right: 2px solid var(--mute); border-bottom: 2px solid var(--mute); transform: rotate(-45deg); transition: transform .15s ease; }
 .chev.open { transform: rotate(45deg); }

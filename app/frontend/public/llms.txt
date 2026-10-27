@@ -1,0 +1,16 @@
+# Leadforge
+
+> Leadforge finds local businesses that may need your service. You describe what you offer, pick up to three cities or draw an area on a map, and get a ranked list of businesses with phone, email and social links. Leadforge drafts the outreach message in English, French or Arabic; the user sends it themselves by email or WhatsApp.
+
+## How it works
+1. Tell Leadforge what you offer; it suggests the kinds of businesses most likely to need it.
+2. Pick where to look: up to three cities, or an area drawn on the map.
+3. Review the ranked leads (reachable ones first), open a draft message and send it yourself.
+
+## Facts
+- Audience: freelancers, agencies and small service providers looking for local clients.
+- Languages: English, French, Arabic (messages); interface in English and French.
+- Leadforge never sends messages on the user's behalf.
+
+## Links
+- [Home](https://leadforge-7vn.pages.dev/)
