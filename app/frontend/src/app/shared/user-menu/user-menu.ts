@@ -2,7 +2,8 @@ import { Component, ElementRef, HostListener, computed, effect, inject, signal, 
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Profile, UsageMap } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { AppLang, I18n } from '../../i18n/i18n';
+import { ThemeChoice, ThemeService } from '../../core/theme.service';
+import { AppLang, I18n, I18nKey } from '../../i18n/i18n';
 
 /** The round account button at the right of the app bar and the menu it opens. */
 @Component({
@@ -14,6 +15,7 @@ import { AppLang, I18n } from '../../i18n/i18n';
 export class UserMenu {
   protected readonly auth = inject(AuthService);
   protected readonly i18n = inject(I18n);
+  protected readonly theme = inject(ThemeService);
   protected readonly t = this.i18n.t;
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
@@ -22,6 +24,10 @@ export class UserMenu {
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
 
   protected readonly langs: { value: AppLang; label: string }[] = [{ value: 'en', label: 'English' }, { value: 'fr', label: 'Français' }];
+
+  protected readonly themes: { value: ThemeChoice; key: I18nKey }[] = [
+    { value: 'system', key: 'menu.themeSystem' }, { value: 'light', key: 'menu.themeLight' }, { value: 'dark', key: 'menu.themeDark' },
+  ];
 
   protected readonly open = signal(false);
   private readonly profile = signal<Profile | null>(null);

@@ -27,6 +27,10 @@ const EN = {
   'menu.left': '{left} of {limit} left',
   'menu.profile': 'View full profile',
   'menu.language': 'Language',
+  'menu.theme': 'Theme',
+  'menu.themeSystem': 'Auto',
+  'menu.themeLight': 'Light',
+  'menu.themeDark': 'Dark',
   'menu.keep': 'Sign in to keep your leads',
   'menu.logout': 'Log out',
 
@@ -188,6 +192,10 @@ const FR_BASE: Record<keyof typeof EN, string> = {
   'menu.left': '{left} sur {limit} restantes',
   'menu.profile': 'Voir le profil complet',
   'menu.language': 'Langue',
+  'menu.theme': 'Thème',
+  'menu.themeSystem': 'Auto',
+  'menu.themeLight': 'Clair',
+  'menu.themeDark': 'Sombre',
   'menu.keep': 'Connectez-vous pour garder vos prospects',
   'menu.logout': 'Se déconnecter',
 
