@@ -24,3 +24,5 @@
 .lang .seg-btn + .seg-btn { border-left: 0; }
 .lang .seg-btn svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lang .seg-btn:has(svg) { padding: 4px 11px; }
+/* the menu's generic button hover (a pale fill) must not repaint the selected option, whose icon is drawn for the solid accent */
+.lang .seg-btn.on, .lang .seg-btn.on:hover { background: var(--accent); color: var(--on-accent); }
