@@ -90,9 +90,26 @@ h1 { font-size: clamp(32px, min(4.8vw, 6.8vh), 66px); line-height: 1; letter-spa
 @media (max-width: 960px) {
   .story { padding-top: 88px; }
   .story-grid { grid-template-columns: 1fr; gap: 0; margin-top: 36px; }
-  .stage { order: -1; top: 64px; height: 340px; z-index: 4; margin-bottom: 8px; }
+  .stage { order: -1; top: 64px; height: min(490px, calc(100svh - 120px)); z-index: 4; margin-bottom: 8px; }
+  /* the tab labels wrap to two lines here, so the panels start lower and are tighter; the demo card drops its contact buttons, as the compact card does */
+  .tabs { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; left: 16px; right: 16px; font-size: 10px; letter-spacing: .03em; }
+  .tabs span { min-width: 0; }
+  .layer { padding: 74px 16px 16px; gap: 8px; }
+  .l1 .opt { padding: 11px 14px 11px 48px; }
+  .l1 .opt strong { font-size: 16px; }
+  .l3 ::ng-deep .contacts { display: none; }
+  .l3 ::ng-deep .dossier { padding: 14px 16px; }
+  .l3 ::ng-deep .reasons { margin-top: 12px; }
+  .l3 ::ng-deep .draft { margin-top: 12px; padding-top: 12px; }
+  .l3 ::ng-deep .bubble { font-size: 13.5px; padding: 10px 12px; }
   .step { min-height: 52vh; }
   .step::before { top: calc(50% - 40px); }
+}
+@media (max-width: 380px) {
+  /* the longest (French) tab labels wrap to three lines on the narrowest phones */
+  .stage { height: min(545px, calc(100svh - 120px)); }
+  .layer { padding-top: 86px; }
+  .l3 ::ng-deep .bubble { font-size: 13px; }
 }
 
 /* ---------- principles ---------- */

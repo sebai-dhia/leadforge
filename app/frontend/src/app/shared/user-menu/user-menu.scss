@@ -20,7 +20,7 @@
 .lang { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; min-height: 44px; font-weight: 500; }
 /* the two language buttons sit side by side in one rounded pill; they never wrap under each other */
 .lang .seg { flex: none; flex-wrap: nowrap; border-radius: 999px; padding: 3px; gap: 2px; }
-.lang .seg-btn { min-height: 32px; padding: 4px 12px; border: 0; border-radius: 999px; font-size: 13.5px; white-space: nowrap; }
+.lang .seg-btn { transition: background-color .15s ease, color .15s ease; min-height: 32px; padding: 4px 12px; border: 0; border-radius: 999px; font-size: 13.5px; white-space: nowrap; }
 .lang .seg-btn + .seg-btn { border-left: 0; }
 .lang .seg-btn svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lang .seg-btn:has(svg) { padding: 4px 11px; }

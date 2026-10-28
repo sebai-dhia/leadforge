@@ -47,6 +47,11 @@ h3 { font-size: 18px; letter-spacing: -.01em; margin: 0; line-height: 1.2; }
   .compact { grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr); }
   .compact .id h3 { font-size: 16px; }
 }
+/* a narrow card: the sample-data label sits in the corner instead of squeezing the name into a few letters per line */
+@container (max-width: 400px) {
+  header { padding-top: 18px; }
+  .tag { position: absolute; top: 12px; right: 14px; padding: 2px 8px; font-size: 10px; }
+}
 .draft { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgb(var(--ink-rgb) / .09); }
 .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--mute); margin-bottom: 9px; }
 .bubble { margin: 0; padding: 13px 15px; border-radius: 14px 14px 14px 4px; background: var(--bubble); border: 1px solid rgb(var(--ink-rgb) / .08);
